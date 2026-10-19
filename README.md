@@ -1,4 +1,6 @@
-# Chickadee Bot
+## Chickadee Bot
+
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/2fe3aa9a-222b-4c1e-bb5a-b83734a70462" />
 
 공공 웹사이트에 게시되거나 숨겨진 불법광고를 탐지하고, 유형과 위치를 확인할 수 있도록 만드는 점검 도구입니다.
 
