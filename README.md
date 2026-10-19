@@ -1,4 +1,6 @@
-# Chickadee Bot
+## Chickadee Bot
+
+<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/2fe3aa9a-222b-4c1e-bb5a-b83734a70462" />
 
 공공 웹사이트에서 문자로 위장하거나 CSS로 숨긴 불법광고 의심 요소를 찾는 **Windows 데스크톱 데모**입니다. URL 하나를 입력하면 하위 페이지와 iframe을 탐색하고, 결과 화면과 평가용 `result.json`을 제공합니다.
 
