@@ -1,0 +1,72 @@
+{
+  "dataset_version": "v4",
+  "archive_name": "chickadee-evidence-v4.zip",
+  "archive_sha256": "3f37553f6167db86c7de54306294c9f48199de3af7ca4308662c0170e7fa23ad",
+  "imported_at": "2026-10-19",
+  "previous_dataset": "research/ad-evidence/2026-10-19",
+  "standalone_attachments": [
+    {
+      "name": "collection-report.md",
+      "sha256": "534a6004f681409a101be6f9a31661bb484c17c56ff87181ee072940d0dfea17",
+      "relationship": "identical_to_archive_member"
+    },
+    {
+      "name": "samples.jsonl",
+      "sha256": "abd09b20a3cff7c1f92b3c32da895281ef3f837d770da5f4a431f6e8123222ca",
+      "relationship": "identical_to_archive_member"
+    }
+  ],
+  "handling": "Text-only import. No source URLs fetched and no collected HTML/scripts executed. Original bytes preserved.",
+  "files": [
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/samples.jsonl",
+      "bytes": 88887,
+      "sha256": "abd09b20a3cff7c1f92b3c32da895281ef3f837d770da5f4a431f6e8123222ca"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/negatives.jsonl",
+      "bytes": 39852,
+      "sha256": "278c9084532f709a0dc2d33a972ddac21e8f8e1040dc617242bb2cb21145238c"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/sources.md",
+      "bytes": 11650,
+      "sha256": "47531a53186a0d85312ccf535a790858d6095a7810fead5b603b275d0313c2db"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/collection-report.md",
+      "bytes": 8474,
+      "sha256": "534a6004f681409a101be6f9a31661bb484c17c56ff87181ee072940d0dfea17"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/new-observed.jsonl",
+      "bytes": 48931,
+      "sha256": "1ff17af3d727ac6008ad667f03ecad33585c8a7c9610850d6cde7fb83217c48b"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/delta-report.md",
+      "bytes": 437,
+      "sha256": "26072f2139c5371d8349544c57eff140e581476f7b9f06abcc16f82bb975c960"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/validation.json",
+      "bytes": 926,
+      "sha256": "42a6335f38643b391d377a4c2d809e0f58b7fc2578dd46740758435486b47ac7"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/README.md",
+      "bytes": 472,
+      "sha256": "1ca707e254814dac484ace2f7bb9cc309e0e68643295f2c058ac88f3f315440c"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/exclusions-addendum.md",
+      "bytes": 3097,
+      "sha256": "256d045331e5b98199981979ed38a1f85717c58a992ac032efcf430d58bc4509"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19-v4/excluded-records.jsonl",
+      "bytes": 1455,
+      "sha256": "8e5c8ad601ee278a4db566594ed899730fb51e46b5ddf821f51bdb3b25ba112b"
+    }
+  ]
+}

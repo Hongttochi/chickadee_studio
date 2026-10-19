@@ -596,5 +596,19 @@
     }
   ],
   "actual_content_file": "mock-site-content.json",
-  "actual_content_priority_ko": "실제 페이지에 넣을 광고·정상 문구는 mock-site-content.json의 placement_examples와 real_cases를 우선 사용한다. 이 파일의 cases는 별도 합성 회귀 사례다."
+  "actual_content_priority_ko": "실제 페이지 문구는 mock-site-content.json의 v4 원문 78건과 재구성 배치 79개를 우선 사용한다. 이 파일의 cases 30개는 별도 합성 회귀 사례이며 신규 실사례 집계와 섞지 않는다.",
+  "actual_dataset": {
+    "version": "v4-curated-1",
+    "file": "mock-site-content.json",
+    "admissible_records": 78,
+    "added_records": 35,
+    "placement_examples": 79,
+    "technique_review_ids": [
+      "A022",
+      "A025"
+    ],
+    "excluded_ids": [
+      "A019"
+    ]
+  }
 }

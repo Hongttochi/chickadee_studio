@@ -12,14 +12,14 @@ from playwright.async_api import async_playwright
 
 from chickadee.detection import analyze, techniques
 from chickadee.scanner import _State, _inspect_frame
-from scripts.validate_research import DATA, validate
+from scripts.validate_research import LEGACY_DATA as DATA, validate
 
 EXTRACT = (Path(__file__).resolve().parents[1] / "chickadee/extract.js").read_text(encoding="utf-8")
 
 
 class ResearchTests(unittest.TestCase):
     def test_imported_corpus_integrity_and_observation_boundaries(self):
-        result = validate()
+        result = validate(DATA)
         self.assertEqual(result["total_records"], 43)
         self.assertEqual(result["original_files_sha256_verified"], 8)
         self.assertEqual(result["origin_counts"], {"observed": 38, "reported": 5})

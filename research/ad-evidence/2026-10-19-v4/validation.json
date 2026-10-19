@@ -1,0 +1,42 @@
+{
+  "validated_at": "2026-10-19T05:57:28+00:00",
+  "samples": 55,
+  "observed_ad_suspected": 50,
+  "reported": 5,
+  "negatives": 23,
+  "unique_ids": 78,
+  "unique_observed_source_groups": 50,
+  "unique_observed_source_urls": 49,
+  "missing_fields": [],
+  "dom_verified_ad": 23,
+  "visible_only_ad": 27,
+  "computed_css_verified": 0,
+  "technique_ids": {
+    "HOMOGLYPH": [
+      "A008",
+      "A009",
+      "A010",
+      "A011",
+      "A016",
+      "A022",
+      "A023",
+      "A042"
+    ],
+    "JAMO": [
+      "A008",
+      "A025"
+    ],
+    "TRANSPARENT": [],
+    "OFFSCREEN": [
+      "A012",
+      "A013",
+      "A015",
+      "A020",
+      "A031"
+    ]
+  },
+  "excluded_ids": [
+    "A019"
+  ],
+  "duplicate_audit": "A039/A040 are distinct body/comment campaigns on one source URL. Obvious same-brand/contact/template clones excluded. 50 source groups are collection-level groupings, not proven 50 independent operators."
+}

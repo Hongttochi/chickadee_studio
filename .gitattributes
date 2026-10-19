@@ -1,2 +1,4 @@
 # Preserve evidence bytes and original whitespace across Windows/Linux checkouts.
-research/ad-evidence/2026-10-19/* -text -whitespace
+research/ad-evidence/** -text -whitespace
+# The generated payload is compared byte-for-byte by --check on every platform.
+examples/mock-site-content.json text eol=lf
