@@ -2,6 +2,10 @@
 
 import re
 import unicodedata
+from dataclasses import dataclass
+from functools import lru_cache
+import json
+from pathlib import Path
 
 LABELS = {
     "HOMOGLYPH": "닮은꼴 글자 위장",
@@ -36,45 +40,93 @@ def skeleton(text: str) -> str:
     return "".join(JAMO_MAP.get(c, c) for c in decomposed if c.isalnum())
 
 
-KEYWORDS = tuple(map(skeleton, (
-    "카지노", "casino", "슬롯", "slot", "토토", "toto", "바카라", "baccarat",
-    "먹튀검증", "안전놀이터", "도박", "성인방송", "성인사이트", "성인물", "야동", "porn", "betting", "mega bet",
-)))
-PREVENTION = tuple(map(skeleton, ("예방", "신고", "주의", "근절", "금지", "단속", "차단", "피해상담")))
-PROMOTION = tuple(map(skeleton, (
-    "가입", "보너스", "첫충", "충전", "입금", "지급", "추천코드", "바로가기", "무료", "텔레그램",
-    "bonus", "signup", "join", "free", "bet now",
-)))
 JAMO_RE = re.compile(r"[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\ud7b0-\ud7ff]")
 
 
+@dataclass(frozen=True)
+class Rules:
+    version: str
+    keywords: tuple[str, ...]
+    prevention: tuple[str, ...]
+    promotion: tuple[str, ...]
+
+    @classmethod
+    def load(cls, path: Path | None = None):
+        path = Path(path or Path(__file__).with_name("rules.json"))
+        if path.stat().st_size > 1_000_000:
+            raise ValueError("탐지 규칙 파일은 1MB 이하여야 합니다.")
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(data, dict) or set(data) != {"version", "keywords", "prevention", "promotion"}:
+            raise ValueError("규칙 파일에는 version, keywords, prevention, promotion이 필요합니다.")
+        if not isinstance(data["version"], str):
+            raise ValueError("규칙 version은 문자열이어야 합니다.")
+        for key in ("keywords", "prevention", "promotion"):
+            if not isinstance(data[key], list) or len(data[key]) > 1000 or not all(isinstance(t, str) and 0 < len(t) <= 100 and skeleton(t) for t in data[key]):
+                raise ValueError(f"{key}는 100자 이하 문자열의 배열(최대 1000개)이어야 합니다.")
+        if not data["keywords"]:
+            raise ValueError("keywords는 비워둘 수 없습니다.")
+        return cls(data["version"], *(tuple(data[k]) for k in ("keywords", "prevention", "promotion")))
+
+
+DEFAULT_RULES = Rules.load()
+
+
+def _canonical(text, digits=False):
+    result, flags = [], []
+    for index, char in enumerate(text):
+        mapped = unicodedata.normalize("NFKC", char).translate(LOOKALIKES)
+        if digits:
+            mapped = mapped.translate(DIGITS)
+        fragment = skeleton(mapped)
+        is_jamo = bool(JAMO_RE.match(char))
+        is_glyph = not is_jamo and mapped.casefold() != char.casefold() and any('a' <= c <= 'z' for c in mapped.casefold())
+        result.extend(fragment)
+        flags.extend([(is_glyph, is_jamo, index)] * len(fragment))
+    return "".join(result), flags
+
+
+@lru_cache(maxsize=256)
+def analyze(text: str, rules: Rules | None = None) -> dict:
+    """Attach obfuscation only to characters inside an actual keyword match."""
+    rules = rules or DEFAULT_RULES
+    matches = []
+    for digits in (False, True):
+        normalized, flags = _canonical(text, digits)
+        for keyword in rules.keywords:
+            needle = skeleton(keyword)
+            for match in re.finditer(re.escape(needle), normalized):
+                start, end = match.span()
+                first, last = flags[start][2], flags[end - 1][2]
+                # Avoid matching English keywords in ordinary words (timeslot).
+                if needle.isascii() and ((first and 'a' <= text[first - 1].casefold() <= 'z') or (last + 1 < len(text) and 'a' <= text[last + 1].casefold() <= 'z')):
+                    continue
+                before = max(text.rfind(sep, 0, first) for sep in ("\n", ".", "!", "?", ";"))
+                after_candidates = [text.find(sep, last + 1) for sep in ("\n", ".", "!", "?", ";")]
+                after = min((n for n in after_candidates if n >= 0), default=len(text))
+                context = skeleton(text[before + 1:after].translate(LOOKALIKES))
+                if any(skeleton(term) in context for term in rules.prevention):
+                    continue
+                if not any(skeleton(term) in context for term in rules.promotion) and len(context) >= 160:
+                    continue
+                matches.append({"keyword": keyword, "source_span": [first, last + 1],
+                                "homoglyph": any(f[0] for f in flags[start:end]),
+                                "jamo": any(f[1] for f in flags[start:end])})
+    unique = {tuple(m["source_span"]) + (m["keyword"],): m for m in reversed(matches)}
+    return {"is_advertisement": bool(matches), "matches": list(unique.values()), "rules_version": rules.version}
+
+
 def is_advertisement(text: str) -> bool:
-    normalized = skeleton(unicodedata.normalize("NFKC", text).translate(LOOKALIKES))
-    variants = (normalized, skeleton(unicodedata.normalize("NFKC", text).translate(LOOKALIKES).translate(DIGITS)))
-    if not any(term in variant for variant in variants for term in KEYWORDS):
-        return False
-    # Educational/warning text is common on public sites. These are heuristic
-    # exclusions, not a legal judgement or a comprehensive semantic classifier.
-    if any(term in normalized for term in PREVENTION):
-        return False
-    return any(term in normalized for term in PROMOTION) or len(normalized) < 160
+    return analyze(text)["is_advertisement"]
 
 
-def techniques(text: str, transparent: bool = False, offscreen: bool = False) -> list[str]:
-    if not is_advertisement(text):
+def techniques(text: str, transparent: bool = False, offscreen: bool = False, rules: Rules | None = None) -> list[str]:
+    analysis = analyze(text, rules)
+    if not analysis["is_advertisement"]:
         return []
-    normalized = unicodedata.normalize("NFKC", text)
-    changed_letters = any(
-        c.translate(LOOKALIKES) != c or
-        (unicodedata.normalize("NFKC", c) != c and not JAMO_RE.match(c)
-         and any("a" <= t.casefold() <= "z" for t in unicodedata.normalize("NFKC", c)))
-        for c in text
-    )
-    digits_needed = not any(k in skeleton(normalized.translate(LOOKALIKES)) for k in KEYWORDS)
     codes = []
-    if changed_letters or (digits_needed and any(c in "013457" for c in normalized)):
+    if any(m["homoglyph"] for m in analysis["matches"]):
         codes.append("HOMOGLYPH")
-    if JAMO_RE.search(text):
+    if any(m["jamo"] for m in analysis["matches"]):
         codes.append("JAMO")
     if transparent:
         codes.append("TRANSPARENT")
@@ -83,14 +135,14 @@ def techniques(text: str, transparent: bool = False, offscreen: bool = False) ->
     return codes
 
 
-def classify_elements(elements: list[dict], inherited: dict | None = None) -> list[dict]:
+def classify_elements(elements: list[dict], inherited: dict | None = None, rules: Rules | None = None) -> list[dict]:
     inherited = inherited or {}
     hits = []
     by_id = {e["node_id"]: e for e in elements}
     for element in elements:
         transparent = element["transparent"] or inherited.get("transparent", False)
         offscreen = element["offscreen"] or inherited.get("offscreen", False)
-        for code in techniques(element["text"], transparent, offscreen):
+        for code in techniques(element["text"], transparent, offscreen, rules):
             hits.append({**element, "technique": code})
     # Prefer the smallest owner of the evidence. A wrapper containing several
     # independently classified descendants must not inflate the finding count.
@@ -103,4 +155,4 @@ def classify_elements(elements: list[dict], inherited: dict | None = None) -> li
     return [h for h in hits if (h["node_id"], h["technique"]) not in ancestors_with_hit
             or h["technique"] in techniques(h["direct_text"],
                 h["transparent"] or inherited.get("transparent", False),
-                h["offscreen"] or inherited.get("offscreen", False))]
+                h["offscreen"] or inherited.get("offscreen", False), rules)]

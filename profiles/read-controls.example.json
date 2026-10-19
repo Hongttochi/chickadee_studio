@@ -1,0 +1,8 @@
+{
+  "name": "읽기 버튼 설정 예시 - 실제 선택자로 수정 필요",
+  "path_prefix": "/",
+  "controls": ["button[data-chickadee-read-more]"],
+  "max_actions": 5,
+  "scroll_steps": 4,
+  "allowed_resource_origins": []
+}

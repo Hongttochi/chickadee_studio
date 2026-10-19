@@ -1,0 +1,8 @@
+{
+  "name": "공개 사이트 기본 탐색 (별도 VM에서 사용)",
+  "path_prefix": "/",
+  "controls": [],
+  "max_actions": 5,
+  "scroll_steps": 4,
+  "allowed_resource_origins": []
+}

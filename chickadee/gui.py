@@ -1,6 +1,7 @@
 import asyncio
 from collections import Counter
 from pathlib import Path
+import json
 import queue
 from threading import Event, Thread
 import tkinter as tk
@@ -8,16 +9,20 @@ from tkinter import filedialog, messagebox, ttk
 
 from . import __version__
 from .demo import DemoSite
-from .detection import LABELS
-from .scanner import ScanConfig, output_directory, scan
+from .detection import LABELS, Rules
+from .profiles import SiteProfile
+from .scanner import ScanConfig, ScanOutcome, output_directory, scan
 
 STATUS = {"completed": "점검 완료", "partial": "일부 결과 · 누락 항목 확인 필요", "cancelled": "사용자 중단 · 일부 결과", "failed": "실행 실패 · 결과를 신뢰하지 마세요"}
 
 
 class Application:
-    def __init__(self, root: tk.Tk, folder: Path | None = None, demo: bool = False):
+    def __init__(self, root: tk.Tk, folder: Path | None = None, demo: bool = False, allow_network=False, rules_path=None, profile_path=None):
         self.root = root
         self.folder = Path(folder or output_directory())
+        self.allow_network = allow_network
+        self.rules_path = rules_path
+        self.profile_path = profile_path
         self.events = queue.Queue()
         self.stop = Event()
         self.worker = None
@@ -55,7 +60,8 @@ class Application:
         main = ttk.Frame(self.root, padding=24)
         main.pack(fill="both", expand=True)
         ttk.Label(main, text="Chickadee Bot", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(main, text="문자 위장과 숨겨진 광고를 찾아, 원문과 위치를 확인합니다.  /  규칙 기반 데모").pack(anchor="w", pady=(2, 16))
+        mode = "외부 사이트 검사 허용 · 별도 VM에서 실행하세요" if self.allow_network else "로컬 전용 · 실제 사이트는 별도 VM에서 검사 후 결과를 불러오세요"
+        ttk.Label(main, text=mode).pack(anchor="w", pady=(2, 16))
         inputs = ttk.Frame(main)
         inputs.pack(fill="x")
         ttk.Label(inputs, text="점검 URL").pack(side="left", padx=(0, 12))
@@ -63,6 +69,8 @@ class Application:
         self.entry.pack(side="left", fill="x", expand=True, ipady=6)
         self.demo_button = ttk.Button(inputs, text="로컬 데모 준비", command=self.prepare_demo)
         self.demo_button.pack(side="left", padx=(8, 0))
+        self.load_button = ttk.Button(inputs, text="결과 불러오기", command=self.open_result)
+        self.load_button.pack(side="left", padx=(8, 0))
         controls = ttk.Frame(main)
         controls.pack(fill="x", pady=12)
         ttk.Label(controls, text="최대 페이지").pack(side="left")
@@ -73,6 +81,10 @@ class Application:
         self.time_input.pack(side="left", padx=(8, 18))
         self.folder_button = ttk.Button(controls, text="저장 폴더", command=self.choose_folder)
         self.folder_button.pack(side="left")
+        self.rules_button = ttk.Button(controls, text="탐지 규칙", command=lambda: self.choose_settings("rules"))
+        self.rules_button.pack(side="left", padx=5)
+        self.profile_button = ttk.Button(controls, text="사이트 설정", command=lambda: self.choose_settings("profile"))
+        self.profile_button.pack(side="left")
         self.cancel_button = ttk.Button(controls, text="중단", command=self.cancel, state="disabled")
         self.cancel_button.pack(side="right")
         self.start_button = ttk.Button(controls, text="탐지 시작", style="Accent.TButton", command=self.start)
@@ -100,9 +112,14 @@ class Application:
         self.table.pack(fill="both", expand=True)
         self.table.bind("<<TreeviewSelect>>", self.show_detail)
         ttk.Label(main, text="선택한 항목의 원문·위치 / 실행 안내").pack(anchor="w", pady=(12, 5))
-        self.detail = tk.Text(main, height=7, wrap="word", bg="white", fg="#173f39", relief="flat", padx=12, pady=10, font=("맑은 고딕", 10))
-        self.detail.pack(fill="x")
-        self._detail("필수 탐지 4종을 지원합니다. 탐지 결과는 규칙 기반 의심 항목이며 담당자의 확인이 필요합니다.\n이전 실행의 result.json은 새 실행 결과 저장 시 교체됩니다.")
+        detail_frame = ttk.Frame(main)
+        detail_frame.pack(fill="x")
+        self.detail = tk.Text(detail_frame, height=7, wrap="word", bg="white", fg="#173f39", relief="flat", padx=12, pady=10, font=("맑은 고딕", 10))
+        detail_scroll = ttk.Scrollbar(detail_frame, orient="vertical", command=self.detail.yview)
+        self.detail.configure(yscrollcommand=detail_scroll.set)
+        detail_scroll.pack(side="right", fill="y")
+        self.detail.pack(fill="x", expand=True)
+        self._detail("이 PC의 기본 실행은 loopback 주소만 허용합니다. 실제 사이트 검사는 별도 VM의 CLI에서 --network로 실행하고 결과 JSON만 가져오세요.\n이전 실행의 result.json은 새 실행 결과 저장 시 교체됩니다.")
 
     def _detail(self, text):
         self.detail.configure(state="normal")
@@ -124,8 +141,39 @@ class Application:
             self.folder = Path(chosen)
             self.path_label.set(f"저장 폴더: {self.folder}")
 
+    def choose_settings(self, kind):
+        chosen = filedialog.askopenfilename(title="탐지 규칙" if kind == "rules" else "사이트별 읽기 설정", filetypes=[("JSON", "*.json")])
+        if not chosen:
+            return
+        try:
+            if kind == "rules":
+                rules = Rules.load(Path(chosen))
+                self.rules_path = Path(chosen)
+                self._detail(f"탐지 규칙 선택: {chosen}\n버전: {rules.version}")
+            else:
+                profile = SiteProfile.load(Path(chosen))
+                self.profile_path = Path(chosen)
+                self._detail(f"사이트 설정 선택: {chosen}\n{profile.name}\n읽기 동작: {profile.controls}")
+        except Exception as exc:
+            messagebox.showerror("설정 파일 확인", str(exc))
+
+    def open_result(self):
+        chosen = filedialog.askopenfilename(title="VM에서 가져온 result.json", filetypes=[("JSON", "*.json")])
+        if not chosen:
+            return
+        try:
+            self.outcome = ScanOutcome.load(Path(chosen))
+            self.findings = self.outcome.result["findings"]
+            self.filter.set("전체")
+            self.refresh()
+            report = self.outcome.report
+            self.status.set(f"결과 불러옴 · {STATUS.get(report['status'], '보고서 없는 결과')} · {len(self.findings)}건")
+            self._detail(f"불러온 파일: {chosen}\n원본 URL: {self.outcome.result['meta']['entry_url']}\n이 동작은 웹사이트에 접속하지 않습니다. 항목을 선택하면 근거를 볼 수 있습니다.")
+        except Exception as exc:
+            messagebox.showerror("결과 파일 확인", str(exc))
+
     def _busy(self, busy):
-        for widget in (self.entry, self.pages_input, self.time_input, self.demo_button, self.folder_button, self.start_button):
+        for widget in (self.entry, self.pages_input, self.time_input, self.demo_button, self.folder_button, self.start_button, self.load_button, self.rules_button, self.profile_button):
             widget.configure(state="disabled" if busy else "normal")
         self.cancel_button.configure(state="normal" if busy else "disabled")
         if busy:
@@ -137,8 +185,9 @@ class Application:
         if self.worker and self.worker.is_alive():
             return
         try:
-            config = ScanConfig(self.url.get().strip(), int(self.page_limit.get()), float(self.time_limit.get()))
-        except ValueError as exc:
+            config = ScanConfig(self.url.get().strip(), int(self.page_limit.get()), float(self.time_limit.get()),
+                                allow_network=self.allow_network, rules_path=self.rules_path, profile_path=self.profile_path)
+        except (ValueError, OSError) as exc:
             messagebox.showerror("입력 확인", str(exc))
             return
         self.findings = []
@@ -209,7 +258,8 @@ class Application:
         if not selected:
             return
         finding = next(f for f in self.findings if f["id"] == selected[0])
-        self._detail(f"{finding['id']} · {LABELS[finding['technique']]} ({finding['technique']})\n페이지: {finding['url']}\n위치: {finding['location']}\n원문:\n{finding['evidence_text']}")
+        evidence = self.outcome.report.get("evidence_details", {}).get(finding["id"], {}) if self.outcome else {}
+        self._detail(f"{finding['id']} · {LABELS[finding['technique']]} ({finding['technique']})\n페이지: {finding['url']}\n위치: {finding['location']}\n원문:\n{finding['evidence_text']}\n근거:\n" + json.dumps(evidence, ensure_ascii=False, indent=2))
 
     def close(self):
         self.closing = True
@@ -218,7 +268,7 @@ class Application:
         self.status.set("진행 중인 작업을 정리한 후 종료합니다.")
 
 
-def launch(folder=None, demo=False):
+def launch(folder=None, demo=False, allow_network=False, rules_path=None, profile_path=None):
     root = tk.Tk()
-    Application(root, folder, demo)
+    Application(root, folder, demo, allow_network, rules_path, profile_path)
     root.mainloop()

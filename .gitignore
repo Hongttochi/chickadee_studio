@@ -16,6 +16,7 @@ dist/
 # Generated findings and collected content
 result.json
 result_extra.json
+scan-report.json
 artifacts/
 logs/
 screenshots/

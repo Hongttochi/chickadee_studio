@@ -45,18 +45,31 @@
       hidden ||= ps.display === 'none';
     }
     const color = rgba(cs.color);
-    let background = [255, 255, 255, 1];
+    let background = [255, 255, 255, 1], imageBackground = false;
     for (let parent = el; parent; parent = parent.parentElement) {
+      imageBackground ||= style(parent).backgroundImage !== 'none';
       const bg = rgba(style(parent).backgroundColor);
       if (bg && bg[3] >= 0.99) { background = bg; break; }
     }
-    const sameColor = color && color[3] > 0.99 && color.slice(0, 3).every((v, i) => Math.abs(v - background[i]) < 1);
+    const sameColor = !imageBackground && color && color[3] > 0.99 && color.slice(0, 3).every((v, i) => Math.abs(v - background[i]) < 1);
     const transparent = alpha <= 0.01 || (color && color[3] <= 0.01) || !!sameColor;
     const rect = el.getBoundingClientRect();
     const outside = (rect.width > 0 || rect.height > 0) && (rect.right <= 0 || rect.bottom <= 0 ||
       (['absolute', 'fixed'].includes(cs.position) && rect.left > innerWidth + 2000));
     const offscreen = hidden || ['hidden', 'collapse'].includes(cs.visibility) || parseFloat(cs.fontSize) <= 1 || outside;
-    return {transparent: !!transparent, offscreen: !!offscreen};
+    const reasons = [];
+    if (alpha <= .01) reasons.push('요소/조상 opacity <= 0.01');
+    if (color && color[3] <= .01) reasons.push('글자색 alpha <= 0.01');
+    if (sameColor) reasons.push('단색 배경과 글자색 일치');
+    if (hidden) reasons.push('요소/조상 display:none');
+    if (['hidden', 'collapse'].includes(cs.visibility)) reasons.push('visibility:' + cs.visibility);
+    if (parseFloat(cs.fontSize) <= 1) reasons.push('font-size <= 1px');
+    if (outside) reasons.push('화면 밖 좌표');
+    return {transparent: !!transparent, offscreen: !!offscreen, reasons,
+      style: {color: cs.color, background: cs.backgroundColor, effective_opacity: alpha,
+        font_size: cs.fontSize, display: cs.display, visibility: cs.visibility,
+        position: cs.position, rect: {x:rect.x, y:rect.y, width:rect.width, height:rect.height},
+        viewport: {width:innerWidth, height:innerHeight}}};
   }
   const elements = [];
   // Build text from DOM text nodes, excluding executable/style source. Also
@@ -64,18 +77,27 @@
   // black, explicitly styled child look like hidden text.
   const textInfo = new Map();
   for (const el of [...all].reverse()) {
-    if (ignored.has(el.tagName)) { textInfo.set(el, {text: '', direct: '', owners: []}); continue; }
+    if (ignored.has(el.tagName)) { textInfo.set(el, {text: '', direct: '', count: 0, transparent: true, offscreen: true, reasons: []}); continue; }
     let text = '', direct = '';
-    const owners = [];
+    let count = 0, transparent = true, offscreen = true;
+    const reasons = new Set();
     for (const node of el.childNodes) {
       if (node.nodeType === Node.TEXT_NODE) { text += node.textContent; direct += node.textContent; }
       else if (node.nodeType === Node.ELEMENT_NODE) {
         const child = textInfo.get(node);
-        if (child) { text += child.text; owners.push(...child.owners); }
+        if (child) {
+          text = (text + child.text).slice(0, textLimit + 1);
+          count += child.count; transparent &&= child.transparent; offscreen &&= child.offscreen;
+          child.reasons.forEach(r => reasons.add(r));
+        }
       }
     }
-    if (direct.trim()) owners.push(appearance(el));
-    textInfo.set(el, {text, direct, owners});
+    if (direct.trim()) {
+      const own = appearance(el);
+      count++; transparent &&= own.transparent; offscreen &&= own.offscreen;
+      own.reasons.forEach(r => reasons.add(r));
+    }
+    textInfo.set(el, {text, direct, count, transparent, offscreen, reasons:[...reasons]});
   }
   let truncated = false;
   for (const el of all) {
@@ -89,10 +111,11 @@
       continue;
     }
     if (elements.length >= limit) { truncated = true; break; }
-    const visibility = {transparent: info.owners.length > 0 && info.owners.every(o => o.transparent),
-      offscreen: info.owners.length > 0 && info.owners.every(o => o.offscreen)};
+    const visibility = {transparent: info.count > 0 && info.transparent,
+      offscreen: info.count > 0 && info.offscreen};
     elements.push({node_id: ids.get(el), parent_id: ids.get(el.parentElement) ?? null,
-      location: selector(el), text, direct_text: direct, ...visibility});
+      location: selector(el), text, direct_text: direct, reasons: info.reasons,
+      computed_style: appearance(el).style, ...visibility});
   }
   return {elements, truncated, links: [...document.querySelectorAll('a[href]')].slice(0, limit).map(a => a.href),
     links_truncated: document.querySelectorAll('a[href]').length > limit};

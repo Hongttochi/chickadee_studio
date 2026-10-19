@@ -1,0 +1,81 @@
+<mxGraphModel adaptiveColors="auto" page="1" pageWidth="1500" pageHeight="920">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="title" value="Chickadee Bot 시스템 아키텍처" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="40" y="20" width="1420" height="60" />
+    </mxCell>
+    <mxCell id="vm" value="별도 VM · 검사 실행 환경 (사용자가 별도 구성)" parent="1" vertex="1" style="swimlane;startSize=36;horizontal=1;dashed=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="40" y="100" width="980" height="700" />
+    </mxCell>
+    <mxCell id="cli" value="CLI / URL 입력" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="40" y="80" width="180" height="100" />
+    </mxCell>
+    <mxCell id="crawl" value="탐색 제어&lt;br&gt;재시도 · 간격 · 동적 상태&lt;br&gt;사이트 설정 JSON" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="260" y="80" width="180" height="100" />
+    </mxCell>
+    <mxCell id="policy" value="요청 정책&lt;br&gt;허용 origin · GET/HEAD&lt;br&gt;외부 자원 제한" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="480" y="80" width="180" height="100" />
+    </mxCell>
+    <mxCell id="browser" value="Playwright + Chromium&lt;br&gt;임시 컨텍스트" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="700" y="80" width="180" height="100" />
+    </mxCell>
+    <mxCell id="dom" value="DOM / CSS 수집&lt;br&gt;원문 · 선택자 · iframe" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="700" y="260" width="180" height="100" />
+    </mxCell>
+    <mxCell id="rules" value="탐지 규칙 JSON&lt;br&gt;HOMOGLYPH · JAMO&lt;br&gt;TRANSPARENT · OFFSCREEN" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="480" y="260" width="180" height="100" />
+    </mxCell>
+    <mxCell id="aggregate" value="결과 통합 / 검증&lt;br&gt;중복 제거 · 근거 · 누락" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="260" y="260" width="180" height="100" />
+    </mxCell>
+    <mxCell id="files" value="result.json&lt;br&gt;scan-report.json" parent="vm" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="260" y="440" width="180" height="100" />
+    </mxCell>
+    <mxCell id="web" value="공공 웹사이트&lt;br&gt;게시글 · 댓글 · iframe" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="1100" y="180" width="320" height="100" />
+    </mxCell>
+    <mxCell id="pc" value="사용자 PC · 기본 loopback 전용" parent="1" vertex="1" style="swimlane;startSize=36;horizontal=1;dashed=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="1100" y="520" width="360" height="280" />
+    </mxCell>
+    <mxCell id="import" value="결과 JSON 불러오기&lt;br&gt;웹사이트 접속 없음" parent="pc" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="30" y="60" width="300" height="80" />
+    </mxCell>
+    <mxCell id="view" value="결과 화면&lt;br&gt;유형 · 원문 · 위치 · 근거" parent="pc" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="30" y="180" width="300" height="70" />
+    </mxCell>
+    <mxCell id="flow0" source="cli" target="crawl" parent="vm" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="flow1" source="crawl" target="policy" parent="vm" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="flow2" source="policy" target="browser" parent="vm" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="flow3" source="browser" target="dom" parent="vm" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="flow4" source="dom" target="rules" parent="vm" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="flow5" source="rules" target="aggregate" parent="vm" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="flow6" source="aggregate" target="files" parent="vm" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="http" source="browser" target="web" parent="1" edge="1" value="HTTP(S)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;startArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="transfer" source="files" target="import" parent="1" edge="1" value="결과 파일만 전달" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="display" source="import" target="view" parent="pc" edge="1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=13;strokeColor=#087E8B;">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="note" value="VM 격리는 별도 구성 필요 · --network는 허용 스위치이며 격리를 검증하지 않음 · 외부 AI API 없음" parent="1" vertex="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=16;fontColor=#123F45;fillColor=#F1FAFA;strokeColor=#329EA8;">
+      <mxGeometry as="geometry" x="40" y="830" width="1420" height="60" />
+    </mxCell>
+  </root>
+</mxGraphModel>
