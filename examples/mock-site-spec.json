@@ -1,0 +1,598 @@
+{
+  "spec_version": "1.0",
+  "title_ko": "Chickadee Bot 모의 광고 삽입 웹 제작 명세",
+  "sample_origin": "synthetic",
+  "purpose_ko": "침해 후 광고가 삽입된 DOM 상태를 재현하는 테스트 웹. 실제 취약점이나 공격 코드는 구현할 필요가 없다.",
+  "execution": {
+    "bind_host": "127.0.0.1",
+    "suggested_port": 8765,
+    "external_requests": false,
+    "external_ad_links": false,
+    "real_credentials": false,
+    "resources": "local_only",
+    "notes_ko": "PC 보호를 위해 외부 스크립트·광고 이미지·추적 코드 없이 자체 제작 자원만 사용한다."
+  },
+  "types": [
+    {
+      "code": "HOMOGLYPH",
+      "name_ko": "닮은꼴 글자 위장",
+      "variants": [
+        "전각",
+        "키릴·그리스 유사 문자",
+        "한글 자모+라틴 r",
+        "광고 문장 안의 닮은꼴 COM"
+      ]
+    },
+    {
+      "code": "JAMO",
+      "name_ko": "자모 분해",
+      "variants": [
+        "호환 자모",
+        "결합 자모",
+        "부분 음절+공백",
+        "인라인 태그 분할"
+      ]
+    },
+    {
+      "code": "TRANSPARENT",
+      "name_ko": "투명 텍스트",
+      "variants": [
+        "투명색",
+        "요소·조상 opacity:0",
+        "opacity:0.003",
+        "단색 배경과 같은 글자색"
+      ]
+    },
+    {
+      "code": "OFFSCREEN",
+      "name_ko": "화면 밖·비표시 은닉",
+      "variants": [
+        "음수 문서 좌표",
+        "0~1px 글자",
+        "display:none",
+        "visibility:hidden",
+        "0~1px 상자+overflow:hidden/clip"
+      ]
+    }
+  ],
+  "page_contract": {
+    "index_path": "/",
+    "case_path_template": "/cases/{id}",
+    "evidence_selector_template": "#evidence-{id}",
+    "case_element": "p",
+    "ancestor_element": "div",
+    "default_font_size": "16px",
+    "default_text_color": "#111111",
+    "default_background": "#ffffff",
+    "one_case_per_page": true,
+    "index_lists_ids_only": true,
+    "index_must_link_all_case_pages": true,
+    "case_text_preservation": "원문의 Unicode 문자·공백을 그대로 유지하고 자동 정규화하지 않는다.",
+    "style_target": "style은 p 요소, ancestor_style은 p를 감싸는 div에 적용한다.",
+    "inline_parts_target": "inline_parts가 있으면 p에 명시된 자식 태그·텍스트를 순서대로 넣는다.",
+    "ui_text_ko": "사이트 메뉴·설명에는 테스트 광고 문자열을 복제하지 않는다. 주입 상태를 바꾸는 UI는 evidence 영역 밖에 둔다.",
+    "runtime_link_policy_ko": "기본 / 인덱스에서 /runtime 페이지로 링크하지 않는다. runtime_scenarios는 각 entry_path로 별도 검사하여 429와 지연 동작이 기본 30개 사례 집계에 섞이지 않게 한다."
+  },
+  "cases": [
+    {
+      "id": "H01",
+      "name_ko": "전각 영문",
+      "content_label": "ad_suspected",
+      "text": "ｃａｓｉｎｏ 가입 보너스",
+      "expected_techniques": [
+        "HOMOGLYPH"
+      ]
+    },
+    {
+      "id": "H02",
+      "name_ko": "키릴·라틴 혼합",
+      "content_label": "ad_suspected",
+      "text": "саsіnо 가입 보너스",
+      "expected_techniques": [
+        "HOMOGLYPH"
+      ]
+    },
+    {
+      "id": "H03",
+      "name_ko": "한글 자모와 라틴 r 혼합",
+      "content_label": "ad_suspected",
+      "text": "ㅋr지노 가입 보너스",
+      "expected_techniques": [
+        "HOMOGLYPH"
+      ],
+      "inspired_by": [
+        "A008",
+        "A009"
+      ]
+    },
+    {
+      "id": "H04",
+      "name_ko": "광고 문장 안의 닮은꼴 COM",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스 demo.CΟΜ",
+      "expected_techniques": [
+        "HOMOGLYPH"
+      ],
+      "inspired_by": [
+        "A010",
+        "A011"
+      ],
+      "notes_ko": "도메인처럼 보이는 문자열일 뿐 링크나 네트워크 요청을 만들지 않는다."
+    },
+    {
+      "id": "J01",
+      "name_ko": "호환 자모 전체 분해",
+      "content_label": "ad_suspected",
+      "text": "ㅋㅏㅈㅣㄴㅗ 가입 보너스",
+      "expected_techniques": [
+        "JAMO"
+      ]
+    },
+    {
+      "id": "J02",
+      "name_ko": "결합 자모 전체 분해",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [
+        "JAMO"
+      ],
+      "notes_ko": "구현 시 textContent를 NFC로 정규화하지 않는다."
+    },
+    {
+      "id": "J03",
+      "name_ko": "일부 음절만 자모·공백으로 분해",
+      "content_label": "ad_suspected",
+      "text": "ㅍ ㅏ워볼 가입 보너스",
+      "expected_techniques": [
+        "JAMO"
+      ],
+      "inspired_by": [
+        "A008"
+      ]
+    },
+    {
+      "id": "J04",
+      "name_ko": "하나의 문구를 인라인 태그로 분리",
+      "content_label": "ad_suspected",
+      "text": "ㅋㅏㅈㅣㄴㅗ 가입 보너스",
+      "expected_techniques": [
+        "JAMO"
+      ],
+      "inline_parts": [
+        {
+          "tag": "span",
+          "text": "ㅋㅏ"
+        },
+        {
+          "tag": "b",
+          "text": "ㅈㅣ"
+        },
+        {
+          "tag": "span",
+          "text": "ㄴㅗ 가입 보너스"
+        }
+      ],
+      "notes_ko": "부모 p 안에 인라인 태그를 연속 배치하고 별도 공백을 추가하지 않는다."
+    },
+    {
+      "id": "T01",
+      "name_ko": "투명 글자색",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [
+        "TRANSPARENT"
+      ],
+      "style": {
+        "color": "transparent"
+      }
+    },
+    {
+      "id": "T02",
+      "name_ko": "조상 opacity:0",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [
+        "TRANSPARENT"
+      ],
+      "ancestor_style": {
+        "opacity": "0"
+      }
+    },
+    {
+      "id": "T03",
+      "name_ko": "거의 투명한 opacity:0.003",
+      "content_label": "ad_suspected",
+      "text": "casino free bonus",
+      "expected_techniques": [
+        "TRANSPARENT"
+      ],
+      "ancestor_style": {
+        "opacity": "0.003"
+      },
+      "inspired_by": [
+        "R006"
+      ]
+    },
+    {
+      "id": "T04",
+      "name_ko": "단색 배경과 같은 글자색",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [
+        "TRANSPARENT"
+      ],
+      "style": {
+        "color": "rgb(255,255,255)",
+        "background-color": "rgb(255,255,255)"
+      }
+    },
+    {
+      "id": "O01",
+      "name_ko": "문서 원점 밖 음수 좌표",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [
+        "OFFSCREEN"
+      ],
+      "style": {
+        "position": "absolute",
+        "left": "-9999px",
+        "top": "-9999px"
+      }
+    },
+    {
+      "id": "O02",
+      "name_ko": "1px 글자",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [
+        "OFFSCREEN"
+      ],
+      "notes_ko": "상자 크기 1px 사례와 분리한다.",
+      "style": {
+        "font-size": "1px"
+      }
+    },
+    {
+      "id": "O03",
+      "name_ko": "조상 display:none",
+      "content_label": "ad_suspected",
+      "text": "slot gacor",
+      "expected_techniques": [
+        "OFFSCREEN"
+      ],
+      "ancestor_style": {
+        "display": "none"
+      },
+      "inspired_by": [
+        "A012",
+        "A015"
+      ]
+    },
+    {
+      "id": "O04",
+      "name_ko": "visibility:hidden",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [
+        "OFFSCREEN"
+      ],
+      "style": {
+        "visibility": "hidden"
+      }
+    },
+    {
+      "id": "O05",
+      "name_ko": "1px 상자와 클리핑",
+      "content_label": "ad_suspected",
+      "text": "slot gacor",
+      "expected_techniques": [
+        "OFFSCREEN"
+      ],
+      "ancestor_style": {
+        "width": "1px",
+        "height": "1px",
+        "overflow": "hidden"
+      },
+      "inspired_by": [
+        "A013"
+      ],
+      "notes_ko": "글자 크기는 16px로 유지한다. box와 font를 혼동하지 않는다."
+    },
+    {
+      "id": "O06",
+      "name_ko": "높이 0 상자와 클리핑",
+      "content_label": "ad_suspected",
+      "text": "Toto 4D",
+      "expected_techniques": [
+        "OFFSCREEN"
+      ],
+      "ancestor_style": {
+        "height": "0px",
+        "overflow": "hidden"
+      },
+      "inspired_by": [
+        "R007"
+      ]
+    },
+    {
+      "id": "M01",
+      "name_ko": "자모와 투명도 중첩",
+      "content_label": "ad_suspected",
+      "text": "ㅋㅏㅈㅣㄴㅗ 가입 보너스",
+      "expected_techniques": [
+        "JAMO",
+        "TRANSPARENT"
+      ],
+      "style": {
+        "opacity": "0"
+      }
+    },
+    {
+      "id": "M02",
+      "name_ko": "혼합 글자·투명도·숨김 중첩",
+      "content_label": "ad_suspected",
+      "text": "ㅋr지노 가입 보너스",
+      "expected_techniques": [
+        "HOMOGLYPH",
+        "TRANSPARENT",
+        "OFFSCREEN"
+      ],
+      "style": {
+        "color": "transparent",
+        "display": "none"
+      }
+    },
+    {
+      "id": "N01",
+      "name_ko": "숨김 예방 공지",
+      "content_label": "normal",
+      "text": "도박 예방: 카지노 광고를 발견하면 신고하세요.",
+      "expected_techniques": [],
+      "style": {
+        "display": "none"
+      }
+    },
+    {
+      "id": "N02",
+      "name_ko": "접근성 바로가기",
+      "content_label": "normal",
+      "text": "본문 바로가기",
+      "expected_techniques": [],
+      "style": {
+        "position": "absolute",
+        "left": "-9999px"
+      }
+    },
+    {
+      "id": "N03",
+      "name_ko": "교재명",
+      "content_label": "normal",
+      "text": "카지노 실무개론",
+      "expected_techniques": [],
+      "inspired_by": [
+        "N003"
+      ],
+      "style": {
+        "display": "none"
+      }
+    },
+    {
+      "id": "N04",
+      "name_ko": "지명",
+      "content_label": "normal",
+      "text": "금촌동은 야동동과 검산동을 포함한다.",
+      "expected_techniques": [],
+      "inspired_by": [
+        "N004"
+      ],
+      "style": {
+        "opacity": "0"
+      }
+    },
+    {
+      "id": "N05",
+      "name_ko": "정상 상품 브랜드",
+      "content_label": "normal",
+      "text": "바카라 전자밸브 무료 배송",
+      "expected_techniques": [],
+      "inspired_by": [
+        "N021"
+      ],
+      "style": {
+        "display": "none"
+      }
+    },
+    {
+      "id": "N06",
+      "name_ko": "광고를 비판적으로 인용한 기사",
+      "content_label": "normal",
+      "text": "카지노 가입 보너스로 현혹하는 광고를 취재했다.",
+      "expected_techniques": [],
+      "inspired_by": [
+        "N016",
+        "N023"
+      ],
+      "style": {
+        "opacity": "0"
+      }
+    },
+    {
+      "id": "N07",
+      "name_ko": "자모 교육",
+      "content_label": "normal",
+      "text": "ᄀ(기윽) ᄂ(니은) ᄃ(디읃)",
+      "expected_techniques": [],
+      "inspired_by": [
+        "N009"
+      ],
+      "style": {
+        "display": "none"
+      }
+    },
+    {
+      "id": "N08",
+      "name_ko": "광고 근거 없는 COM 문자열",
+      "content_label": "normal",
+      "text": "그리스 문자 교육 CΟΜ",
+      "expected_techniques": []
+    },
+    {
+      "id": "C01",
+      "name_ko": "위장·은닉 없는 일반 광고 문구",
+      "content_label": "ad_suspected",
+      "text": "카지노 가입 보너스",
+      "expected_techniques": [],
+      "notes_ko": "광고 문맥은 양성이지만 필수 4종 위장·은닉이 없으므로 result.json finding은 0건이다."
+    },
+    {
+      "id": "C02",
+      "name_ko": "HTML 코드처럼 보이는 일반 텍스트",
+      "content_label": "ad_suspected",
+      "text": "<a style=\"display:none;color:transparent\">slot gacor</a>",
+      "expected_techniques": [],
+      "render_as": "textContent",
+      "inspired_by": [
+        "A014"
+      ],
+      "notes_ko": "반드시 textContent로 넣는다. innerHTML로 실행하면 다른 사례가 된다. 광고 문맥 양성, 스타일 기법 음성."
+    }
+  ],
+  "runtime_scenarios": [
+    {
+      "id": "R01",
+      "name_ko": "중첩 iframe",
+      "case_ids": [
+        "H03",
+        "T03"
+      ],
+      "depth": 2,
+      "same_origin_only": true,
+      "expectation_ko": "최상위 페이지 URL과 두 단계 iframe 경로를 보존한다.",
+      "entry_path": "/runtime/R01"
+    },
+    {
+      "id": "R02",
+      "name_ko": "지연 댓글",
+      "case_ids": [
+        "J03"
+      ],
+      "delay_ms": 300,
+      "transport": "same_origin_GET",
+      "expectation_ko": "지연 렌더링 후 사례를 찾는다. 이 fixture는 settle-ms 500 이상으로 검증한다.",
+      "entry_path": "/runtime/R02"
+    },
+    {
+      "id": "R03",
+      "name_ko": "댓글 더보기",
+      "case_ids": [
+        "T01"
+      ],
+      "control_selector": "#load-more",
+      "control_type": "button",
+      "disable_after_click": true,
+      "expectation_ko": "사이트 profile controls에 선택자를 등록하면 클릭 뒤 사례를 찾는다.",
+      "entry_path": "/runtime/R03",
+      "scanner_profile": {
+        "controls": [
+          "#load-more"
+        ],
+        "max_actions": 1,
+        "scroll_steps": 2
+      }
+    },
+    {
+      "id": "R04",
+      "name_ko": "쿼리 페이지 이동",
+      "page_urls": [
+        "/board?page=1",
+        "/board?page=2"
+      ],
+      "case_ids": [
+        "H01",
+        "J01"
+      ],
+      "expectation_ko": "다른 쿼리를 다른 페이지로 탐색한다.",
+      "entry_path": "/runtime/R04"
+    },
+    {
+      "id": "R05",
+      "name_ko": "스크롤 후 정상 광고 문구",
+      "case_ids": [
+        "C01"
+      ],
+      "document_height_px": 4000,
+      "append_normal_text_on_scroll": true,
+      "expectation_ko": "일반 흐름 문구가 viewport 위로 올라가도 OFFSCREEN 결과를 만들지 않는다.",
+      "entry_path": "/runtime/R05"
+    },
+    {
+      "id": "R06",
+      "name_ko": "호출 제한",
+      "second_link_path": "/runtime/R06/must-not-request",
+      "expectation_ko": "429 무재시도·같은 origin 후속 요청 중단. 이미 출발한 요청은 별도로 구분해 기록한다.",
+      "entry_path": "/runtime/R06",
+      "entry_behavior": "HTTP 200, link to limited_path first and second_link_path second",
+      "limited_path": "/runtime/R06/limited",
+      "limited_response": {
+        "status": 429,
+        "headers": {
+          "Retry-After": "3600"
+        }
+      }
+    }
+  ],
+  "result_contract": {
+    "required_technique_codes": [
+      "HOMOGLYPH",
+      "JAMO",
+      "TRANSPARENT",
+      "OFFSCREEN"
+    ],
+    "one_finding_per_technique": true,
+    "deduplicate_by": [
+      "url",
+      "location",
+      "technique"
+    ],
+    "evidence_text": "실제 DOM 요소의 textContent 원문",
+    "location": "프레임 내 유일 CSS 선택자; iframe이면 전체 경로 포함",
+    "zero_findings_is_valid": true,
+    "plain_ad_without_target_technique": "필수 result.json에는 기록하지 않는다.",
+    "fixture_case_count": 30,
+    "baseline_expected_findings_without_runtime_scenarios": 23,
+    "baseline_expectations_apply_to": "/cases/{id} 페이지를 모두 한 번씩 점검한 경우. runtime_scenarios는 별도 실행·집계한다."
+  },
+  "acceptance_checks_ko": [
+    "각 case 페이지의 실제 요소 텍스트·계산 CSS·선택자 유일성을 확인한다.",
+    "복합 기법은 expected_techniques의 코드마다 별도 finding을 낸다.",
+    "정상 대조군과 기법 음성 대조군의 expected_techniques는 빈 배열이다.",
+    "HTML 문자열이 아니라 실제 스타일로 적용해야 하는 사례와 textContent 사례를 구분한다.",
+    "합성 fixture의 성공을 실제 사이트 정확도나 법적 불법성 판정으로 표현하지 않는다."
+  ],
+  "type_axis_ko": "필수 유형은 광고 주제가 아닌 위장·은닉 방법 4종이다. 광고 주제는 별도 분류한다.",
+  "content_categories": [
+    {
+      "code": "GAMBLING",
+      "name_ko": "도박 홍보 의심",
+      "terms": [
+        "카지노",
+        "슬롯",
+        "토토",
+        "바카라",
+        "파워볼"
+      ],
+      "role_ko": "기본 fixture의 주제. 실제 사이트 가입·베팅·외부 링크는 필요하지 않다."
+    },
+    {
+      "code": "ADULT",
+      "name_ko": "성인 콘텐츠 홍보 의심",
+      "terms": [
+        "성인방송",
+        "성인사이트",
+        "porn"
+      ],
+      "role_ko": "선택 확장. 텍스트만 사용하며 이미지·영상은 넣지 않는다. 필수 4종 코드와 별도 축이다."
+    }
+  ]
+}

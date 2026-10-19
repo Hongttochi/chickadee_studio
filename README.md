@@ -107,6 +107,7 @@ VM에서 `result.json`, `scan-report.json`만 가져온 뒤 화면의 **결과 �
 | [제출 체크리스트](docs/submission-checklist.md) | 신청 서류·실행 파일·최종 검증 |
 | [결과 스키마](schemas/result.schema.json) | 자체 개발용 검증 규칙, 공식 배포 파일 아님 |
 | [검출 예시](examples/result.sample.json) / [0건 예시](examples/result.empty.json) | 형식 설명용 가상 데이터 |
+| [모의 웹 제작 명세 JSON](examples/mock-site-spec.json) | 필수 4종·복합·정상 대조군 30개, 동적 탐색 시나리오 6개 |
 | [외부 구성요소](docs/third-party-notices.md) | 사용 도구와 라이선스 확인 경로 |
 
 ## 현재 한계
