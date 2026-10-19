@@ -108,6 +108,7 @@ VM에서 `result.json`, `scan-report.json`만 가져온 뒤 화면의 **결과 �
 | [결과 스키마](schemas/result.schema.json) | 자체 개발용 검증 규칙, 공식 배포 파일 아님 |
 | [검출 예시](examples/result.sample.json) / [0건 예시](examples/result.empty.json) | 형식 설명용 가상 데이터 |
 | [모의 웹 제작 명세 JSON](examples/mock-site-spec.json) | 필수 4종·복합·정상 대조군 30개, 동적 탐색 시나리오 6개 |
+| [모의 웹 실제 내용 JSON](examples/mock-site-content.json) | 실제 조사 원문 43건, 게시글·댓글·footer 등에 넣을 배치 예시 17개 |
 | [외부 구성요소](docs/third-party-notices.md) | 사용 도구와 라이선스 확인 경로 |
 
 ## 현재 한계
