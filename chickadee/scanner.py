@@ -161,6 +161,7 @@ class _State:
     blocked_requests: list = field(default_factory=list)
     retry_count: int = 0
     states_scanned: int = 0
+    stopped_origins: dict = field(default_factory=dict)
 
 
 async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> ScanOutcome:
@@ -212,6 +213,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> Scan
               "states_scanned": state.states_scanned, "retry_count": state.retry_count,
               "evidence_details": state.evidence_details, "actions": state.actions,
               "blocked_requests": state.blocked_requests,
+              "stopped_origins": {v["origin"]: v for v in state.stopped_origins.values()},
               "rules_version": rules.version, "profile": asdict(profile),
               "execution_mode": "network-explicit" if config.allow_network else "loopback-only",
               "limits": {"max_pages": config.max_pages, "timeout_sec": config.timeout_sec,
@@ -258,6 +260,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         target = normalize_url(request.url)
                         if not config.allow_network and not is_loopback(target):
                             reason = "로컬 전용 모드: 외부 자원 차단"
+                        elif origin(target) in state.stopped_origins:
+                            reason = "HTTP 429 수신으로 해당 origin 추가 요청 중단"
                         elif origin(target) not in allowed:
                             reason = "허용되지 않은 origin 차단"
                     except ValueError:
@@ -272,6 +276,18 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                 else:
                     await route.continue_()
             await context.route("**/*", guard)
+            def observe_response(response):
+                if response.status != 429:
+                    return
+                source = origin(response.url)
+                if source not in state.stopped_origins:
+                    parts = urlsplit(response.url)
+                    state.stopped_origins[source] = {"origin": urlunsplit((parts.scheme, parts.netloc, "", "", "")),
+                        "status": 429, "url": response.url,
+                        "retry_after": response.headers.get("retry-after"), "policy": "stop-origin"}
+                    state.errors.append({"url": response.url, "message": "HTTP 429: 같은 origin의 새 요청과 재시도를 중단했습니다."})
+                    emit({"kind": "warning", "message": "HTTP 429: 해당 사이트 요청을 중단합니다."})
+            context.on("response", observe_response)
             async def block_socket(socket):
                 await socket.close(reason="Chickadee: WebSocket connections are disabled")
             await context.route_web_socket("**/*", block_socket)
@@ -281,6 +297,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
             site = origin(queue[0])
             attempts = 0
             while queue and attempts < config.max_pages:
+                if site in state.stopped_origins:
+                    break
                 url = queue.popleft()
                 key = visit_key(url)
                 if key in visited:
@@ -333,7 +351,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                 finally:
                     await page.close()
                 state.remaining = len(queue)
-            if queue:
+            if queue and site not in state.stopped_origins:
                 state.errors.append({"url": config.entry_url, "message": "최대 페이지 수에 도달했습니다. 일부 결과입니다."})
         finally:
             await browser.close()
@@ -345,7 +363,8 @@ async def _navigate(page, url, config, state, emit):
     for attempt in range(config.retries + 1):
         try:
             response = await page.goto(url, wait_until="domcontentloaded", timeout=int(config.page_timeout_sec * 1000))
-            retryable = response and (response.status == 429 or response.status >= 500)
+            # Rate limiting ends collection for the origin; never retry 429.
+            retryable = response and response.status >= 500
             if not retryable or attempt == config.retries:
                 return response
             try:
@@ -373,6 +392,8 @@ _FINGERPRINT = """() => {
 async def _inspect_dynamic(page, config, profile, rules, site, script, state, emit):
     links, seen = [], set()
     async def snapshot():
+        if site in state.stopped_origins:
+            raise RuntimeError("HTTP 429 수신으로 해당 origin 수집을 중단했습니다.")
         if origin(page.url) != site:
             raise RuntimeError("설정된 동작이 다른 사이트로 이동하여 점검을 중단했습니다.")
         fingerprint = await page.evaluate(_FINGERPRINT)
@@ -478,14 +499,21 @@ _FRAME_PROBE = """el => {
         parts.unshift(tag + ':nth-of-type(' + (siblings.indexOf(node) + 1) + ')');
         if (document.querySelectorAll(parts.join(' > ')).length === 1) break;
     }
-    let opacity = 1, hidden = false;
+    let opacity = 1, hidden = false, clipped = false, fixed = false;
     for (let node = el; node; node = node.parentElement) {
         const s = getComputedStyle(node);
         opacity *= Number(s.opacity);
         hidden ||= s.display === 'none';
+        fixed ||= s.position === 'fixed';
+        const box = node.getBoundingClientRect();
+        clipped ||= (['hidden', 'clip'].includes(s.overflowX) && box.width <= 1) ||
+            (['hidden', 'clip'].includes(s.overflowY) && box.height <= 1);
     }
     const s = getComputedStyle(el), r = el.getBoundingClientRect();
     return {selector: parts.join(' > '), src: el.hasAttribute('src') ? el.src : null, transparent: opacity <= 0.01,
-        offscreen: hidden || ['hidden', 'collapse'].includes(s.visibility) ||
-        ((r.width > 0 || r.height > 0) && (r.right <= 0 || r.bottom <= 0))};
+        offscreen: hidden || clipped || ['hidden', 'collapse'].includes(s.visibility) ||
+        ((r.width > 0 || r.height > 0) && (r.right + (fixed ? 0 : scrollX) <= 0 ||
+            r.bottom + (fixed ? 0 : scrollY) <= 0 ||
+            (['absolute','fixed'].includes(s.position) && r.left + (fixed ? 0 : scrollX) > innerWidth + 2000) ||
+            (fixed && r.top > innerHeight + 2000)))};
 }"""

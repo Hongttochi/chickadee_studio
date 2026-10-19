@@ -73,13 +73,21 @@ DEFAULT_RULES = Rules.load()
 
 def _canonical(text, digits=False):
     result, flags = [], []
+    # A Latin r resembles the vowel in ㅋr/ㅂr only in this Hangul context.
+    # Do not globally turn an ordinary English r into a Hangul vowel.
+    mixed = set()
+    for i in range(len(text) - 2):
+        if text[i] in LEADS and text[i + 1] in "rR" and (JAMO_RE.match(text[i + 2]) or '\uac00' <= text[i + 2] <= '\ud7a3'):
+            mixed.update((i, i + 1))
     for index, char in enumerate(text):
         mapped = unicodedata.normalize("NFKC", char).translate(LOOKALIKES)
+        if index in mixed and char in "rR":
+            mapped = "ㅏ"
         if digits:
             mapped = mapped.translate(DIGITS)
         fragment = skeleton(mapped)
-        is_jamo = bool(JAMO_RE.match(char))
-        is_glyph = not is_jamo and mapped.casefold() != char.casefold() and any('a' <= c <= 'z' for c in mapped.casefold())
+        is_jamo = index not in mixed and bool(JAMO_RE.match(char))
+        is_glyph = index in mixed or (not is_jamo and mapped.casefold() != char.casefold() and any('a' <= c <= 'z' for c in mapped.casefold()))
         result.extend(fragment)
         flags.extend([(is_glyph, is_jamo, index)] * len(fragment))
     return "".join(result), flags
@@ -89,7 +97,8 @@ def _canonical(text, digits=False):
 def analyze(text: str, rules: Rules | None = None) -> dict:
     """Attach obfuscation only to characters inside an actual keyword match."""
     rules = rules or DEFAULT_RULES
-    matches = []
+    matches, contexts = [], []
+    boundaries = [m.start() for m in re.finditer(r"[\n!?;。！？]|\.(?=\s|$)", text)]
     for digits in (False, True):
         normalized, flags = _canonical(text, digits)
         for keyword in rules.keywords:
@@ -100,19 +109,31 @@ def analyze(text: str, rules: Rules | None = None) -> dict:
                 # Avoid matching English keywords in ordinary words (timeslot).
                 if needle.isascii() and ((first and 'a' <= text[first - 1].casefold() <= 'z') or (last + 1 < len(text) and 'a' <= text[last + 1].casefold() <= 'z')):
                     continue
-                before = max(text.rfind(sep, 0, first) for sep in ("\n", ".", "!", "?", ";"))
-                after_candidates = [text.find(sep, last + 1) for sep in ("\n", ".", "!", "?", ";")]
-                after = min((n for n in after_candidates if n >= 0), default=len(text))
+                before = max((n for n in boundaries if n < first), default=-1)
+                after = min((n for n in boundaries if n > last), default=len(text))
+                before, after = max(before, first - 161), min(after, last + 161)
                 context = skeleton(text[before + 1:after].translate(LOOKALIKES))
                 if any(skeleton(term) in context for term in rules.prevention):
                     continue
-                if not any(skeleton(term) in context for term in rules.promotion) and len(context) >= 160:
+                # A topic alone is also a book title, place name, brand or lesson.
+                # Require a local promotional signal, even for short text.
+                if not any(skeleton(term) in context for term in rules.promotion):
                     continue
+                contexts.append((before + 1, after))
                 matches.append({"keyword": keyword, "source_span": [first, last + 1],
                                 "homoglyph": any(f[0] for f in flags[start:end]),
                                 "jamo": any(f[1] for f in flags[start:end])})
     unique = {tuple(m["source_span"]) + (m["keyword"],): m for m in reversed(matches)}
-    return {"is_advertisement": bool(matches), "matches": list(unique.values()), "rules_version": rules.version}
+    contextual = []
+    for token in re.finditer(r"[^\W_]+", text):
+        raw = token.group()
+        if skeleton(raw.translate(LOOKALIKES)) != 'com' or raw.isascii():
+            continue
+        if any(start <= token.start() and token.end() <= end for start, end in contexts):
+            contextual.append({"source_span": list(token.span()), "original": raw,
+                               "canonical": "com", "reason": "같은 문장 내 광고 키워드·권유 문맥의 닮은꼴 COM 표기"})
+    return {"is_advertisement": bool(matches), "matches": list(unique.values()),
+            "contextual_homoglyphs": contextual, "rules_version": rules.version}
 
 
 def is_advertisement(text: str) -> bool:
@@ -124,7 +145,7 @@ def techniques(text: str, transparent: bool = False, offscreen: bool = False, ru
     if not analysis["is_advertisement"]:
         return []
     codes = []
-    if any(m["homoglyph"] for m in analysis["matches"]):
+    if any(m["homoglyph"] for m in analysis["matches"]) or analysis["contextual_homoglyphs"]:
         codes.append("HOMOGLYPH")
     if any(m["jamo"] for m in analysis["matches"]):
         codes.append("JAMO")

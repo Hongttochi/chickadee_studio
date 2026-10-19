@@ -1,6 +1,6 @@
 // Evaluated independently in every frame, including cross-origin frames.
 ({limit = 20000, textLimit = 20000} = {}) => {
-  const ignored = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'TITLE']);
+  const ignored = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'TITLE', 'TEXTAREA']);
   const all = [...document.querySelectorAll('body, body *')];
   const ids = new Map(all.map((e, i) => [e, i]));
   const styleCache = new WeakMap();
@@ -38,11 +38,21 @@
   }
   function appearance(el) {
     const cs = style(el);
-    let alpha = 1, hidden = false;
+    let alpha = 1, hidden = false, clipped = false, fixed = false;
+    const hidingAncestors = [];
     for (let parent = el; parent; parent = parent.parentElement) {
       const ps = style(parent);
       alpha *= Number(ps.opacity);
       hidden ||= ps.display === 'none';
+      fixed ||= ps.position === 'fixed';
+      const pr = parent.getBoundingClientRect();
+      const tinyClip = (['hidden', 'clip'].includes(ps.overflowX) && pr.width <= 1) ||
+        (['hidden', 'clip'].includes(ps.overflowY) && pr.height <= 1);
+      clipped ||= tinyClip;
+      if (hidingAncestors.length < 20 && (ps.display === 'none' || Number(ps.opacity) < 1 || tinyClip)) {
+        hidingAncestors.push({location: selector(parent), display: ps.display, opacity: ps.opacity,
+          width: ps.width, height: ps.height, overflow_x: ps.overflowX, overflow_y: ps.overflowY});
+      }
     }
     const color = rgba(cs.color);
     let background = [255, 255, 255, 1], imageBackground = false;
@@ -54,21 +64,28 @@
     const sameColor = !imageBackground && color && color[3] > 0.99 && color.slice(0, 3).every((v, i) => Math.abs(v - background[i]) < 1);
     const transparent = alpha <= 0.01 || (color && color[3] <= 0.01) || !!sameColor;
     const rect = el.getBoundingClientRect();
-    const outside = (rect.width > 0 || rect.height > 0) && (rect.right <= 0 || rect.bottom <= 0 ||
-      (['absolute', 'fixed'].includes(cs.position) && rect.left > innerWidth + 2000));
-    const offscreen = hidden || ['hidden', 'collapse'].includes(cs.visibility) || parseFloat(cs.fontSize) <= 1 || outside;
+    // Scrolling puts normal content above the viewport. Compare non-fixed
+    // elements with the document origin so this is not an evasion signal.
+    const dx = fixed ? 0 : scrollX, dy = fixed ? 0 : scrollY;
+    const outside = (rect.width > 0 || rect.height > 0) && (rect.right + dx <= 0 || rect.bottom + dy <= 0 ||
+      (['absolute', 'fixed'].includes(cs.position) && rect.left + dx > innerWidth + 2000) ||
+      (fixed && rect.top > innerHeight + 2000));
+    const offscreen = hidden || clipped || ['hidden', 'collapse'].includes(cs.visibility) || parseFloat(cs.fontSize) <= 1 || outside;
     const reasons = [];
     if (alpha <= .01) reasons.push('요소/조상 opacity <= 0.01');
     if (color && color[3] <= .01) reasons.push('글자색 alpha <= 0.01');
     if (sameColor) reasons.push('단색 배경과 글자색 일치');
     if (hidden) reasons.push('요소/조상 display:none');
+    if (clipped) reasons.push('요소/조상 0~1px 상자와 overflow:hidden/clip');
     if (['hidden', 'collapse'].includes(cs.visibility)) reasons.push('visibility:' + cs.visibility);
     if (parseFloat(cs.fontSize) <= 1) reasons.push('font-size <= 1px');
-    if (outside) reasons.push('화면 밖 좌표');
+    if (outside) reasons.push('문서 원점 밖 또는 멀리 배치한 고정/절대 좌표');
     return {transparent: !!transparent, offscreen: !!offscreen, reasons,
       style: {color: cs.color, background: cs.backgroundColor, effective_opacity: alpha,
         font_size: cs.fontSize, display: cs.display, visibility: cs.visibility,
         position: cs.position, rect: {x:rect.x, y:rect.y, width:rect.width, height:rect.height},
+        document_rect: {x:rect.x + scrollX, y:rect.y + scrollY, width:rect.width, height:rect.height},
+        scroll: {x:scrollX, y:scrollY}, hiding_ancestors: hidingAncestors,
         viewport: {width:innerWidth, height:innerHeight}}};
   }
   const elements = [];
@@ -101,7 +118,7 @@
   }
   let truncated = false;
   for (const el of all) {
-    if (ignored.has(el.tagName) || el.closest('script, style, noscript, template')) continue;
+    if (ignored.has(el.tagName) || el.closest('script, style, noscript, template, textarea')) continue;
     const info = textInfo.get(el);
     const text = info.text;
     if (!text.trim()) continue;

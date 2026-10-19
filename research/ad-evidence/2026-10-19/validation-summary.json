@@ -1,0 +1,75 @@
+{
+  "validated_at": "2026-10-19T04:46:40+00:00",
+  "total_records": 43,
+  "duplicate_ids": [],
+  "origin_counts": [
+    {
+      "origin": "observed",
+      "count": 38
+    },
+    {
+      "origin": "reported",
+      "count": 5
+    }
+  ],
+  "label_counts": [
+    {
+      "label": "ad_suspected",
+      "count": 20
+    },
+    {
+      "label": "normal",
+      "count": 23
+    }
+  ],
+  "status_counts": [
+    {
+      "status": "dom_verified",
+      "count": 28
+    },
+    {
+      "status": "reported_only",
+      "count": 5
+    },
+    {
+      "status": "visible_only",
+      "count": 10
+    }
+  ],
+  "missing_required": [],
+  "non_null_geometry_or_computed": [],
+  "direct_ad_techniques": [
+    {
+      "technique": "HOMOGLYPH",
+      "count": 4
+    },
+    {
+      "technique": "JAMO",
+      "count": 1
+    },
+    {
+      "technique": "OFFSCREEN",
+      "count": 3
+    }
+  ],
+  "reported_ad_techniques": [
+    {
+      "technique": "HOMOGLYPH",
+      "count": 1
+    },
+    {
+      "technique": "OFFSCREEN",
+      "count": 3
+    },
+    {
+      "technique": "TRANSPARENT",
+      "count": 2
+    }
+  ],
+  "notes": [
+    "Schema/JSON parsing and counts only; no detector execution or accuracy evaluation",
+    "Direct TRANSPARENT count is zero",
+    "Computed CSS and geometry not available",
+    "No synthetic fixtures"
+  ]
+}

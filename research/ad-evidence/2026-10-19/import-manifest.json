@@ -1,0 +1,48 @@
+{
+  "archive_name": "chickadee-research-2026-10-19 (2).zip",
+  "archive_sha256": "2cd31db5f9a63c392a3356d8e0e2a0940657afdeb95be2990cbf84319e0d39b7",
+  "imported_at": "2026-10-19",
+  "handling": "Untrusted research data; no source URLs visited and no source HTML or scripts executed during import. Original file bytes preserved.",
+  "files": [
+    {
+      "path": "research/ad-evidence/2026-10-19/README.md",
+      "bytes": 2096,
+      "sha256": "6e2a038818e888b4b7d76a8b1fca3f1ad3987657e0fb0966eee1c4ec2d292508"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19/collection-report.md",
+      "bytes": 12512,
+      "sha256": "d85be0dc316f4085de9b9b7066193cb091c541b1bb8d4210f411ad16d45fdf3c"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19/delta-report.md",
+      "bytes": 1630,
+      "sha256": "84ab726a2fe1ba2695bc2fc7ddc66199f19ba93cb60697c4080bbfdf722fac04"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19/negatives.jsonl",
+      "bytes": 39852,
+      "sha256": "278c9084532f709a0dc2d33a972ddac21e8f8e1040dc617242bb2cb21145238c"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19/review.md",
+      "bytes": 4731,
+      "sha256": "973e4a19c9ca9c862d1638dbc8e26119eb81d0d1618220841a87f874e38cf721"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19/samples.jsonl",
+      "bytes": 39956,
+      "sha256": "f68fc05fff4a1ec76738be1c93da9f0a534c8302e05ccd7b3c2cb519ad253618"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19/sources.md",
+      "bytes": 27415,
+      "sha256": "116eee22203ad6291eb47ca584396afbef70cec4dbb372bdd412f42cf7784c37"
+    },
+    {
+      "path": "research/ad-evidence/2026-10-19/validation-summary.json",
+      "bytes": 1316,
+      "sha256": "51fd19acc9b29dd3da78fe4d4091f3f36a78ebf2cdd315d2b86d206819e0cf04"
+    }
+  ]
+}

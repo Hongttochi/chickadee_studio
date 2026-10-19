@@ -35,6 +35,12 @@ class Fixture:
                 status = 200
                 if self.path == "/retry" and fixture.counts[self.path] == 1:
                     status, content = 503, "temporary failure"
+                elif self.path == "/rate":
+                    content = '<a href="/limited">first</a><a href="/after-limit">second</a>'
+                elif self.path == "/limited":
+                    status, content = 429, "rate limited"
+                elif self.path == "/ajax429":
+                    content = "<script>fetch('/limited').then(()=>fetch('/after-limit')).catch(()=>{});</script>"
                 elif self.path == "/retry":
                     content = "<p>ㅋㅏㅈㅣㄴㅗ 가입 보너스</p>"
                 elif self.path == "/comments":
@@ -65,6 +71,8 @@ class Fixture:
                 self.send_header('Content-Length', str(len(raw)))
                 if status == 503:
                     self.send_header('Retry-After', '0.5')
+                if status == 429:
+                    self.send_header('Retry-After', '3600')
                 self.end_headers()
                 self.wfile.write(raw)
         self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
@@ -140,6 +148,28 @@ class ProductionTests(unittest.TestCase):
             self.assertEqual(site.counts.get('writes', 0), 0)
             self.assertTrue(any(r['method']=='POST' for r in outcome.report['blocked_requests']))
             self.assertTrue(any(r['type']=='document' for r in outcome.report['blocked_requests']))
+
+    def test_429_stops_origin_without_retry_or_following_queued_pages(self):
+        with Fixture() as site:
+            outcome = asyncio.run(scan(ScanConfig(site.url+'rate', settle_ms=0, interval_sec=0, retries=3)))
+            self.assertEqual(outcome.report['status'], 'partial', outcome.report)
+            self.assertEqual(outcome.report['retry_count'], 0)
+            self.assertEqual(site.counts.get('/limited'), 1)
+            self.assertNotIn('/after-limit', site.counts)
+            self.assertEqual(outcome.report['pages_remaining'], 1)
+            self.assertEqual(outcome.report['stopped_origins'][site.url.rstrip('/')]['retry_after'], '3600')
+            self.assertFalse(any('최대 페이지' in e['message'] for e in outcome.report['errors']))
+            with tempfile.TemporaryDirectory() as folder:
+                path = outcome.save(Path(folder))
+                self.assertEqual(ScanOutcome.load(path).report['stopped_origins'], outcome.report['stopped_origins'])
+
+    def test_ajax_429_blocks_subsequent_requests_to_origin(self):
+        with Fixture() as site:
+            outcome = asyncio.run(scan(ScanConfig(site.url+'ajax429', settle_ms=200, interval_sec=0)))
+            self.assertNotEqual(outcome.report['status'], 'completed', outcome.report)
+            self.assertEqual(site.counts.get('/limited'), 1)
+            self.assertNotIn('/after-limit', site.counts)
+            self.assertTrue(outcome.report['stopped_origins'])
 
     def test_form_submission_control_is_rejected(self):
         with Fixture() as site, tempfile.TemporaryDirectory() as folder:

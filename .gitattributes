@@ -1,0 +1,2 @@
+# Preserve evidence bytes and original whitespace across Windows/Linux checkouts.
+research/ad-evidence/2026-10-19/* -text -whitespace
