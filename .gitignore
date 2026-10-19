@@ -6,6 +6,7 @@ venv/
 .pytest_cache/
 build/
 dist/
+*.spec
 
 # Local settings and credentials
 .env

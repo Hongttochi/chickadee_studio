@@ -1,0 +1,15 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>스타일 은닉 사례</title>
+<style>body{font:18px sans-serif;margin:50px;background:#fff;color:#183a35}.opacity{opacity:0}.transparent{color:transparent}.same{color:rgb(255,255,255)}.outside{position:absolute;left:-9999px}.small{font-size:1px}.none{display:none}iframe{width:600px;height:200px;border:1px solid #ccc}</style>
+<h1>스타일 은닉 게시글</h1><a href="/">목록</a>
+<p>광고 요소는 일부가 의도적으로 보이지 않습니다.</p>
+<div class="comments">
+<p id="opacity" class="opacity">카지노 가입 보너스 지급</p>
+<p id="transparent" class="transparent">슬롯 무료 체험 바로가기</p>
+<p id="same" class="same">바카라 가입 보너스 지급</p>
+<p id="outside" class="outside">토토 가입 보너스 지급</p>
+<p id="small" class="small">카지노 가입 보너스 지급</p>
+<p id="none" class="none">슬롯 무료 체험 바로가기</p>
+<div style="opacity:0"><p id="inherited" class="inherited">카지노 가입 보너스 지급</p></div>
+</div>
+<iframe src="/frame/outer" title="중첩 프레임 테스트"></iframe>
+</html>
