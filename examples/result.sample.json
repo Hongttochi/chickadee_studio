@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "topic": "TOPIC",
+    "entry_url": "https://example.go.kr/board/list",
+    "started_at": "2026-10-19T10:00:00+09:00",
+    "finished_at": "2026-10-19T10:00:12+09:00",
+    "elapsed_sec": 12,
+    "tool_version": "0.0.0-example"
+  },
+  "findings": [
+    {
+      "id": "f_001",
+      "url": "https://example.go.kr/board/view?id=1",
+      "is_violation": true,
+      "location": "div.article-body > span.promo:nth-of-type(1)",
+      "evidence_text": "ｃａｓｉｎｏ 가입 보너스 지급",
+      "technique": "HOMOGLYPH"
+    },
+    {
+      "id": "f_002",
+      "url": "https://example.go.kr/board/view?id=1",
+      "is_violation": true,
+      "location": "div.article-body > span.promo:nth-of-type(2)",
+      "evidence_text": "ㅋㅏㅈㅣㄴㅗ 가입 보너스 지급",
+      "technique": "JAMO"
+    },
+    {
+      "id": "f_003",
+      "url": "https://example.go.kr/board/view?id=2",
+      "is_violation": true,
+      "location": "div.comments > p.promo",
+      "evidence_text": "슬롯 가입 보너스 지급",
+      "technique": "TRANSPARENT"
+    },
+    {
+      "id": "f_004",
+      "url": "https://example.go.kr/board/view?id=2",
+      "is_violation": true,
+      "location": "iframe[src=\"https://example.go.kr/widget/notice\"] >>> div.wrap > span.promo",
+      "evidence_text": "카지노 가입 보너스 지급",
+      "technique": "OFFSCREEN"
+    }
+  ]
+}

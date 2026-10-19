@@ -1,0 +1,11 @@
+{
+  "meta": {
+    "topic": "TOPIC",
+    "entry_url": "https://example.go.kr/board/list",
+    "started_at": "2026-10-19T10:00:00+09:00",
+    "finished_at": "2026-10-19T10:00:05+09:00",
+    "elapsed_sec": 5,
+    "tool_version": "0.0.0-example"
+  },
+  "findings": []
+}

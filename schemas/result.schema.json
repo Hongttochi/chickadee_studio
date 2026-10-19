@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chickadee Bot result.json - development validation schema",
+  "description": "2026년 9월 모집요강을 바탕으로 작성한 자체 개발용 스키마입니다. 공식 배포 파일이 아닙니다. ID 고유성, 검출 중복, 선택자 정확성, 인코딩은 별도 검증이 필요합니다. docs/requirements.md 참고.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["meta", "findings"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["topic", "entry_url", "started_at", "finished_at", "elapsed_sec"],
+      "properties": {
+        "topic": { "const": "TOPIC" },
+        "entry_url": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" },
+        "elapsed_sec": { "type": "number", "minimum": 0 },
+        "tool_version": { "type": "string" }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "url", "is_violation", "location", "evidence_text", "technique"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri", "pattern": "^https?://" },
+          "is_violation": { "type": "boolean" },
+          "location": { "type": "string", "minLength": 1 },
+          "evidence_text": { "type": "string" },
+          "technique": { "enum": ["HOMOGLYPH", "JAMO", "TRANSPARENT", "OFFSCREEN"] }
+        }
+      }
+    }
+  }
+}

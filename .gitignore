@@ -1,0 +1,23 @@
+# Python development and packaging
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+build/
+dist/
+
+# Local settings and credentials
+.env
+.env.*
+!.env.example
+
+# Generated findings and collected content
+result.json
+result_extra.json
+artifacts/
+logs/
+screenshots/
+
+# Private application forms and submission packages
+submission-private/
