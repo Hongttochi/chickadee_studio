@@ -1,14 +1,25 @@
-## Chickadee Bot
+## Chickadee Studio
 
-<img width="300" height="300" alt="image" src="https://github.com/user-attachments/assets/2fe3aa9a-222b-4c1e-bb5a-b83734a70462" />
+<img width="150" height="150" alt="돋보기를 든 박새" src="desktop/assets/app-mark.png" />
 
-공공 웹사이트에서 문자로 위장하거나 CSS로 숨긴 불법광고 의심 요소를 찾는 점검 도구입니다. URL을 시작으로 하위 페이지·동적 댓글·설정한 읽기 버튼·iframe을 탐색하고, 판정 근거와 평가용 `result.json`을 제공합니다.
+공공 웹사이트의 광고 의심 요소를 검사하는 **Electron 기반 Windows 앱**입니다. 노드를 연결해 검사 구성을 바꾸고, 실제 검사 화면·방문 경로·HTTP 응답·판정 근거를 확인합니다. 필수 4종 결과는 `result.json`, 전체 내역은 고정 17칼럼 CSV와 보고서로 저장합니다.
 
-**0.4.1부터 실행 파일을 더블클릭하고 외부 URL을 입력하면 바로 검사할 수 있습니다.** Python·Docker·VM 설치나 별도 실행 옵션은 필요하지 않습니다. [Windows 빠른 실행](docs/quickstart-windows.md)을 참고하세요. 로컬 주소만 허용하려면 선택적으로 `--local-only`를 사용합니다.
+**[Windows v0.5.0 다운로드](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.5.0)** → ZIP 전체 압축 해제 → `Chickadee.exe` 실행. Python·Node.js·Docker 설치는 필요하지 않습니다. 외부 URL은 기본 허용이며 Chromium과 검사 프로그램을 함께 제공합니다. [Windows 빠른 실행](docs/quickstart-windows.md) · [데스크톱 앱](docs/desktop.md) · [디자인 기준](DESIGN.md)
 
 행정안전부·한국지능정보사회진흥원의 **2026 공공 웹사이트 불법광고 탐지 도구 개발 공모전**을 목표로 개발하고 있습니다. 현재 필수 4종의 규칙 기반 탐지·화면·파일 출력을 구현했으며, 최종 제출본 수준의 탐지 성능 검증은 남아 있습니다.
 
-## 구현한 기능
+## 데스크톱 작업 흐름
+
+- **검사 구성:** 대상 → 브라우저 → 콘텐츠 수집 → 필수 탐지/광고 분류 → 결과 출력. 포트 연결·해제와 하위 링크 설정이 실제 실행에 적용됩니다.
+- **실시간 화면:** 실제 Chromium 화면, 현재 URL, 단계와 HTTP 응답을 표시합니다. 대상 HTML을 Electron 표시 창에 삽입하지 않습니다.
+- **탐지 내역:** 필수 탐지·광고 의심 필터, 원문 검색, 근거 패널, CSV 저장을 제공합니다.
+- **탐색 경로:** 방문·대기 목록, 발견 출처, 응답 코드·추출 수치·시간을 확인합니다.
+- **검사 기록:** 실행마다 별도 폴더, 전체 이벤트 로그, 마지막 검사 화면과 최근 30개 실행을 보관합니다.
+- **디자인:** 로컬 Pretendard, 선명한 블루·짙은 네이비·최소 라운드와 README 기반 새 로고를 적용했습니다.
+
+![검사 구성 화면](docs/assets/studio-workflow.png)
+
+## 구현한 탐지 기능
 
 | 필수 탐지 유형 | 코드 | 처리하는 사례 |
 | --- | --- | --- |
@@ -33,7 +44,7 @@
 
 0.4.2에서는 게시판·상세 글을 일반 메뉴보다 먼저 방문하고, `data-url`·`data-href`·단순 `location.href` 주소를 추가로 수집합니다. 목록과 상세 글의 같은 광고 후보는 합치며, 실행 기록과 보고서에서 링크 발견 수·요소 수·방문 시간·본문 선택자 일치 여부를 확인할 수 있습니다. [실제 테스트 페이지 비교와 한계](docs/performance.md)를 참고하세요.
 
-![현재 점검 화면](docs/assets/app-dashboard.png)
+![탐지 근거 화면](docs/assets/studio-results.png)
 
 ## Dots 조사 자료 반영
 
@@ -43,7 +54,22 @@
 
 원본의 `dom_verified`는 정적 HTML 확인을 뜻하며 계산된 CSS·화면 검증과 다릅니다. 원본 HTML을 실행하지 않고 새로 작성한 로컬 fixture로 동작을 검증합니다. 실제 사이트 정확도는 아직 측정하지 않았습니다. [자료·코드 반영 내역과 한계](docs/research-integration.md)를 확인하세요.
 
-## 바로 실행
+## Electron 앱 실행과 빌드
+
+Windows 배포 폴더 전체를 해제하고 `Chickadee.exe`를 실행합니다. URL 입력 후 **검사 실행**, 합성 사례는 **데모 검사**를 사용합니다. 데모의 예상 필수 탐지는 14건입니다.
+
+개발 환경은 Windows x64, Python 3.12, Node.js 24 기준입니다. 루트의 Python 가상환경과 Chromium을 준비한 후:
+
+```powershell
+cd desktop
+npm ci
+npm run build
+npm start
+```
+
+루트의 `scripts/build-desktop.ps1`로 검사 프로그램과 Electron Windows 앱을 함께 빌드합니다. 생성 위치는 `artifacts/electron-0.5.0/win-unpacked/Chickadee.exe`입니다. `resources/engine`을 포함한 폴더 전체를 배포합니다. [개발·배포·검증 절차](docs/desktop.md)를 확인하세요.
+
+## Python CLI·Tkinter 호환 화면
 
 빌드된 Windows 패키지가 있으면 **`ChickadeeBot` 폴더 전체**를 해제하고 `ChickadeeBot.exe`를 실행합니다. **로컬 데모 준비 → 탐지 시작**을 누르면 예상 14건과 원문·위치를 확인할 수 있습니다.
 
@@ -75,7 +101,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 
 ## 결과 파일
 
-기본 저장 위치는 배포본에서는 실행 파일 옆 `results`, 소스 실행에서는 저장소의 `results`입니다. 화면에서 폴더를 바꾸거나 CLI에서 `--output-dir`를 지정할 수 있습니다.
+새 앱은 문서 폴더의 `Chickadee/results/실행별폴더`에 저장합니다. **검사 설정**에서 변경할 수 있습니다. Python CLI와 Tkinter 호환 화면은 기존 `results` 경로와 `--output-dir`를 사용합니다.
 
 | 파일 | 내용 |
 | --- | --- |
@@ -83,7 +109,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 | `scan-report.json` | 완료·일부 결과·중단·실패 상태, 점검 페이지, 오류·한도, 결과 파일 해시 |
 | `result.csv` | 필수 기법·광고 의심 후보를 고정된 17개 칼럼으로 저장. [칼럼 정의](docs/result-format.md) |
 
-새 실행 종료 시 이전 파일을 교체합니다. **일부 결과나 실패를 0건 정상 완료로 해석하지 마세요.** 일반 광고 후보는 보고서 `ad_candidates`와 CSV에 저장하며, 위장·은닉이 없는 문구는 필수 `result.json`에 넣지 않습니다. `result_extra.json`은 생성하지 않습니다.
+데스크톱 앱은 실행별 폴더에 저장합니다. Python CLI에서 같은 출력 경로를 재사용하면 이전 파일을 교체합니다. **일부 결과나 실패를 0건 정상 완료로 해석하지 마세요.** 일반 광고 후보는 보고서 `ad_candidates`와 CSV에 저장하며, 위장·은닉이 없는 문구는 필수 `result.json`에 넣지 않습니다. `result_extra.json`은 생성하지 않습니다.
 
 ## 실제 사이트 검사
 

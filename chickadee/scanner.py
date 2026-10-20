@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -106,6 +107,10 @@ class ScanConfig:
     profile_path: Path | None = None
     retries: int = 1
     interval_sec: float = 1.0
+    capture_previews: bool = False
+    follow_links: bool = True
+    detect_techniques: bool = True
+    detect_candidates: bool = True
 
     def __post_init__(self):
         normalize_url(self.entry_url)
@@ -121,6 +126,10 @@ class ScanConfig:
             raise ValueError("재시도는 0~3회, 요청 간격은 0~30초여야 합니다.")
         Rules.load(self.rules_path)
         SiteProfile.load(self.profile_path)
+        if not all(type(v) is bool for v in (self.capture_previews, self.follow_links, self.detect_techniques, self.detect_candidates)):
+            raise ValueError("검사 단계 설정은 true/false여야 합니다.")
+        if not (self.detect_techniques or self.detect_candidates):
+            raise ValueError("하나 이상의 분석 단계를 연결하세요.")
 
 
 @dataclass
@@ -202,6 +211,7 @@ class _State:
     finding_scopes: set = field(default_factory=set)
     page_diagnostics: list = field(default_factory=list)
     discovered_urls: int = 1
+    pending_urls: dict = field(default_factory=dict)
 
 
 async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> ScanOutcome:
@@ -250,6 +260,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> Scan
     }
     report = {"status": status, "pages_scanned": state.pages, "pages_remaining": state.remaining,
               "page_diagnostics": state.page_diagnostics,
+              "pending_urls": list(state.pending_urls.values()),
               "crawl_summary": {"discovered_urls": state.discovered_urls, "pages_scanned": len(state.pages),
                                 "queue_remaining": state.remaining, "scheduling": "content-first"},
               "errors": state.errors, "finding_count": len(state.findings),
@@ -262,7 +273,9 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> Scan
               "execution_mode": "network-explicit" if config.allow_network else "loopback-only",
               "limits": {"max_pages": config.max_pages, "timeout_sec": config.timeout_sec,
                          "page_timeout_sec": config.page_timeout_sec, "settle_ms": config.settle_ms,
-                         "retries": config.retries, "interval_sec": config.interval_sec}}
+                         "retries": config.retries, "interval_sec": config.interval_sec},
+              "enabled_stages": {"follow_links": config.follow_links, "techniques": config.detect_techniques,
+                                 "candidates": config.detect_candidates, "live_preview": config.capture_previews}}
     report["candidate_count"] = len(report["ad_candidates"])
     report["csv_schema_version"] = "1.0"
     return ScanOutcome(result, report)
@@ -330,6 +343,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         reason = "HTTP(S) 외 자원 차단"
                 if reason:
                     entry = {"url": request.url, "method": request.method, "type": request.resource_type, "reason": reason}
+                    emit({"kind": "request_blocked", **entry})
                     if len(state.blocked_requests) < 200:
                         state.blocked_requests.append(entry)
                     if essential and not any(e["url"] == request.url for e in state.errors):
@@ -350,6 +364,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     state.errors.append({"url": response.url, "message": "HTTP 429: 같은 origin의 새 요청과 재시도를 중단했습니다."})
                     emit({"kind": "warning", "message": "HTTP 429: 해당 사이트 요청을 중단합니다."})
             context.on("response", observe_response)
+            context.on("response", lambda response: emit({"kind": "http_response", "url": response.url,
+                "http_status": response.status, "method": response.request.method, "resource_type": response.request.resource_type}))
             async def block_socket(socket):
                 await socket.close(reason="Chickadee: WebSocket connections are disabled")
             await context.route_web_socket("**/*", block_socket)
@@ -357,6 +373,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
             entry = normalize_url(config.entry_url)
             queue = [(0, next(sequence), entry)]
             queued = {visit_key(entry)}
+            parents = {visit_key(entry): None}
+            state.pending_urls[visit_key(entry)] = {'url': entry, 'discovered_from': None, 'priority': 0}
             visited = set()
             site = origin(entry)
             attempts = 0
@@ -365,6 +383,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     break
                 _, _, url = heapq.heappop(queue)
                 key = visit_key(url)
+                state.pending_urls.pop(key, None)
                 if key in visited:
                     continue
                 visited.add(key)
@@ -375,10 +394,13 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                 emit({"kind": "status", "message": f"{attempts}/{config.max_pages} 페이지 점검 중: {url}"})
                 emit({"kind": "progress", "pages_scanned": len(state.pages), "attempts": attempts,
                       "queue_remaining": len(queue), "max_pages": config.max_pages})
+                emit({"kind": "phase", "stage": "browser", "action": "navigate", "url": url,
+                      "message": "페이지로 이동하고 HTML 응답을 확인합니다."})
                 page = await context.new_page()
                 page_started = time.monotonic()
                 diagnostic = {"url": url, "priority": navigation_priority(url), "status": "inspecting",
-                              "links_discovered": 0, "links_queued": 0, "elements_examined": 0}
+                              "links_discovered": 0, "links_queued": 0, "elements_examined": 0,
+                              "discovered_from": parents.get(key)}
                 state.page_diagnostics.append(diagnostic)
                 findings_before, candidates_before = len(state.findings), len(state.ad_candidates)
                 page.on("dialog", lambda dialog: dialog.dismiss())
@@ -390,6 +412,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         diagnostic["final_url"] = page.url
                         diagnostic["http_status"] = response.status if response else None
                         diagnostic["title"] = await page.title()
+                        emit({"kind": "phase", "stage": "browser", "action": "response", "url": page.url,
+                              "http_status": diagnostic["http_status"], "message": "응답 수신 · 렌더링 준비", "title": diagnostic['title']})
                         if response and response.status >= 400:
                             raise RuntimeError(f"HTTP {response.status}")
                         if response and "html" not in response.headers.get("content-type", "text/html"):
@@ -408,7 +432,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     diagnostic["status"] = "scanned"
                     if page.url not in state.pages:
                         state.pages.append(page.url)
-                    for link in links:
+                    for link in links if config.follow_links else []:
                         try:
                             candidate = normalize_url(link)
                             candidate_key = visit_key(candidate)
@@ -421,8 +445,12 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                                 raise RuntimeError("탐색 URL 안전 한도 20000개에 도달했습니다.")
                             heapq.heappush(queue, (navigation_priority(candidate), next(sequence), candidate))
                             queued.add(candidate_key)
+                            parents[candidate_key] = page.url
                             diagnostic["links_queued"] += 1
                             state.discovered_urls = len(queued)
+                            discovery = {'url': candidate, 'discovered_from': page.url, 'priority': navigation_priority(candidate)}
+                            state.pending_urls[candidate_key] = discovery
+                            emit({'kind': 'url_discovered', **discovery})
                 except Exception as exc:
                     diagnostic["status"] = "error"
                     diagnostic["error"] = str(exc) or "페이지 제한시간 초과"
@@ -490,7 +518,17 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
         if fingerprint['signature'] not in seen:
             seen.add(fingerprint['signature'])
             state.states_scanned += 1
-            links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules, profile.content_selector))
+            emit({"kind": "phase", "stage": "collector", "action": "extract", "url": page.url,
+                  "message": "DOM·본문·계산된 CSS·링크를 수집합니다."})
+            links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules,
+                                              profile.content_selector, config.detect_techniques, config.detect_candidates))
+            if config.capture_previews:
+                try:
+                    pixels = await page.screenshot(type='jpeg', quality=45, timeout=1500)
+                    emit({"kind": "preview", "url": page.url, "title": await page.title(),
+                          "data_url": 'data:image/jpeg;base64,' + base64.b64encode(pixels).decode('ascii')})
+                except Exception:
+                    emit({"kind": "preview_unavailable", "url": page.url, "message": "화면 미리보기를 생성하지 못했습니다. 본문 검사는 계속합니다."})
             if page.url not in state.pages:
                 state.pages.append(page.url)
         return fingerprint
@@ -500,6 +538,8 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
     previous = await snapshot()
     quiet = 0
     for step in range(profile.scroll_steps):
+        emit({"kind": "phase", "stage": "collector", "action": "scroll", "url": page.url,
+              "message": f"스크롤 {step + 1}: 지연 로딩과 숨은 콘텐츠 변경을 확인합니다."})
         await page.evaluate("window.scrollTo(0, document.body?.scrollHeight || 0)")
         await page.wait_for_timeout(config.settle_ms)
         current = await snapshot()
@@ -534,6 +574,8 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
             raise ValueError(f"폼 제출 또는 일반 링크는 읽기용 클릭 대상이 아닙니다: {selector}")
         before = await page.evaluate(_FINGERPRINT)
         state.actions.append({"url": page.url, "selector": selector, "index": action_index + 1})
+        emit({"kind": "phase", "stage": "collector", "action": "read_control", "url": page.url,
+              "selector": selector, "message": "설정된 읽기 버튼을 실행합니다."})
         await control.click(timeout=min(3000, int(config.page_timeout_sec * 1000)), no_wait_after=True)
         await page.wait_for_timeout(config.settle_ms)
         after = await snapshot()
@@ -546,7 +588,8 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
     return list(dict.fromkeys(links))
 
 
-async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit, rules=None, content_selector=None):
+async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit, rules=None, content_selector=None,
+                         detect_techniques=True, detect_candidates=True):
     data = await frame.evaluate(script, {"contentSelector": content_selector})
     if state.page_diagnostics:
         diagnostic = state.page_diagnostics[-1]
@@ -557,7 +600,10 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
     if data["truncated"] or data["links_truncated"]:
         state.errors.append({"url": page_url, "message": "요소·텍스트·링크 수집 한도 초과: 일부 콘텐츠가 누락되었습니다."})
     links = data["links"]
-    for hit in classify_elements(data["elements"], inherited, rules):
+    if detect_techniques:
+        emit({"kind": "phase", "stage": "techniques", "action": "analyze", "url": page_url,
+              "message": f"{len(data['elements'])}개 요소의 문자 위장·자모·투명·화면 밖 은닉을 검사합니다.", "frame_depth": prefix.count(' >>> ')})
+    for hit in classify_elements(data["elements"], inherited, rules) if detect_techniques else []:
         location = prefix + hit["location"]
         scope = prefix + (hit.get("content_scope") or hit["location"])
         state.finding_scopes.add((page_url, scope))
@@ -572,8 +618,11 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
             "style_reasons": hit.get("reasons", []), "computed_style": hit.get("computed_style", {}),
             "frame_flags": inherited, "action_sequence": list(state.actions),
             "scope_location": scope, "observed_at": datetime.now().astimezone().isoformat()}
-        emit({"kind": "finding", "finding": finding})
-    for hit in classify_candidates(data["elements"], rules):
+        emit({"kind": "finding", "finding": finding, "detail": state.evidence_details[finding['id']]})
+    if detect_candidates:
+        emit({"kind": "phase", "stage": "candidates", "action": "analyze", "url": page_url,
+              "message": "광고 주제·권유 문맥·정상 대조 문맥을 분석합니다."})
+    for hit in classify_candidates(data["elements"], rules) if detect_candidates else []:
         scope = prefix + (hit.get("content_scope") or hit["location"])
         key = page_url, scope, hit["category"]
         if (page_url, scope) in state.finding_scopes or key in state.candidate_keys:
@@ -601,7 +650,8 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
             if probe["src"] is not None:
                 frame_selector += "[src=" + json.dumps(probe["src"], ensure_ascii=False) + "]"
             await child.wait_for_load_state("domcontentloaded", timeout=1500)
-            links.extend(await _inspect_frame(child, prefix + frame_selector + " >>> ", flags, page_url, script, state, emit, rules))
+            links.extend(await _inspect_frame(child, prefix + frame_selector + " >>> ", flags, page_url, script, state, emit, rules,
+                                              None, detect_techniques, detect_candidates))
         except Exception as exc:
             state.errors.append({"url": page_url, "message": f"iframe 점검 실패 ({child.url}): {exc}"})
     return links

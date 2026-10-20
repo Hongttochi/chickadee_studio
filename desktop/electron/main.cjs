@@ -1,0 +1,244 @@
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  shell,
+  clipboard,
+  screen,
+} = require("electron");
+const path = require("node:path");
+const fs = require("node:fs/promises");
+const { fileURLToPath } = require("node:url");
+const { Backend } = require("./backend.cjs");
+let window,
+  backend,
+  outputRoot,
+  currentPath,
+  closing = false;
+app.setName("Chickadee");
+app.setAppUserModelId("org.chickadee.inspector");
+const root = path.resolve(__dirname, "../..");
+const smoke = process.env.CHICKADEE_TEST_DATA;
+if (smoke) app.setPath("userData", smoke);
+const page = path.resolve(__dirname, "../dist/index.html");
+const workflowPath = () => path.join(app.getPath("userData"), "workflow.json");
+function authorize(event) {
+  try {
+    if (
+      event.senderFrame !== window.webContents.mainFrame ||
+      fileURLToPath(event.senderFrame.url) !== page
+    )
+      throw new Error();
+  } catch (_) {
+    throw new Error("허용되지 않은 앱 요청입니다.");
+  }
+}
+function handler(name, callback) {
+  ipcMain.handle("desktop:" + name, (event, ...args) => {
+    authorize(event);
+    return callback(...args);
+  });
+}
+async function initialize() {
+  outputRoot = path.join(app.getPath("documents"), "Chickadee", "results");
+  if (smoke) outputRoot = path.join(smoke, "results");
+  const area = screen.getPrimaryDisplay().workAreaSize;
+  window = new BrowserWindow({
+    width: Math.min(1530, area.width - 24),
+    height: Math.min(990, area.height - 24),
+    minWidth: Math.min(1120, area.width - 24),
+    minHeight: Math.min(700, area.height - 24),
+    backgroundColor: "#f2f4f6",
+    title: "Chickadee",
+    icon: path.join(__dirname, "../assets/app.ico"),
+    titleBarStyle: "hidden",
+    titleBarOverlay: { color: "#ffffff", symbolColor: "#4b5563", height: 40 },
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      backgroundThrottling: false,
+    },
+  });
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event) => event.preventDefault());
+  window.webContents.session.setPermissionRequestHandler(
+    (_contents, _permission, callback) => callback(false),
+  );
+  window.webContents.session.setPermissionCheckHandler(() => false);
+  const executable = app.isPackaged
+    ? path.join(process.resourcesPath, "engine", "ChickadeeEngine.exe")
+    : path.join(root, ".venv", "Scripts", "python.exe");
+  const args = app.isPackaged
+    ? ["--data-dir", app.getPath("userData")]
+    : ["-m", "chickadee.bridge", "--data-dir", app.getPath("userData")];
+  backend = new Backend(
+    executable,
+    args,
+    {
+      cwd: app.isPackaged ? process.resourcesPath : root,
+      env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+    },
+    (event) => {
+      if (event.kind === "done") currentPath = event.path;
+      if (window && !window.isDestroyed())
+        window.webContents.send("desktop:event", event);
+    },
+  );
+  handler("state", async () => ({
+    ...(await backend.request("state")),
+    outputRoot,
+    workflow: await fs
+      .readFile(workflowPath(), "utf8")
+      .then(JSON.parse)
+      .catch(() => null),
+  }));
+  handler("start", async (options) => {
+    if (!options || typeof options !== "object")
+      throw new Error("검사 설정이 필요합니다.");
+    const keys = [
+      "url",
+      "max_pages",
+      "timeout_sec",
+      "settle_ms",
+      "interval_sec",
+      "profile",
+      "preview",
+      "demo",
+      "workflow",
+    ];
+    const clean = Object.fromEntries(
+      keys
+        .filter((key) => Object.hasOwn(options, key))
+        .map((key) => [key, options[key]]),
+    );
+    currentPath = null;
+    return backend.request("start", { ...clean, output_root: outputRoot });
+  });
+  handler("stop", () => backend.request("stop"));
+  handler("load", async () => {
+    const selected = await dialog.showOpenDialog(window, {
+      title: "검사 결과 불러오기",
+      filters: [{ name: "result.json", extensions: ["json"] }],
+      properties: ["openFile"],
+    });
+    if (selected.canceled) return null;
+    const value = await backend.request("load", {
+      path: selected.filePaths[0],
+    });
+    currentPath = value.path;
+    return value;
+  });
+  handler("history", async (id) => {
+    const state = await backend.request("state");
+    const entry = state.history.find((item) => item.id === id);
+    if (!entry) throw new Error("검사 기록을 찾을 수 없습니다.");
+    const value = await backend.request("load", { path: entry.path });
+    currentPath = value.path;
+    return value;
+  });
+  handler("export", async () => {
+    const selected = await dialog.showSaveDialog(window, {
+      defaultPath: "chickadee-results.csv",
+      filters: [{ name: "CSV", extensions: ["csv"] }],
+    });
+    if (selected.canceled) return null;
+    return backend.request("export", { path: selected.filePath });
+  });
+  handler("choose-folder", async () => {
+    const selected = await dialog.showOpenDialog(window, {
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (!selected.canceled) outputRoot = selected.filePaths[0];
+    return outputRoot;
+  });
+  handler("open-folder", async () => {
+    const folder = currentPath ? path.dirname(currentPath) : outputRoot;
+    await fs.mkdir(folder, { recursive: true });
+    return shell.openPath(folder);
+  });
+  handler("copy", (text) => {
+    if (typeof text !== "string" || text.length > 1000000)
+      throw new Error("복사할 내용이 너무 큽니다.");
+    clipboard.writeText(text);
+  });
+  handler("save-workflow", async (value) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      JSON.stringify(value).length > 100000
+    )
+      throw new Error("워크플로 형식이 올바르지 않습니다.");
+    await fs.mkdir(path.dirname(workflowPath()), { recursive: true });
+    const temporary = workflowPath() + ".tmp";
+    await fs.writeFile(temporary, JSON.stringify(value, null, 2), "utf8");
+    await fs.rename(temporary, workflowPath());
+    return true;
+  });
+  handler("export-workflow", async (value) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      JSON.stringify(value).length > 100000
+    )
+      throw new Error("구성 형식이 올바르지 않습니다.");
+    const selected = await dialog.showSaveDialog(window, {
+      defaultPath: "chickadee-workflow.json",
+      filters: [{ name: "검사 구성", extensions: ["json"] }],
+    });
+    if (selected.canceled) return null;
+    await fs.writeFile(
+      selected.filePath,
+      JSON.stringify(value, null, 2),
+      "utf8",
+    );
+    return { path: selected.filePath };
+  });
+  handler("load-workflow", async () => {
+    const selected = await dialog.showOpenDialog(window, {
+      title: "워크플로 JSON 불러오기",
+      filters: [{ name: "Workflow", extensions: ["json"] }],
+      properties: ["openFile"],
+    });
+    if (selected.canceled) return null;
+    const stat = await fs.stat(selected.filePaths[0]);
+    if (stat.size > 100000)
+      throw new Error("워크플로는 100KB 이하여야 합니다.");
+    return JSON.parse(await fs.readFile(selected.filePaths[0], "utf8"));
+  });
+  window.webContents.on("before-input-event", (event, input) => {
+    if (input.key === "F12" && !app.isPackaged) {
+      window.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+  await window.loadFile(page);
+}
+const single = app.requestSingleInstanceLock();
+if (!single) app.quit();
+else {
+  app.on("second-instance", () => {
+    if (window) {
+      window.show();
+      window.focus();
+    }
+  });
+  app
+    .whenReady()
+    .then(initialize)
+    .catch((error) => {
+      dialog.showErrorBox("Chickadee", error.message);
+      app.quit();
+    });
+  app.on("window-all-closed", () => app.quit());
+  app.on("before-quit", (event) => {
+    if (backend && !closing) {
+      event.preventDefault();
+      closing = true;
+      backend.close().finally(() => app.quit());
+    }
+  });
+}

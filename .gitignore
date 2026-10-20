@@ -7,6 +7,9 @@ venv/
 build/
 dist/
 *.spec
+!scripts/engine.spec
+node_modules/
+desktop/dist/
 
 # Local settings and credentials
 .env

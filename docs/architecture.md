@@ -2,11 +2,13 @@
 
 ![GPT로 생성한 아키텍처](assets/architecture-gpt.png)
 
-현재 코드는 0.4.2이며, 그림은 이전 버전의 개념도입니다. 외부 사이트를 직접 검사하거나 저장된 결과를 불러올 수 있습니다. 그림의 VM은 사용자가 별도로 구성하는 실행 환경입니다. 프로그램에 VM 생성·자동 격리·원격 VM 접속 기능이 들어 있다는 뜻이 아닙니다.
+현재 코드는 0.5.0이며, 그림은 이전 버전의 개념도입니다. Electron 화면 → 제한된 IPC → Python JSONL 브리지 → Playwright Chromium → 탐지·저장 순서로 실행합니다. 외부 사이트를 직접 검사하거나 저장된 결과를 불러올 수 있습니다. 그림의 VM은 사용자가 별도로 구성하는 실행 환경입니다. 프로그램에 VM 생성·자동 격리·원격 VM 접속 기능이 들어 있다는 뜻이 아닙니다.
 
 | 구성 | 구현 | 역할 |
 | --- | --- | --- |
-| 화면 / CLI | `chickadee/gui.py`, `__main__.py` | 입력, 중단, 결과 불러오기, 유형·원문·근거 조회 |
+| Windows 화면 | `desktop/src`, `desktop/electron` | React Flow 구성, 실제 페이지 이미지·단계·진단, 제한된 IPC |
+| 검사 브리지 | `bridge.py`, `workflow.py` | JSONL 자식 프로세스, 그래프 검증, 단계 선택, 실행별 저장과 기록 |
+| 호환 화면 / CLI | `chickadee/gui.py`, `__main__.py` | Tkinter 입력, 중단, 결과 불러오기, 유형·원문·근거 조회 |
 | 탐색 제어 | `scanner.py` | 게시판·상세 글 우선순위 큐, 재시도, 한도, 지연 로딩·스크롤·읽기 동작, 페이지별 진단 |
 | 요청 정책 | `scanner.py` | 외부 URL 기본 허용·선택적 --local-only, origin 허용 목록, GET/HEAD, 자원·WebSocket 차단 |
 | DOM 수집 | `extract.js`, `_inspect_frame` | 원문, 선택자, CSS·좌표, 중첩 iframe 경로 |

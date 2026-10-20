@@ -1,14 +1,14 @@
 # Windows 빠른 실행
 
 1. ZIP 파일을 전부 압축 해제합니다.
-2. `ChickadeeBot.exe`를 더블클릭합니다. `_internal` 폴더를 같은 위치에 둡니다.
-3. 검사할 URL을 입력하고 **점검 시작**을 누릅니다. 외부 사이트도 기본으로 허용됩니다.
-4. 결과는 실행 파일 옆 `results` 폴더의 `result.json`, `result.csv`, `scan-report.json`으로 저장됩니다.
+2. `Chickadee.exe`를 더블클릭합니다. `resources` 등 함께 들어 있는 파일과 폴더를 유지합니다.
+3. 검사할 URL을 입력하고 **검사 실행**을 누릅니다. **데모 검사**로 로컬 예제를 먼저 확인할 수도 있습니다.
+4. 결과는 기본적으로 `문서/Chickadee/results` 아래 실행별 폴더에 `result.json`, `result.csv`, `scan-report.json`으로 저장됩니다. **저장 폴더**에서 실제 위치를 확인합니다.
 
 Python·Docker·VM 설치나 별도 옵션은 필요하지 않습니다.
 
-`RUN_TEST_SITE.cmd`를 실행하면 사용자 테스트 게시판 주소와 사이트 설정이 미리 입력됩니다. **점검 시작**을 누르면 검사합니다. `RUN_DEMO.cmd`는 로컬 데모를 준비합니다.
+**검사 구성**에서 노드를 연결하거나 끊으면 실제 검사 단계가 변경됩니다. 검사 중인 페이지 이미지, 탐색 경로, HTTP 응답과 탐지 근거는 앱에서 확인할 수 있습니다.
 
-로컬 주소만 검사하려면 선택적으로 `--local-only` 옵션을 사용합니다.
+이 배포본은 Windows x64용 Electron 앱입니다. 이전 `ChickadeeBot.exe`와 실행 옵션은 Python/Tkinter 호환판에 해당합니다.
 
-[저장 형식](result-format.md) · [매뉴얼](manual.md)
+[데스크톱 앱 안내](desktop.md) · [저장 형식](result-format.md) · [Python 호환판 매뉴얼](manual.md)
