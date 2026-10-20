@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="desktop/assets/app-mark.png" width="112" alt="돋보기를 든 박새, Chickadee 로고" />
+<img width="500" height="180" alt="치카디 미니멀 테크 로고" src="https://github.com/user-attachments/assets/00fe0c7d-f628-4bf1-bf8a-f10b9b3c4f0c" />
 
 # Chickadee Studio
 
