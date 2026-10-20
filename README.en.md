@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="desktop/assets/app-mark.png" width="112" alt="Chickadee logo: a bird holding a magnifying glass" />
+<img width="500" height="180" alt="치카디 미니멀 테크 로고" src="https://github.com/user-attachments/assets/00fe0c7d-f628-4bf1-bf8a-f10b9b3c4f0c" />
 
 # Chickadee Studio
 
