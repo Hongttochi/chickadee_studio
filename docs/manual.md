@@ -1,6 +1,6 @@
 # 실행·빌드 및 사용설명서
 
-> 이 문서는 Python CLI·Tkinter 호환판 기준입니다. v0.6.1 Windows Electron 앱은 [빠른 실행](quickstart-windows.md)과 [데스크톱 앱 안내](desktop.md)를 참고하세요.
+> 이 문서는 Python CLI·Tkinter 호환판 기준입니다. v0.6.2 Windows Electron 앱은 [빠른 실행](quickstart-windows.md)과 [데스크톱 앱 안내](desktop.md)를 참고하세요.
 
 **결과 저장 위치:** 실행 파일 옆 `results` 폴더에 `result.json`, `scan-report.json`, `result.csv`를 저장합니다. 소스 실행은 저장소의 `results`가 기본값입니다. 화면의 **저장 폴더 설정** 또는 `--output-dir`로 바꿀 수 있습니다. 세 파일은 실행 종료 시 교체됩니다. 일반 광고 후보는 보고서 `ad_candidates`와 CSV에 별도로 담습니다. `result_extra.json`은 생성하지 않습니다. [고정 17개 칼럼](result-format.md)과 [빠른 실행](quickstart-windows.md)을 참고하세요.
 

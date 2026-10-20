@@ -1,4 +1,4 @@
-# Chickadee Studio 0.6.1
+# Chickadee Studio 0.6.2
 
 Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. 사용자에게 Node.js·Python·Docker 설치를 요구하지 않습니다. 디자인 기준과 참고 제품은 [DESIGN.md](../DESIGN.md)에 기록합니다.
 
@@ -53,9 +53,17 @@ Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. �
 
 루트의 Python 3.12 가상환경에 requirements-dev.txt를 설치하고 Chromium headless shell을 준비합니다. desktop에서 Node.js 24로 npm ci, npm run build, npm start를 실행합니다. scripts/build-desktop.ps1은 Python 프로그램과 Electron 앱을 함께 빌드합니다.
 
-scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복된 headed Chromium은 제외합니다. artifacts/electron-0.6.1/win-unpacked 전체를 배포합니다. exe 한 파일만 배포하면 안 됩니다.
+scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복된 headed Chromium은 제외합니다. artifacts/electron-0.6.2/win-unpacked 전체를 배포합니다. exe 한 파일만 배포하면 안 됩니다.
 
 빌드 후 루트에서 `.venv/Scripts/python.exe scripts/package-desktop.py`를 실행하면 사용법·프런트엔드 라이선스와 함께 ZIP·SHA-256 파일을 만듭니다. ZIP을 다시 읽어 각 파일의 CRC도 검사합니다.
+
+### GitHub 자동 릴리스
+
+`.github/workflows/release.yml`은 main·master push 또는 수동 실행으로 Windows x64 프리릴리스를 만듭니다. 현재 앱은 Windows 경로와 실행 파일을 사용하므로 macOS 패키지는 생성하지 않습니다.
+
+새 버전은 `desktop/package.json`과 `desktop/package-lock.json`의 앱 버전, `chickadee/__init__.py`, package.json의 Electron·엔진 출력 경로에 함께 반영합니다. `docs/releases/<버전>.md`에 변경 사항을 작성하고 다운로드 문서도 갱신합니다. Python 3.12에서 `python scripts/release.py version`으로 일치를 확인할 수 있습니다.
+
+이미 같은 버전의 태그나 릴리스가 있으면 빌드·게시를 건너뜁니다. 새 버전이면 Python·데스크톱 테스트, Windows 패키징, 패키지 실행 통합 검사, ZIP·체크섬 검증을 거쳐 해당 실행의 커밋에 `v<버전>` 태그로 게시합니다. 테스트나 검증이 실패하면 게시하지 않습니다. 재실행으로 기존 태그·asset을 덮어쓰지 않습니다.
 
 검증은 루트의 unittest discover, desktop의 npm test와 npm run smoke를 사용합니다. CHICKADEE_PACKAGED_EXE에 실행 파일 절대 경로를 지정하면 배포본으로 통합 검사합니다. 별도 테스트 폴더에서 실제 데모·화면·CSV·연결선 해제와 재연결을 확인합니다.
 
