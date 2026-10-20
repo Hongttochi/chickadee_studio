@@ -1,4 +1,4 @@
-"""Groq-only evidence agent. Model requests can only read collected evidence."""
+"""Groq-only agent with bounded, host-validated follow-up collection."""
 from copy import deepcopy
 import json
 import os
@@ -7,6 +7,7 @@ from threading import Event
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
 from jsonschema import Draft202012Validator
 from .detection import analyze_element
@@ -100,6 +101,8 @@ class EvidenceAgent:
         self.ledger = deepcopy(ledger or {'calls': 0, 'charged_tokens': 0, 'usage_tokens': 0})
         if any(type(self.ledger.get(k)) is not int or self.ledger[k] < 0 for k in ('calls', 'charged_tokens', 'usage_tokens')):
             raise ValueError('Groq 사용량 기록 형식 오류')
+        if type(self.ledger.get('site_visits', 0)) is not int or not 0 <= self.ledger.get('site_visits', 0) <= 6:
+            raise ValueError('추가 탐색 사용량 기록 형식 오류')
         for name in ('token_limit', 'call_limit'):
             self.ledger[name] = min(self.ledger.get(name, self.config[name]), self.config[name])
         self.started = time.monotonic()
@@ -144,6 +147,89 @@ class EvidenceAgent:
             raise ValueError('Groq 응답이 불완전하거나 거부되었습니다.') from None
 
     def investigate(self, packet):
+        return self.investigate_with_exploration(packet)
+
+    def investigate_with_exploration(self, packet, options=None, explore=None):
+        result = self._investigate_collected(packet)
+        if not explore or not options or not (result['assessment'] == 'uncertain' or
+                result['recommended_next_action'] == 'collect_more_evidence' or result['missing_evidence']):
+            return result
+        if self.ledger['call_limit'] - self.ledger['calls'] < 2:
+            result['exploration_status'] = 'budget_exhausted'
+            return result
+        try:
+            result = self._follow_up(packet, result, options, explore)
+        except Exception:
+            # An interrupted follow-up never discards the valid initial review.
+            result.update(assessment='uncertain', recommended_next_action='collect_more_evidence',
+                          exploration_status='incomplete')
+            result['missing_evidence'] = list(dict.fromkeys([*result['missing_evidence'], '추가 탐색 미완료: 시간·예산·수집 상태 확인']))[:10]
+            self.emit({'kind': 'agent_step', 'action': 'exploration_incomplete'})
+        result['ledger'] = deepcopy(self.ledger)
+        return result
+
+    def _follow_up(self, packet, initial, options, explore):
+        by_id = {o['id']: o for o in options[:12]}
+        schema = {'type': 'object', 'additionalProperties': False, 'required': ['link_ids'],
+                  'properties': {'link_ids': {'type': 'array', 'items': {'enum': list(by_id)},
+                                             'minItems': 1, 'maxItems': 2, 'uniqueItems': True}}}
+        tools = [{'type': 'function', 'function': {'name': 'site_explore', 'parameters': schema,
+                  'description': 'Collect up to two observed same-site pages to resolve missing evidence. No arbitrary URLs.'}}]
+        messages = [{'role': 'system', 'content': SYSTEM + '\nFor this follow-up only, site_explore is permitted. '
+                     'Choose links relevant to the SAME post or its context. Never infer the original post is an ad '
+                     'just because another unrelated post is advertising. If relevance is unclear, stay uncertain.'},
+                    {'role': 'user', 'content': json.dumps({'source_evidence_id': packet['id'],
+                     'untrusted_source_text': redact(packet['text'][:800]), 'missing_evidence': initial['missing_evidence'],
+                     'choices': [{'link_id': o['id'], 'kind': o['kind'], 'untrusted_path': redact(urlsplit(o['url']).path[:160])}
+                                 for o in by_id.values()]}, ensure_ascii=False)}]
+        plan = self.call(messages, tools=tools)
+        calls = plan.get('tool_calls', [])
+        if len(calls) != 1:
+            raise ValueError('추가 탐색은 한 번의 제한된 계획만 허용합니다.')
+        call = calls[0]
+        if call.get('function', {}).get('name') != 'site_explore' or not isinstance(call.get('id'), str) or len(call['id']) > 200:
+            raise ValueError('허용되지 않은 추가 탐색 도구')
+        args = json.loads(call['function']['arguments'])
+        Draft202012Validator(schema).validate(args)
+        observations, visits, observed = [], [], {packet['id']}
+        for link_id in args['link_ids']:
+            remaining = 30 - (time.monotonic() - self.started)
+            if self.stop.is_set() or remaining < 5 or self.ledger.get('site_visits', 0) >= 6:
+                break
+            self.ledger['site_visits'] = self.ledger.get('site_visits', 0) + 1
+            self.persist(deepcopy(self.ledger))
+            self.emit({'kind': 'agent_step', 'action': 'site_explore', 'link_id': link_id, 'url': by_id[link_id]['url']})
+            page = explore(by_id[link_id], min(10, remaining - 3))
+            visits.append({'link_id': link_id, 'status': page['status'], 'packet_ids': [p['id'] for p in page['packets']]})
+            # Bound text sent to Groq independently of browser collection limits.
+            for p in page['packets'][:2]:
+                observed.add(p['id'])
+                observations.append({'evidence_id': p['id'], 'link_id': link_id, 'text': redact(p['text'][:600]),
+                                     'truncated': p.get('truncated') or len(p['text']) > 600,
+                                     'scope_quality': p.get('scope_quality'), 'style_observed': p.get('computed_style') is not None})
+        if not observations:
+            raise ValueError('추가 문맥을 수집하지 못했습니다.')
+        messages += [{'role': 'assistant', 'content': None, 'tool_calls': [
+            {'id': call['id'], 'type': 'function', 'function': {'name': 'site_explore', 'arguments': json.dumps(args)}}]},
+            {'role': 'tool', 'tool_call_id': call['id'], 'content': json.dumps({'observations': observations, 'visits': visits}, ensure_ascii=False)},
+            {'role': 'user', 'content': 'Return JSON for the ORIGINAL source post, citing the source ID and relevant collected IDs. Schema: ' + json.dumps(ASSESSMENT_SCHEMA)}]
+        final = self.call(messages, final=True)
+        try:
+            result = json.loads(final.get('content') or '')
+            Draft202012Validator(ASSESSMENT_SCHEMA).validate(result)
+            ids = set(result['evidence_ids'])
+            if packet['id'] not in ids or not ids <= observed:
+                raise ValueError()
+        except Exception:
+            raise ValueError('추가 탐색 판정·근거 ID 검증 실패') from None
+        supporting = [o for o in observations if o['evidence_id'] in ids - {packet['id']}]
+        if not supporting or all(o['truncated'] or o['scope_quality'] == 'overlapping' or len(o['text']) < 10 for o in supporting):
+            result.update(assessment='uncertain', recommended_next_action='collect_more_evidence')
+        result['summary'] = redact(result['summary'])
+        return {**initial, **result, 'reads': [*initial['reads'], {'tool': 'site_explore', 'evidence_id': packet['id']}],
+                'exploration_status': 'completed', 'visits': visits, 'ledger': deepcopy(self.ledger)}
+
+    def _investigate_collected(self, packet):
         if self.ledger['call_limit'] - self.ledger['calls'] < 2:
             raise ValueError('Groq 분석에는 최소 2회 호출 여유가 필요합니다. 요청하지 않았습니다.')
         evidence_id = packet['id']

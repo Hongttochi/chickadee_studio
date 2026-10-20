@@ -1,5 +1,14 @@
 # 검증 기록
 
+## 0.8.0 같은 사이트 추가 탐색·근거 화면 (2026-10-21)
+
+- 로컬 실제 Chromium + 결정론적 Groq 응답으로 근거 부족 → 모델의 허용 링크 선택 → 같은 사이트 상세 수집 → 재판정 → sidecar 저장·불러오기·그래프 연결을 확인했습니다. 원래 `result.json`, CSV, `scan-report.json`은 추가 조사 전후 바이트가 일치합니다.
+- 별도 로컬 함정 서버로 HTTP 직접·연쇄 리다이렉션, JavaScript 이동, meta refresh의 외부 요청 **0회**를 확인했습니다. 같은 origin HTTP 이동은 수집되며 POST 요청은 서버에 도달하지 않았습니다. 잘못된 링크 ID·한도 소진 때 추가 탐색을 막고, 손상된 사용량 기록은 유료 요청을 잠급니다.
+- 원본 viewport JPEG, SHA-256, `evidence/` 파일 저장, 보고서 복원, 비 JPEG·손상 이미지 거부를 검증했습니다. 화면 시험은 패널 이미지·확대·기록 복원과 예산 부족 시 실제 요청 전 중단을 확인했습니다.
+- 실제 Groq `openai/gpt-oss-20b`와 소유한 합성 게시판에서 **4회 요청, 2,887토큰**, 상세 페이지와 원래 페이지 **2개 추가 방문**, JSON 의견, 화면 **1장** 촬영을 완료했습니다. 키는 사용자가 지정한 기존 dotenv에서 메모리로만 읽었고 저장소·보고서에 복사하지 않았습니다. [정제한 실행 기록](../examples/groq-exploration-smoke-2026-10-21.json)을 보관합니다. 실제 사이트 정확도·피싱 분류 성능·포괄적 주입 방어 시험은 아닙니다.
+- 로컬 Python **77개**(63.609초), JavaScript **3개**, Vite 빌드 및 실제 Python bridge 연결 화면 시험이 통과했습니다. 최종 패키지 실행·게시 검증 결과는 CI 완료 후 아래에 추가합니다.
+- `DESIGN.md`, `desktop/src/theme.css`, `desktop/src/style.css`는 이번 기능 변경으로 수정하지 않았습니다.
+
 ## 0.7.0 탐색·비교·Groq와 새 디자인 통합 (2026-10-21)
 
 - [Windows CI](https://github.com/orqan137/chickadee_Bot/actions/runs/39458062106) 전체 성공. 릴리스 커밋 `2974daf`의 실제 `Chickadee.exe`에서 기존 smoke와 신규 분석 smoke가 모두 통과했습니다. CI Python 73개(58.799초), JavaScript 3개도 통과했습니다. 첫 시도의 신규 smoke 시작 오류는 테스트 드라이버의 Electron 호출 바인딩을 수정해 해결했습니다.

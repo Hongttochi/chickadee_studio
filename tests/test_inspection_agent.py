@@ -132,7 +132,7 @@ class InspectionTests(unittest.TestCase):
                 path = Path(bridge.output_path); original = path.read_bytes()
                 with patch('chickadee.agent.groq_request', side_effect=groq_stub):
                     bridge.command('agent-configure', {'api_key': 'test_key_not_real'})
-                    bridge.command('agent-run', {'run_id': bridge.run_id, 'evidence_id': insight['packets'][0]['id']})
+                    bridge.command('agent-run', {'run_id': bridge.run_id, 'evidence_id': next(p['id'] for p in insight['packets'] if '카지노' in p['text'])})
                     bridge.agent_worker.join(5)
                 self.assertEqual(len(bridge.agent_data['assessments']), 1)
                 self.assertEqual(path.read_bytes(), original)

@@ -1,0 +1,144 @@
+{
+  "scope": "Real Groq tool selection + real Chromium on owned synthetic localhost pages; no real-site accuracy claim.",
+  "provider": "groq",
+  "completed": true,
+  "ledger": {
+    "calls": 4,
+    "charged_tokens": 2887,
+    "usage_tokens": 2887,
+    "token_limit": 24000,
+    "call_limit": 4,
+    "site_visits": 2
+  },
+  "local_paths_requested": [
+    "/",
+    "/posts/1",
+    "/"
+  ],
+  "assessments": [
+    {
+      "assessment": "ad_suspected",
+      "exploration_status": "completed",
+      "reads": [
+        {
+          "tool": "evidence_read",
+          "evidence_id": "e_18d88f8ec5816b90abd863e6"
+        },
+        {
+          "tool": "site_explore",
+          "evidence_id": "e_18d88f8ec5816b90abd863e6"
+        }
+      ],
+      "missing_evidence": [
+        "충분한 동일 영역 문맥"
+      ],
+      "model": "openai/gpt-oss-20b"
+    }
+  ],
+  "collected_pages": 2,
+  "screenshots_captured": 1,
+  "events": [
+    {
+      "kind": "agent_started"
+    },
+    {
+      "kind": "agent_step",
+      "action": "model_request"
+    },
+    {
+      "kind": "agent_step",
+      "action": "tool_result",
+      "tool": "evidence_read"
+    },
+    {
+      "kind": "agent_step",
+      "action": "model_request"
+    },
+    {
+      "kind": "agent_step",
+      "action": "model_request"
+    },
+    {
+      "kind": "agent_step",
+      "action": "site_explore"
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "페이지로 이동하고 HTML 응답을 확인합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "응답 수신 · 렌더링 준비"
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "DOM·본문·계산된 CSS·링크를 수집합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "2개 요소의 문자 위장·자모·투명·화면 밖 은닉을 검사합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "광고 주제·권유 문맥·정상 대조 문맥을 분석합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "스크롤 1: 지연 로딩과 숨은 콘텐츠 변경을 확인합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "스크롤 2: 지연 로딩과 숨은 콘텐츠 변경을 확인합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "site_explore"
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "페이지로 이동하고 HTML 응답을 확인합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "응답 수신 · 렌더링 준비"
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "DOM·본문·계산된 CSS·링크를 수집합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "3개 요소의 문자 위장·자모·투명·화면 밖 은닉을 검사합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "광고 주제·권유 문맥·정상 대조 문맥을 분석합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "스크롤 1: 지연 로딩과 숨은 콘텐츠 변경을 확인합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "browser_phase",
+      "message": "스크롤 2: 지연 로딩과 숨은 콘텐츠 변경을 확인합니다."
+    },
+    {
+      "kind": "agent_step",
+      "action": "model_request"
+    }
+  ]
+}

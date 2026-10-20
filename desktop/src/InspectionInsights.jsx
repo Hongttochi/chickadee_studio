@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ReactFlow, Controls, Background } from "@xyflow/react";
 import { explorationFlow, CHANGE_LABELS } from "./inspection-model.mjs";
 import "./inspection.css";
+import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
 
 const api = window.chickadee;
 const EMPTY = { graph: { nodes: [], edges: [] }, packets: [], agent: { assessments: [], ledger: {} } };
@@ -72,7 +73,7 @@ export default function InspectionInsights() {
       {(flow.omitted > 0 || data.graph.truncated) && <p>화면 표시 {flow.nodes.length}개 / 관측 {data.graph.nodes.length}개. 수집 한도: {data.graph.truncated ? "도달" : "미도달"}.</p>}
       {selected && <div className="inspection-detail"><strong>{selected.label}</strong><p>{selected.url}</p>
         <p>{selected.kind === "state" ? `${selected.packet_ids?.length || 0}개 영역 관측` : selected.status}</p>
-        {packet && <pre>{packet.text}</pre>}</div>}
+        {packet && <><pre>{packet.text}</pre><EvidenceScreenshot screenshot={data.screenshots?.[selected.screenshot_id || packet.snapshot_id]} hidden={packet.transparent || packet.offscreen} /></>}</div>}
     </>}
     {tab === "comparison" && <>
       <div className="inspection-actions"><label>이전 검사 <select aria-label="비교 기준" value={baseline} onChange={(event) => setBaseline(event.target.value)}>
@@ -101,15 +102,24 @@ export default function InspectionInsights() {
       <p>외부 API는 Groq만 사용합니다. 키는 메모리에만 보관합니다. 선택한 근거의 일부 문구·관측값을 전송하며 URL·이메일·전화번호는 마스킹합니다. 자유 서술의 개인정보까지 모두 제거되는 것은 아닙니다.</p>
       <p>현재 검사 누적 호출 {ledger.calls || 0}/{ledger.call_limit || callLimit} · 예산 사용 {ledger.charged_tokens || 0}/{ledger.token_limit || tokenLimit}토큰 · 제공자 보고 {ledger.usage_tokens || 0}토큰</p>
       <label>검토 영역 <select aria-label="검토 영역" value={packetId} onChange={(event) => setPacketId(event.target.value)}><option value="">영역 선택</option>
-        {data.packets.map((item) => <option key={item.id} value={item.id}>{item.text.slice(0, 60)} · {item.location}</option>)}
+        {data.packets.filter((item) => !item.supplemental).map((item) => <option key={item.id} value={item.id}>{item.text.slice(0, 60)} · {item.location}</option>)}
       </select></label>
       {packet && <div className="inspection-detail"><pre>{packet.text}</pre><p>스타일: {packet.computed_style ? "관측" : "미확인"} · {packet.truncated ? "일부 문맥" : "수집 문맥"}</p></div>}
       <div className="inspection-actions"><button disabled={!packet || busy} onClick={() => action(() => api.runAgent({ run_id: run, evidence_id: packetId }))}>Groq 분석</button>
         <button disabled={!data.agent?.running} onClick={() => action(() => api.stopAgent())}>분석 중단</button></div>
+      <p>근거 부족 시 같은 사이트의 관측된 페이지를 최대 2개 추가 확인합니다. 추가 탐색을 포함해 최대 4회 모델 호출이며 위 누적 한도 안에서 실행합니다. 사이트 밖 이동·폼 제출·다운로드는 허용하지 않습니다.</p>
+      {data.agent?.events?.length > 0 && <details open={Boolean(data.agent.running)}><summary>조사 과정</summary><ol>
+        {data.agent.events.slice(-20).map((event, index) => <li key={index}>{({model_request: "Groq 요청", tool_result: "근거 조회", site_explore: "같은 사이트 추가 탐색", browser_phase: "브라우저 확인", browser_request_blocked: "요청 차단", browser_warning: "수집 알림", exploration_incomplete: "추가 확인 미완료"})[event.action] || event.kind}{event.tool && ` · ${event.tool}`}{event.url && ` · ${event.url}`}{event.message && ` · ${event.message}`}{event.reason && ` · ${event.reason}`}</li>)}
+      </ol></details>}
+      {data.agent?.explorations?.map((visit, index) => <details key={index}><summary>추가 탐색 {index + 1} · {visit.status}</summary><p>{visit.url}</p><p>수집 영역 {visit.packets.length}개 · 차단 요청 {visit.blocked_requests.length}개</p>
+        {visit.blocked_requests.map((item, i) => <p key={i}>{item.reason} · {item.target_url || item.url}</p>)}
+        <EvidenceScreenshot screenshot={Object.values(visit.screenshots || {})[0]} />
+      </details>)}
       {data.agent?.assessments?.slice().reverse().map((item, index) => <article className="inspection-detail" key={index}>
         <strong>{{ ad_suspected: "광고 의심", benign_context: "정상 문맥 제안", uncertain: "보류" }[item.assessment]}</strong><p>{item.summary}</p>
         <p>{item.reads.map((read) => read.tool).join(" → ")} · {item.provider} / {item.model}</p>
         {item.missing_evidence.length > 0 && <p>미확인: {item.missing_evidence.join(", ")}</p>}
+        {item.exploration_status && <p>추가 확인: {({completed: "완료", incomplete: "미완료", budget_exhausted: "예산 부족"})[item.exploration_status]}</p>}
       </article>)}
     </>}
   </section>;

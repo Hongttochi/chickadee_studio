@@ -18,8 +18,9 @@ from .workflow import compile_workflow
 from .control import ScanControl
 from .reviews import ReviewStore
 from .tools import capabilities, resolve_tool
-from .inspection import compare_reports
+from .inspection import compare_reports, validate_inspection, validate_screenshots
 from .agent import EvidenceAgent, settings as agent_settings
+from .site_explorer import exploration_options, collect_page
 import os
 
 
@@ -213,16 +214,44 @@ class DesktopBridge:
         raise ValueError('지원하지 않는 명령입니다.')
 
     def _sidecar(self, name, default):
+        invalid_agent = {'ledger': {'calls': 12, 'charged_tokens': 60000, 'usage_tokens': 0,
+                                   'call_limit': 1, 'token_limit': 1000},
+                         'assessments': [], 'explorations': [],
+                         'events': [{'kind': 'agent_failed', 'message': '사용량 기록 손상: 이 기록의 유료 요청을 차단했습니다.'}]}
         try:
             path = Path(self.output_path).with_name(name)
             if path.stat().st_size > 12_000_000:
-                return default
+                return invalid_agent if name == 'agent.json' else default
             data = json.loads(path.read_text(encoding='utf-8'))
-            return data if data.get('result_sha256') == self.outcome.report.get('result_sha256') else default
-        except (OSError, ValueError, TypeError, AttributeError):
+            if data.get('result_sha256') != self.outcome.report.get('result_sha256'):
+                return invalid_agent if name == 'agent.json' else default
+            if name == 'agent.json':
+                ledger = data.get('ledger')
+                if not isinstance(ledger, dict) or any(type(ledger.get(k)) is not int or ledger[k] < 0 for k in ('calls', 'charged_tokens', 'usage_tokens')):
+                    return invalid_agent
+                if type(ledger.get('site_visits', 0)) is not int or not 0 <= ledger.get('site_visits', 0) <= 6:
+                    return invalid_agent
+                if any(not isinstance(data.get(k, []), list) or len(data.get(k, [])) > cap for k, cap in [('assessments', 100), ('events', 200), ('explorations', 6)]):
+                    return invalid_agent
+                for visit in data.get('explorations', []):
+                    if not isinstance(visit.get('source_evidence_id'), str) or not isinstance(visit.get('url'), str) or not isinstance(visit.get('blocked_requests'), list):
+                        return invalid_agent
+                    validate_inspection({'evidence_packets': visit['packets'], 'exploration': visit['graph']})
+                    validate_screenshots(visit.get('screenshots', {}))
+            return data
+        except FileNotFoundError:
             return default
+        except (OSError, ValueError, TypeError, AttributeError, KeyError):
+            return invalid_agent if name == 'agent.json' else default
 
     def _save_agent(self):
+        for visit in self.agent_data.get('explorations', []):
+            for image in visit.get('screenshots', {}).values():
+                relative = 'evidence/agent-' + image['sha256'] + '.jpg'
+                target = Path(self.output_path).parent / relative
+                if not target.exists():
+                    atomic_write(target, base64.b64decode(image['data_url'].split(',', 1)[1]))
+                image['relative_path'] = relative
         data = {**self.agent_data, 'result_sha256': self.outcome.report['result_sha256']}
         atomic_write(Path(self.output_path).with_name('agent.json'), json.dumps(data, ensure_ascii=False).encode('utf-8'))
 
@@ -236,7 +265,9 @@ class DesktopBridge:
         if method == 'agent-status':
             return {'provider': 'groq', 'configured': self.agent_config is not None or bool(os.environ.get('GROQ_API_KEY')),
                     'running': bool(self.agent_worker and self.agent_worker.is_alive()),
-                    'ledger': self.agent_data.get('ledger', {}), 'assessments': self.agent_data.get('assessments', [])}
+                    'ledger': self.agent_data.get('ledger', {}), 'assessments': self.agent_data.get('assessments', []),
+                    'events': self.agent_data.get('events', [])[-40:],
+                    'explorations': self.agent_data.get('explorations', [])}
         if method == 'agent-stop':
             self.agent_stop.set()
             return {'stopping': True}
@@ -246,8 +277,27 @@ class DesktopBridge:
             report = self.outcome.report if self.outcome else {}
             graph = report.get('exploration') or {'version': 1, 'nodes': list(self.live_graph['nodes'].values()),
                                                    'edges': list(self.live_graph['edges'].values())}
-            return {'run_id': self.run_id, 'graph': graph, 'packets': report.get('evidence_packets', []),
-                    'comparison': self.comparison, 'agent': self._inspection_command('agent-status', {})}
+            # Follow-up observations stay in agent.json, with independent graph
+            # identities. The original scan/result and comparison remain immutable.
+            nodes, edges = list(graph['nodes']), list(graph['edges'])
+            screenshots = dict(report.get('screenshots', {}))
+            packets = {p['id']: p for p in report.get('evidence_packets', [])}
+            for index, visit in enumerate(self.agent_data.get('explorations', [])):
+                prefix = 'agent_' + str(index) + '_'
+                for node in visit['graph']['nodes']:
+                    captured = next((p.get('snapshot_id') or node['id'] for p in visit['packets'] if p['id'] in node.get('packet_ids', [])), node['id'])
+                    nodes.append({**node, 'id': prefix + node['id'], 'screenshot_id': prefix + captured,
+                                  'label': '추가 탐색 · ' + node['label']})
+                for edge in visit['graph']['edges']:
+                    edges.append({**edge, 'id': prefix + edge['id'], 'source': prefix + edge['source'], 'target': prefix + edge['target']})
+                source = next((n for n in graph['nodes'] if visit['source_evidence_id'] in n.get('packet_ids', [])), None)
+                target = next((n for n in visit['graph']['nodes'] if n['kind'] == 'page'), None)
+                if source and target:
+                    edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'Groq 추가 확인'})
+                packets.update((p['id'], {**p, 'supplemental': True, 'snapshot_id': prefix + (p.get('snapshot_id') or '')}) for p in visit['packets'] if p['id'] not in packets)
+                screenshots.update((prefix + key, image) for key, image in visit.get('screenshots', {}).items())
+            return {'run_id': self.run_id, 'graph': {**graph, 'nodes': nodes, 'edges': edges}, 'packets': list(packets.values()),
+                    'screenshots': screenshots, 'comparison': self.comparison, 'agent': self._inspection_command('agent-status', {})}
         if self.running or self.outcome is None:
             raise ValueError('검사 완료 후 실행하세요.')
         if method == 'compare':
@@ -293,7 +343,29 @@ class DesktopBridge:
             observe({'kind': 'agent_started', 'evidence_id': packet['id'], 'provider': 'groq'})
             agent = EvidenceAgent(config, self.agent_data.get('ledger'), stop=self.agent_stop, emit=observe, persist=persist)
             persist(agent.ledger)
-            assessment = agent.investigate(packet)
+            entry = self.outcome.result['meta']['entry_url']
+            # Only source scan packets are accepted by agent-run. Supplemental
+            # pages cannot recursively grow an unbounded exploration tree.
+            options = exploration_options(packet, self.outcome.report, entry)
+            def explore(option, timeout):
+                def progress(event):
+                    if event['kind'] in ('phase', 'request_blocked', 'warning'):
+                        observe({'kind': 'agent_step', 'action': 'browser_' + event['kind'],
+                                 **{k: v for k, v in event.items() if k in ('url', 'message', 'reason', 'target_url')}})
+                outcome = collect_page(option, entry, timeout, self.agent_stop, progress)
+                packets = outcome.report.get('evidence_packets', [])[:12]
+                ids = {p['id'] for p in packets}
+                graph = outcome.report['exploration']
+                graph = {**graph, 'nodes': [{**n, 'packet_ids': [p for p in n.get('packet_ids', []) if p in ids]} for n in graph['nodes'][:100]]}
+                node_ids = {n['id'] for n in graph['nodes']}
+                graph['edges'] = [e for e in graph['edges'] if e['source'] in node_ids and e['target'] in node_ids]
+                visit = {'url': option['url'], 'source_evidence_id': packet['id'], 'status': outcome.report['status'],
+                         'packets': packets, 'graph': graph, 'blocked_requests': outcome.report['blocked_requests'],
+                         'screenshots': dict(list(outcome.report.get('screenshots', {}).items())[:2])}
+                self.agent_data.setdefault('explorations', []).append(visit)
+                self._save_agent()
+                return visit
+            assessment = agent.investigate_with_exploration(packet, options, explore)
             self.agent_data['assessments'] = [*self.agent_data.get('assessments', [])[-99:], assessment]
             self._save_agent()
             self.emit({'kind': 'agent_done', 'assessment': assessment})

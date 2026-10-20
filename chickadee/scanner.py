@@ -14,14 +14,14 @@ import sys
 import tempfile
 from threading import Event
 import time
-from urllib.parse import parse_qsl, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urljoin, urlsplit, urlunsplit
 
 from . import __version__
 from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write
 from .profiles import SiteProfile
-from .inspection import InspectionTrace, validate_inspection
+from .inspection import InspectionTrace, validate_inspection, validate_screenshots
 
 # A browser installed with PLAYWRIGHT_BROWSERS_PATH=0 travels with the package.
 # Honour an explicit developer setting; frozen builds always use their own copy.
@@ -142,6 +142,11 @@ class ScanOutcome:
         validate_result(self.result)
         folder = Path(folder).resolve()
         folder.mkdir(parents=True, exist_ok=True)
+        validate_screenshots(self.report.get('screenshots', {}))
+        for image in self.report.get('screenshots', {}).values():
+            relative = 'evidence/' + image['sha256'] + '.jpg'
+            atomic_write(folder / relative, base64.b64decode(image['data_url'].split(',', 1)[1]))
+            image['relative_path'] = relative
         payload = (json.dumps(self.result, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8")
         csv_payload = csv_bytes(self.result, self.report)
         report = {**self.report, "result_sha256": hashlib.sha256(payload).hexdigest(), "output_path": str(folder / "result.json"),
@@ -215,6 +220,9 @@ class _State:
     discovered_urls: int = 1
     pending_urls: dict = field(default_factory=dict)
     trace: InspectionTrace = field(default_factory=InspectionTrace)
+    screenshots: dict = field(default_factory=dict)
+    screenshot_bytes: int = 0
+    pending_redirects: dict = field(default_factory=dict)
 
 
 async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control=None) -> ScanOutcome:
@@ -252,6 +260,8 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
         if not worker.done():
             worker.cancel()
             await asyncio.gather(worker, return_exceptions=True)
+    for url, target in state.pending_redirects.items():
+        state.errors.append({'url': url, 'message': '동적 HTTP 이동은 자동 추적하지 않았습니다: ' + target})
     if status == "completed" and (state.errors or state.remaining):
         status = "partial" if state.pages else "failed"
     finished = datetime.now().astimezone()
@@ -263,6 +273,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     }
     report = {"status": status, "pages_scanned": state.pages, "pages_remaining": state.remaining,
               "exploration": state.trace.export(), "evidence_packets": list(state.trace.packets.values()),
+              "screenshots": state.screenshots,
               "page_diagnostics": state.page_diagnostics,
               "pending_urls": list(state.pending_urls.values()),
               "crawl_summary": {"discovered_urls": state.discovered_urls, "pages_scanned": len(state.pages),
@@ -343,6 +354,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                             reason = "로컬 전용 모드: 외부 자원 차단"
                         elif origin(target) in state.stopped_origins:
                             reason = "HTTP 429 수신으로 해당 origin 추가 요청 중단"
+                        elif request.resource_type == 'document' and origin(target) != origin(config.entry_url):
+                            reason = "사이트 밖 문서 이동·리다이렉션 차단"
                         elif origin(target) not in allowed:
                             reason = "허용되지 않은 origin 차단"
                     except ValueError:
@@ -356,7 +369,42 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         state.errors.append({"url": request.url, "message": reason + ": 콘텐츠가 누락될 수 있습니다."})
                     await route.abort()
                 else:
-                    await route.continue_()
+                    # Inspect each redirect response before Chromium can follow it.
+                    # route.continue_ alone may follow an HTTP redirect without a
+                    # second routing callback, bypassing an origin-only guard.
+                    response = await route.fetch(max_redirects=0, timeout=int(config.page_timeout_sec * 1000))
+                    destination = response.headers.get('location')
+                    if response.status in (301, 302, 303, 307, 308) and destination:
+                        target = urljoin(request.url, destination)
+                        try:
+                            permitted = (origin(target) == origin(config.entry_url) if request.resource_type == 'document'
+                                         else origin(target) in allowed)
+                            normalize_url(target)
+                        except ValueError:
+                            permitted = False
+                        if permitted and request.resource_type == 'document' and request.frame == request.frame.page.main_frame:
+                            # Never fulfill a redirect for Chromium to auto-follow:
+                            # subsequent hops may bypass routing. _navigate follows
+                            # each validated hop as a NEW navigation instead.
+                            state.pending_redirects[request.url] = target
+                            emit({'kind': 'navigation_redirect', 'url': request.url, 'target_url': target,
+                                  'http_status': response.status})
+                            await response.dispose()
+                            await route.fulfill(status=200, content_type='text/html', body='<html></html>')
+                            return
+                        else:
+                            entry = {'url': request.url, 'target_url': target, 'type': request.resource_type,
+                                     'method': request.method, 'http_status': response.status,
+                                     'reason': '사이트 밖 리다이렉션 응답 차단' if not permitted else '리소스·iframe HTTP 리다이렉션 제한'}
+                            if len(state.blocked_requests) < 200:
+                                state.blocked_requests.append(entry)
+                            emit({'kind': 'request_blocked', **entry})
+                            state.errors.append({'url': request.url, 'message': entry['reason']})
+                            await response.dispose()
+                            await route.abort()
+                            return
+                    await route.fulfill(response=response)
+                    await response.dispose()
             await context.route("**/*", guard)
             def observe_response(response):
                 if response.status != 429:
@@ -489,7 +537,20 @@ async def _navigate(page, url, config, state, emit):
         if origin(url) in state.stopped_origins:
             raise RuntimeError("HTTP 429 수신으로 해당 origin 재시도를 중단했습니다.")
         try:
-            response = await page.goto(url, wait_until="domcontentloaded", timeout=int(config.page_timeout_sec * 1000))
+            current, redirects = url, set()
+            for hop in range(7):
+                try:
+                    response = await page.goto(current, wait_until="domcontentloaded", timeout=int(config.page_timeout_sec * 1000))
+                except Exception:
+                    if current not in state.pending_redirects:
+                        raise
+                target = state.pending_redirects.pop(current, None)
+                if target is None:
+                    break
+                if target in redirects or hop == 6 or origin(target) != origin(config.entry_url):
+                    raise RuntimeError('리다이렉션 반복·횟수·사이트 범위 제한') from None
+                redirects.add(current)
+                current = target
             # Rate limiting ends collection for the origin; never retry 429.
             retryable = response and response.status >= 500
             if not retryable or attempt == config.retries:
@@ -617,7 +678,12 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
     if detect_techniques:
         emit({"kind": "phase", "stage": "techniques", "action": "analyze", "url": page_url,
               "message": f"{len(data['elements'])}개 요소의 문자 위장·자모·투명·화면 밖 은닉을 검사합니다.", "frame_depth": prefix.count(' >>> ')})
-    for hit in classify_elements(data["elements"], inherited, rules) if detect_techniques else []:
+    hits = classify_elements(data["elements"], inherited, rules) if detect_techniques else []
+    candidates = classify_candidates(data["elements"], rules) if detect_candidates else []
+    fresh = any((page_url, prefix + h['location'], h['technique']) not in state.seen_findings for h in hits)
+    fresh |= any((page_url, prefix + (h.get('content_scope') or h['location']), h['category']) not in state.candidate_keys for h in candidates)
+    screenshot_id = await _evidence_screenshot(frame.page, state, emit) if fresh else None
+    for hit in hits:
         location = prefix + hit["location"]
         scope = prefix + (hit.get("content_scope") or hit["location"])
         state.finding_scopes.add((page_url, scope))
@@ -631,12 +697,14 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
         state.evidence_details[finding["id"]] = {"analysis": hit["analysis"],
             "style_reasons": hit.get("reasons", []), "computed_style": hit.get("computed_style", {}),
             "frame_flags": inherited, "action_sequence": list(state.actions),
-            "scope_location": scope, "observed_at": datetime.now().astimezone().isoformat()}
+            "scope_location": scope, "observed_at": datetime.now().astimezone().isoformat(),
+            "screenshot_id": screenshot_id,
+            "screenshot_region": await _screen_region(frame, hit['location']) if screenshot_id else None}
         emit({"kind": "finding", "finding": finding, "detail": state.evidence_details[finding['id']]})
     if detect_candidates:
         emit({"kind": "phase", "stage": "candidates", "action": "analyze", "url": page_url,
               "message": "광고 주제·권유 문맥·정상 대조 문맥을 분석합니다."})
-    for hit in classify_candidates(data["elements"], rules) if detect_candidates else []:
+    for hit in candidates:
         scope = prefix + (hit.get("content_scope") or hit["location"])
         key = page_url, scope, hit["category"]
         if (page_url, scope) in state.finding_scopes or key in state.candidate_keys:
@@ -645,7 +713,9 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
                      "location": prefix + hit["location"], "scope_location": scope,
                      "evidence_text": hit["text"], "category": hit["category"], "review_required": True,
                      "matched_keywords": hit["matched_keywords"], "reasons": hit["reasons"],
-                     "observed_at": datetime.now().astimezone().isoformat(), "analysis": hit.get("analysis", {})}
+                     "observed_at": datetime.now().astimezone().isoformat(), "analysis": hit.get("analysis", {}),
+                     "screenshot_id": screenshot_id,
+                     "screenshot_region": await _screen_region(frame, hit['location']) if screenshot_id else None}
         if hit.get('related_content_url'):
             candidate['related_content_url'] = hit['related_content_url']
         state.candidate_keys[key] = candidate["id"]
@@ -669,6 +739,39 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
         except Exception as exc:
             state.errors.append({"url": page_url, "message": f"iframe 점검 실패 ({child.url}): {exc}"})
     return links
+
+
+async def _screen_region(frame, selector):
+    try:
+        # bounding_box uses top-level viewport coordinates even inside an iframe.
+        return await frame.locator(selector).first.bounding_box(timeout=300)
+    except Exception:
+        return None
+
+
+async def _evidence_screenshot(page, state, emit):
+    key = state.trace.active
+    if key in state.screenshots:
+        return key
+    if not key or len(state.screenshots) >= 24 or state.screenshot_bytes >= 3_000_000:
+        return None
+    try:
+        # Preserve the observed viewport: never scroll or unhide an element for evidence.
+        pixels = await page.screenshot(type='jpeg', quality=55, timeout=1200)
+        if len(pixels) > 200_000 or state.screenshot_bytes + len(pixels) > 3_000_000:
+            return None
+        state.screenshots[key] = {
+            'data_url': 'data:image/jpeg;base64,' + base64.b64encode(pixels).decode('ascii'),
+            'sha256': hashlib.sha256(pixels).hexdigest(), 'url': page.url,
+            'viewport': page.viewport_size, 'snapshot_id': key,
+            'observed_at': datetime.now().astimezone().isoformat(), 'capture': 'original_viewport',
+        }
+        state.screenshot_bytes += len(pixels)
+        emit({'kind': 'evidence_screenshot', 'screenshot_id': key, 'sha256': state.screenshots[key]['sha256']})
+        return key
+    except Exception:
+        emit({'kind': 'warning', 'message': '근거 화면 촬영 실패: 원문·CSS 근거는 보존합니다.'})
+        return None
 
 
 _FRAME_PROBE = """el => {

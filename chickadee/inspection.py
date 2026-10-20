@@ -1,6 +1,7 @@
 """Bounded, inert evidence snapshots and an observed exploration graph."""
 from copy import deepcopy
 from datetime import datetime
+import base64
 import hashlib
 import json
 
@@ -127,6 +128,7 @@ class InspectionTrace:
 
 def validate_inspection(report):
     """Legacy reports are accepted; malformed new feature data is rejected."""
+    validate_screenshots(report.get('screenshots', {}))
     packets = report.get('evidence_packets', [])
     if not isinstance(packets, list) or len(packets) > InspectionTrace.MAX_PACKETS:
         raise ValueError('수집 영역 목록 형식 오류')
@@ -156,6 +158,24 @@ def validate_inspection(report):
     for edge in graph['edges']:
         if not isinstance(edge, dict) or not all(isinstance(edge.get(k), str) for k in ('id', 'source', 'target')) or edge['source'] not in nodes or edge['target'] not in nodes:
             raise ValueError('탐색 연결 형식 오류')
+
+
+def validate_screenshots(screenshots):
+    if not isinstance(screenshots, dict) or len(screenshots) > 24:
+        raise ValueError('근거 화면 목록 형식 오류')
+    size = 0
+    for value in screenshots.values():
+        if not isinstance(value, dict) or not isinstance(value.get('data_url'), str) or not value['data_url'].startswith('data:image/jpeg;base64,'):
+            raise ValueError('근거 화면은 내장 JPEG만 허용합니다.')
+        try:
+            pixels = base64.b64decode(value['data_url'].split(',', 1)[1], validate=True)
+        except ValueError:
+            raise ValueError('근거 화면 인코딩 오류') from None
+        size += len(pixels)
+        if len(pixels) > 200_000 or not pixels.startswith(b'\xff\xd8\xff') or hashlib.sha256(pixels).hexdigest() != value.get('sha256'):
+            raise ValueError('근거 화면 크기·해시 오류')
+    if size > 3_000_000:
+        raise ValueError('근거 화면 총 크기 초과')
 
 
 def compare_reports(previous, current):

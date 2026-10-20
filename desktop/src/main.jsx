@@ -7,6 +7,7 @@ import React, {
   useCallback,
 } from "react";
 import { createRoot } from "react-dom/client";
+import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -2745,6 +2746,8 @@ function RecordDetail({
             <li key={index}>{reason}</li>
           ))}
         </ul>
+        <EvidenceScreenshot screenshot={outcome?.report.screenshots?.[detail.screenshot_id]}
+          hidden={record.technique === "TRANSPARENT" || record.technique === "OFFSCREEN"} />
         <div className="review-editor">
           <details className="review-note-details" open={note ? true : undefined}>
           <summary>검토 메모</summary>

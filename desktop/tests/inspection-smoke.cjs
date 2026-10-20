@@ -13,7 +13,7 @@ const http = require("node:http");
   const server = http.createServer((request, response) => {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(request.url === "/" ? '<a href="/post">게시글</a>' :
-      `<article id="post" style="opacity:${revision ? 0 : 1}"><p>카지노 가입 보너스 ${revision}</p><a href="https://example.invalid/${revision}">주소</a></article>`);
+      `<article id="post" style="opacity:${revision ? 0 : 1}"><p>카지노 가입 보너스 ${revision}</p><p>caѕino join now</p><a href="https://example.invalid/${revision}">주소</a></article>`);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const env = { ...process.env, CHICKADEE_TEST_DATA: data };
@@ -21,6 +21,7 @@ const http = require("node:http");
   try {
     app = await launch({ env, ...(packaged ? { executablePath: process.env.CHICKADEE_PACKAGED_EXE, args: [] } : {}) });
     const page = await app.firstWindow();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     page.setDefaultTimeout(15000);
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
@@ -41,6 +42,20 @@ const http = require("node:http");
     await wait(1);
     const firstGraph = await page.locator('.inspection-graph .react-flow__node').count();
     assert.ok(firstGraph >= 4);
+    await page.getByRole('button', { name: /^탐지 내역/ }).click();
+    await page.locator('tbody tr').first().click();
+    const evidence = page.getByAltText('검사 브라우저에서 촬영한 탐지 당시 화면', { exact: true });
+    await evidence.waitFor({ state: 'attached' });
+    await page.waitForFunction(() => document.querySelector('.evidence-capture img')?.naturalWidth === 1366);
+    // Completion loads the persisted outcome asynchronously after live rows;
+    // select the saved row once its screenshot has arrived.
+    await page.locator('tbody tr .evidence-cell').first().click();
+    await page.locator('.record-drawer[aria-hidden="false"]').waitFor();
+    await page.getByRole('button', { name: '확대', exact: true }).waitFor();
+    await page.screenshot({ path: path.join(root, 'artifacts/evidence-panel-0.8.0.png') });
+    await page.getByRole('button', { name: '확대', exact: true }).click();
+    assert.equal(await page.locator('.evidence-capture-image.expanded').count(), 1);
+    await page.getByRole('button', { name: '검사 분석', exact: true }).click();
     revision = 1;
     await page.locator(".header-run-controls button.primary").click();
     let current = await wait(2);
@@ -78,9 +93,13 @@ const http = require("node:http");
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
     await page.getByRole('tab', { name: '변경 비교', exact: true }).click();
     await page.locator('.inspection-changes article').first().waitFor();
+    await page.getByRole('button', { name: /^탐지 내역/ }).click();
+    await page.locator('tbody tr').first().click();
+    await page.getByAltText('검사 브라우저에서 촬영한 탐지 당시 화면', { exact: true }).waitFor();
     assert.equal(errors.length, 0, errors.join('\n'));
     console.log(JSON.stringify({ status: 'passed', mode: packaged ? 'electron-packaged' : 'source-ui-real-python', explorationGraph: true,
       textStyleLinkComparison: true, comparisonReload: true, groqConfiguration: true,
+      evidenceScreenshot: true, screenshotReload: true,
       budgetBlockedBeforeNetwork: true, immutableResult: true, secretNotPersisted: true, data }));
   } finally {
     if (app) await app.close();
