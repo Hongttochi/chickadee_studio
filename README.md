@@ -6,6 +6,19 @@
 
 **[Windows v0.5.0 다운로드](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.5.0)** → ZIP 전체 압축 해제 → `Chickadee.exe` 실행. Python·Node.js·Docker 설치는 필요하지 않습니다. 외부 URL은 기본 허용이며 Chromium과 검사 프로그램을 함께 제공합니다. [Windows 빠른 실행](docs/quickstart-windows.md) · [데스크톱 앱](docs/desktop.md) · [디자인 기준](DESIGN.md)
 
+## 다운로드하고 바로 실행하기 — Windows 앱
+
+**배포 패키지에는 앱과 검사 프로그램·Chromium이 모두 들어 있습니다.** Windows x64 PC에서 압축을 풀고 실행하면 URL 입력·실제 검사·결과 조회·JSON/CSV 저장을 바로 사용할 수 있습니다. Python, Node.js, Docker, 개발 도구 설치나 빌드 명령은 필요하지 않습니다.
+
+1. **[Chickadee Studio 0.5.0 Windows ZIP 다운로드](https://github.com/orqan137/chickadee_Bot/releases/download/v0.5.0/Chickadee-Studio-0.5.0-win-x64.zip)**를 누릅니다. 배포 페이지에서 받는 경우 Assets의 `Chickadee-Studio-0.5.0-win-x64.zip`을 선택합니다.
+2. 다운로드한 ZIP을 원하는 폴더에 **전체 압축 해제**합니다.
+3. `Chickadee-0.5.0` 폴더 안의 **`Chickadee.exe`를 더블클릭**합니다.
+4. 검사할 URL을 입력하고 **검사 실행**을 누릅니다. 먼저 동작을 확인하려면 **데모 검사**를 누릅니다.
+
+결과는 앱에서 바로 확인하고, **결과 폴더** 버튼으로 저장된 파일을 엽니다. 기본 저장 위치는 `문서/Chickadee/results` 아래 실행별 폴더입니다. 사용자가 선택한 사이트를 검사하려면 인터넷 연결이 필요하며, 로컬 데모는 오프라인으로 실행할 수 있습니다.
+
+`Chickadee.exe`와 `resources` 등 동봉 파일은 같은 배포 폴더에 유지합니다. 이동하거나 팀원에게 전달할 때도 폴더 전체를 사용하세요. 현재 배포는 Windows x64 프리릴리스이며, 배포 인증서 서명은 포함하지 않았습니다.
+
 행정안전부·한국지능정보사회진흥원의 **2026 공공 웹사이트 불법광고 탐지 도구 개발 공모전**을 목표로 개발하고 있습니다. 현재 필수 4종의 규칙 기반 탐지·화면·파일 출력을 구현했으며, 최종 제출본 수준의 탐지 성능 검증은 남아 있습니다.
 
 ## 데스크톱 작업 흐름
