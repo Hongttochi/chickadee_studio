@@ -21,6 +21,7 @@ from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write
 from .profiles import SiteProfile
+from .inspection import InspectionTrace, validate_inspection
 
 # A browser installed with PLAYWRIGHT_BROWSERS_PATH=0 travels with the package.
 # Honour an explicit developer setting; frozen builds always use their own copy.
@@ -190,6 +191,7 @@ class ScanOutcome:
                 for key in ("matched_keywords", "reasons"):
                     if not isinstance(candidate.get(key, []), list) or not all(isinstance(s, str) for s in candidate.get(key, [])):
                         raise ValueError("광고 후보 근거는 문자열 배열이어야 합니다.")
+        validate_inspection(report)
         return cls(result, report)
 
 
@@ -212,6 +214,7 @@ class _State:
     page_diagnostics: list = field(default_factory=list)
     discovered_urls: int = 1
     pending_urls: dict = field(default_factory=dict)
+    trace: InspectionTrace = field(default_factory=InspectionTrace)
 
 
 async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control=None) -> ScanOutcome:
@@ -259,6 +262,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
         "findings": state.findings,
     }
     report = {"status": status, "pages_scanned": state.pages, "pages_remaining": state.remaining,
+              "exploration": state.trace.export(), "evidence_packets": list(state.trace.packets.values()),
               "page_diagnostics": state.page_diagnostics,
               "pending_urls": list(state.pending_urls.values()),
               "crawl_summary": {"discovered_urls": state.discovered_urls, "pages_scanned": len(state.pages),
@@ -401,6 +405,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                       "queue_remaining": len(queue), "max_pages": config.max_pages})
                 emit({"kind": "phase", "stage": "browser", "action": "navigate", "url": url,
                       "message": "페이지로 이동하고 HTML 응답을 확인합니다."})
+                state.trace.page(url, 'inspecting', emit, parents.get(key))
                 page = await context.new_page()
                 page_started = time.monotonic()
                 diagnostic = {"url": url, "priority": navigation_priority(url), "status": "inspecting",
@@ -456,6 +461,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                             discovery = {'url': candidate, 'discovered_from': page.url, 'priority': navigation_priority(candidate)}
                             state.pending_urls[candidate_key] = discovery
                             emit({'kind': 'url_discovered', **discovery})
+                            state.trace.page(candidate, 'pending', emit, page.url)
                 except Exception as exc:
                     diagnostic["status"] = "error"
                     diagnostic["error"] = str(exc) or "페이지 제한시간 초과"
@@ -463,6 +469,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     emit({"kind": "warning", "message": f"점검 누락: {url} - {exc or '페이지 제한시간 초과'}"})
                 finally:
                     diagnostic["elapsed_sec"] = round(time.monotonic() - page_started, 3)
+                    state.trace.page(url, diagnostic['status'], emit)
                     diagnostic["findings_added"] = len(state.findings) - findings_before
                     diagnostic["candidates_added"] = len(state.ad_candidates) - candidates_before
                     emit({"kind": "page_complete", "page": diagnostic, "pages_scanned": len(state.pages),
@@ -512,7 +519,7 @@ _FINGERPRINT = """() => {
 
 async def _inspect_dynamic(page, config, profile, rules, site, script, state, emit):
     links, seen = [], set()
-    async def snapshot():
+    async def snapshot(action='초기 수집'):
         if site in state.stopped_origins:
             raise RuntimeError("HTTP 429 수신으로 해당 origin 수집을 중단했습니다.")
         if origin(page.url) != site:
@@ -523,6 +530,7 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
         if fingerprint['signature'] not in seen:
             seen.add(fingerprint['signature'])
             state.states_scanned += 1
+            state.trace.snapshot(page.url, fingerprint['signature'], action, emit)
             emit({"kind": "phase", "stage": "collector", "action": "extract", "url": page.url,
                   "message": "DOM·본문·계산된 CSS·링크를 수집합니다."})
             links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules,
@@ -547,7 +555,7 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
               "message": f"스크롤 {step + 1}: 지연 로딩과 숨은 콘텐츠 변경을 확인합니다."})
         await page.evaluate("window.scrollTo(0, document.body?.scrollHeight || 0)")
         await page.wait_for_timeout(config.settle_ms)
-        current = await snapshot()
+        current = await snapshot(f'스크롤 {step + 1}')
         quiet = quiet + 1 if current == previous else 0
         if quiet >= 2:
             break
@@ -583,7 +591,7 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
               "selector": selector, "message": "설정된 읽기 버튼을 실행합니다."})
         await control.click(timeout=min(3000, int(config.page_timeout_sec * 1000)), no_wait_after=True)
         await page.wait_for_timeout(config.settle_ms)
-        after = await snapshot()
+        after = await snapshot('읽기 버튼: ' + selector)
         if after == before:
             state.errors.append({"url": page.url, "message": f"설정한 읽기 동작의 콘텐츠 변경을 확인하지 못했습니다: {selector}"})
             break
@@ -596,6 +604,7 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
 async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit, rules=None, content_selector=None,
                          detect_techniques=True, detect_candidates=True):
     data = await frame.evaluate(script, {"contentSelector": content_selector})
+    state.trace.capture(data['elements'], page_url, prefix, emit, inherited)
     if state.page_diagnostics:
         diagnostic = state.page_diagnostics[-1]
         diagnostic["elements_examined"] += len(data["elements"])

@@ -77,6 +77,8 @@ jobs:
         run: |
           $env:CHICKADEE_PACKAGED_EXE = Join-Path $env:GITHUB_WORKSPACE "artifacts/electron-$env:APP_VERSION/win-unpacked/Chickadee.exe"
           npm run smoke
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/inspection-smoke.cjs
       - name: Package ZIP and SHA256
         run: .\.venv\Scripts\python.exe scripts/package-desktop.py
       - name: Verify release files

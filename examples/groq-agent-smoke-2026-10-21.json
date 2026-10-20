@@ -1,0 +1,32 @@
+{
+  "scope": "Actual Groq API with synthetic text only; no live suspect pages or user research corpus uploaded.",
+  "provider": "groq",
+  "model": "openai/gpt-oss-20b",
+  "completed_assessments": [
+    {
+      "case": "synthetic_promotion",
+      "assessment": "ad_suspected",
+      "reads": [
+        {
+          "tool": "evidence_read",
+          "evidence_id": "e_2e3cde86ed2d5463b4728bf4"
+        }
+      ],
+      "status": "completed",
+      "missing_evidence": []
+    }
+  ],
+  "tracked_budget_ledger": {
+    "calls": 4,
+    "charged_tokens": 5766,
+    "usage_tokens": 1889,
+    "token_limit": 24000,
+    "call_limit": 4
+  },
+  "limitations": [
+    "One synthetic promotion assessment completed through actual evidence_read tool selection and validated JSON output.",
+    "Additional synthetic injection case reached the cumulative call limit before its final assessment; not an injection-resistance pass.",
+    "Tracked ledger includes an initial model_not_found request; a preceding HTTP 403 setup request had no returned usage and is outside this ledger.",
+    "This is not a representative detection benchmark or a complete agent-security assessment."
+  ]
+}

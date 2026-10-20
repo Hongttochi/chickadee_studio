@@ -66,6 +66,8 @@ exports.launch = async ({ env }) => {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   async function invoke(method, value) {
+    const extensions = { inspection: "inspection", compare: "compare", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop" };
+    if (extensions[method]) return backend.request(extensions[method], value || {});
     if (method === "state")
       return {
         ...(await backend.request("state")),
@@ -151,6 +153,7 @@ exports.launch = async ({ env }) => {
           "resume",
           "stop",
           "capabilities",
+          "inspection", "compare", "configureAgent", "runAgent", "stopAgent",
           "preferences",
           "history",
           "load",
@@ -168,9 +171,11 @@ exports.launch = async ({ env }) => {
         ]),
       );
       window.chickadee.onEvent = (callback) => {
-        window.__sourceEvent = callback;
+        window.__sourceEvents ||= new Set();
+        window.__sourceEvents.add(callback);
+        window.__sourceEvent = (event) => window.__sourceEvents.forEach((listener) => listener(event));
         return () => {
-          window.__sourceEvent = null;
+          window.__sourceEvents.delete(callback);
         };
       };
     });

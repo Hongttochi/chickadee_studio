@@ -1,0 +1,14 @@
+/* Feature-local layout only; no changes to global design tokens or components. */
+.inspection-extension { min-width: 0; padding: 16px; overflow: auto; flex: 1; }
+.inspection-extension button, .inspection-extension input, .inspection-extension select { font: inherit; color: inherit; border: 1px solid currentColor; border-radius: 2px; padding: 7px 10px; }
+.inspection-extension button { cursor: pointer; background: transparent; }
+.inspection-extension button[aria-selected="true"] { font-weight: 700; text-decoration: underline; text-underline-offset: 6px; }
+.inspection-extension button:disabled { opacity: .45; cursor: default; }
+.inspection-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 14px; }
+.inspection-extension label { display: flex; flex-direction: column; gap: 6px; min-width: 120px; }
+.inspection-extension select { max-width: 100%; }
+.inspection-graph { height: 430px; min-height: 280px; color: #101a2b; }
+.inspection-detail, .inspection-changes article { padding: 16px 0; border-bottom: 1px solid #9ba5b5; }
+.inspection-extension pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; font: inherit; }
+.inspection-extension p { overflow-wrap: anywhere; margin: 10px 0; }
+.inspection-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }

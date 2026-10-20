@@ -17,7 +17,7 @@
 [![Electron](https://img.shields.io/badge/Electron-44-47848f?style=flat&logo=electron&logoColor=white)](desktop/package.json)
 [![Python](https://img.shields.io/badge/Python-3.12-47779e?style=flat&logo=python&logoColor=white)](requirements.txt)
 
-[**Windows 다운로드**](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.6.3) · [빠른 시작](docs/quickstart-windows.md) · [사용 설명서](docs/manual.md) · [릴리스 노트](docs/releases/0.6.3.md)
+[**Windows 다운로드**](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.7.0) · [빠른 시작](docs/quickstart-windows.md) · [사용 설명서](docs/manual.md) · [릴리스 노트](docs/releases/0.7.0.md)
 
 </div>
 
@@ -31,8 +31,8 @@
 
 **Windows 배포 파일에는 앱·Python 검사 엔진·Chromium이 모두 포함됩니다.** Python, Node.js, Docker를 따로 설치할 필요가 없습니다.
 
-1. [**0.6.3 Windows ZIP**](https://github.com/orqan137/chickadee_Bot/releases/download/v0.6.3/Chickadee-Studio-0.6.3-win-x64.zip)을 내려받아 전체 압축을 풉니다.
-2. `Chickadee-0.6.3/Chickadee.exe`를 실행합니다.
+1. [**0.7.0 Windows ZIP**](https://github.com/orqan137/chickadee_Bot/releases/download/v0.7.0/Chickadee-Studio-0.7.0-win-x64.zip)을 내려받아 전체 압축을 풉니다.
+2. `Chickadee-0.7.0/Chickadee.exe`를 실행합니다.
 3. **검사 대상** 노드를 누르고 오른쪽 URL 입력란에 주소를 입력합니다.
 4. 상단 **검사 실행**을 누릅니다. 먼저 둘러보려면 옆의 펼침 메뉴에서 **데모 검사**를 선택하세요.
 
@@ -76,7 +76,15 @@
 | 저장과 복원 | JSON·CSV·보고서, 마지막 검사 화면과 최근 30개 실행 기록 보관 |
 | 빠른 조작 | 앱 드롭다운, 키보드 메뉴 이동, 빠른 명령, 설정·노드 위치 기억 |
 
-외부 API 키나 GPU 없이 규칙 기반으로 동작합니다. 로컬 에이전트 연동 규격은 제공하지만 **AI 제공자는 연결하지 않았습니다.** [에이전트 확장 규격](docs/agent-extension.md)
+기본 검사는 외부 API 키나 GPU 없이 규칙 기반으로 동작합니다.
+
+### 검사 분석 · 0.7.0
+
+- **탐색 그래프**: 실제 관찰한 페이지, 스크롤·읽기 동작과 iframe 탐색을 확인합니다.
+- **변경 비교**: 같은 URL의 이전 검사와 문구·스타일·링크를 비교하고 기준 기록을 선택합니다.
+- **Groq 검토**: 선택한 근거를 API 키로 분석하는 선택 기능입니다. 자동으로 호출하지 않으며 호출·토큰 한도를 적용합니다. 원본 탐지 결과와 사람의 검토 상태는 변경하지 않습니다.
+
+외부로 전달되는 근거와 마스킹 범위, 설정 방법은 [검사 분석 안내](docs/inspection-agent.md)를 확인하세요.
 
 ## 무엇을 탐지하나요?
 
@@ -133,7 +141,7 @@ npm run build
 npm start
 ```
 
-Windows 앱·검사 엔진 패키징은 저장소 루트의 `scripts/build-desktop.ps1`을 사용합니다. 출력은 `artifacts/electron-0.6.3/win-unpacked/Chickadee.exe`이며 폴더 전체를 배포합니다.
+Windows 앱·검사 엔진 패키징은 저장소 루트의 `scripts/build-desktop.ps1`을 사용합니다. 출력은 `artifacts/electron-0.7.0/win-unpacked/Chickadee.exe`이며 폴더 전체를 배포합니다.
 
 </details>
 
@@ -180,7 +188,7 @@ macOS에서는 Python 실행 경로를 `.venv/bin/python`으로 바꿉니다. �
 | [Windows 빠른 실행](docs/quickstart-windows.md) | [데스크톱 개발·배포](docs/desktop.md) | [조사 자료 원본](research/README.md) |
 | [사용 매뉴얼](docs/manual.md) | [아키텍처](docs/architecture.md) | [Dots 자료 반영](docs/research-integration.md) |
 | [결과 파일 형식](docs/result-format.md) | [검증 기록](docs/validation.md) | [v4 조사 정리](docs/research-v4.md) |
-| [릴리스 노트](docs/releases/0.6.3.md) | [디자인 기준](DESIGN.md) | [ML·에이전트 설계](docs/ml-agent-generalization.md) |
+| [릴리스 노트](docs/releases/0.7.0.md) | [디자인 기준](DESIGN.md) | [ML·에이전트 설계](docs/ml-agent-generalization.md) |
 | [개발 계획](docs/development-plan.md) | [에이전트 규격](docs/agent-extension.md) | [ML 오프라인 대조](research/ml-review/2026-10-21/) |
 | [요구사항](docs/requirements.md) | [외부 구성요소](docs/third-party-notices.md) | [모의 웹 명세](examples/mock-site-spec.json) |
 | [제출 체크리스트](docs/submission-checklist.md) | [결과 예시](examples/result.sample.json) | [모의 웹 내용](examples/mock-site-content.json) |

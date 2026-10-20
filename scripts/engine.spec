@@ -6,6 +6,7 @@ a = Analysis(
     [str(root / 'run_bridge.py')], pathex=[str(root)], binaries=[],
     datas=[(str(root / 'chickadee/extract.js'), 'chickadee'),
            (str(root / 'chickadee/rules.json'), 'chickadee'),
+           (str(root / 'chickadee/data'), 'chickadee/data'),
            (str(root / 'schemas/result.schema.json'), 'schemas'),
            (str(root / 'chickadee/demo_site'), 'chickadee/demo_site'),
            (str(root / 'profiles'), 'profiles')],

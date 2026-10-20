@@ -1,6 +1,6 @@
 # 개발 계획
 
-0.6.2의 구현 상태와 다음 작업을 정리합니다. 체크되지 않은 항목은 아직 개발·검증하지 않았습니다. 현재 앱은 [데스크톱 앱 안내](desktop.md), Python 호환판은 [매뉴얼](manual.md)을 따릅니다.
+0.7.0의 구현 상태와 다음 작업을 정리합니다. 탐색 그래프·변경 비교·Groq 수집 근거 조사는 [사용 안내](inspection-agent.md)를 따릅니다. 학습 ML·브라우저 재관측·OCR은 후속 범위입니다. 현재 앱은 [데스크톱 앱 안내](desktop.md), Python 호환판은 [매뉴얼](manual.md)을 따릅니다.
 
 ## 1차 목표: 필수 4종을 끝까지 실행
 
@@ -20,7 +20,7 @@
 | 데스크톱 화면 | Electron + React + React Flow | 실제 단계·페이지 화면·포트 연결과 결과 근거 표시; Tkinter 호환판 유지 |
 | 배포 | Electron 폴더형 + PyInstaller 검사 프로그램 | Python·Chromium을 동봉한 Windows x64 실행 파일 |
 
-의존성은 requirements 파일에 고정하고 Chromium과 Python 런타임을 포함하는 Windows 폴더형 패키지를 만듭니다. AI API는 사용하지 않습니다. 개발 PC에서 소스·화면·실행 파일을 검증하며, 개발 도구가 없는 별도 PC 검증은 최종 제출 전에 남아 있습니다.
+의존성은 requirements 파일에 고정하고 Chromium과 Python 런타임을 포함하는 Windows 폴더형 패키지를 만듭니다. 기본 검사는 로컬 규칙을 사용하며, 사용자가 선택한 근거의 AI 검토에만 Groq API를 사용합니다. 개발 도구가 없는 별도 사용자 PC 검증은 최종 제출 전에 남아 있습니다.
 
 ## 탐색과 판정 원칙
 

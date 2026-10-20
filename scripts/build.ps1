@@ -12,7 +12,7 @@ try {
         & $taskPython -m playwright install chromium --only-shell
         if ($LASTEXITCODE -ne 0) { throw 'Chromium installation failed.' }
     }
-    & $taskPython -m PyInstaller --noconfirm --clean --onedir --windowed --distpath $DistPath --name ChickadeeBot --add-data 'chickadee/extract.js;chickadee' --add-data 'chickadee/rules.json;chickadee' --add-data 'schemas/result.schema.json;schemas' --add-data 'chickadee/demo_site;chickadee/demo_site' run.py
+    & $taskPython -m PyInstaller --noconfirm --clean --onedir --windowed --distpath $DistPath --name ChickadeeBot --add-data 'chickadee/extract.js;chickadee' --add-data 'chickadee/rules.json;chickadee' --add-data 'chickadee/data;chickadee/data' --add-data 'schemas/result.schema.json;schemas' --add-data 'chickadee/demo_site;chickadee/demo_site' run.py
     if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
     $taskApp = Join-Path $DistPath 'ChickadeeBot'
     Copy-Item -LiteralPath 'docs\manual.md' -Destination (Join-Path $taskApp 'MANUAL.md')

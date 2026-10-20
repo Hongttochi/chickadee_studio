@@ -88,6 +88,7 @@ import {
 import "./style.css";
 import "./theme.css";
 import brandMark from "../assets/app-mark.png";
+import InspectionInsights from "./InspectionInsights.jsx";
 import targetMap from "../assets/map.png";
 import browserImage from "../assets/browser.png";
 import collectionImage from "../assets/collection.png";
@@ -1043,7 +1044,7 @@ function App() {
     setQueue(0);
     setElapsed(0);
     setStartTime(Date.now());
-    setView("workflow");
+    setView((previous) => previous === "inspection" ? "inspection" : "workflow");
     setSelectedNode(null);
     setSelectedRecord(null);
     try {
@@ -1234,6 +1235,7 @@ function App() {
             ["workflow", "Workflow", "검사 구성"],
             ["results", "ListFilter", "탐지 내역"],
             ["pages", "Network", "탐색 경로"],
+            ["inspection", "GitBranch", "검사 분석"],
             ["activity", "Activity", "진행 기록"],
             ["history", "History", "검사 기록"],
           ].map(([id, icon, label]) => (
@@ -1269,7 +1271,7 @@ function App() {
       <main className="main">
         <header className="topbar">
             <h1>
-              {view === "history"
+              {view === "inspection" ? "검사 분석" : view === "history"
                 ? "검사 기록"
                 : view === "results"
                   ? "탐지 내역"
@@ -1460,6 +1462,7 @@ function App() {
           </div>
         </section>
         <div className="content-area" data-view={view} key={view}>
+          {view === "inspection" && <InspectionInsights />}
           {view === "workflow" && (
             <div className={`studio ${selectedNode || monitorOpen ? "panel-open" : "panel-closed"}`}>
               <section className="canvas-shell">
