@@ -121,12 +121,22 @@ async function initialize() {
     (_contents, _permission, callback) => callback(false),
   );
   window.webContents.session.setPermissionCheckHandler(() => false);
-  const executable = app.isPackaged
-    ? path.join(process.resourcesPath, "engine", "ChickadeeEngine.exe")
-    : path.join(root, ".venv", "Scripts", "python.exe");
-  const args = app.isPackaged
+  let executable = app.isPackaged
+    ? path.join(
+        process.resourcesPath,
+        "engine",
+        process.platform === "win32" ? "ChickadeeEngine.exe" : "ChickadeeEngine",
+      )
+    : process.platform === "win32"
+      ? path.join(root, ".venv", "Scripts", "python.exe")
+      : path.join(root, ".venv", "bin", "python");
+  let args = app.isPackaged
     ? ["--data-dir", app.getPath("userData")]
     : ["-m", "chickadee.bridge", "--data-dir", app.getPath("userData")];
+  if (!app.isPackaged && process.platform === "darwin") {
+    args = [process.arch === "arm64" ? "-arm64" : "-x86_64", executable, ...args];
+    executable = "/usr/bin/arch";
+  }
   backend = new Backend(
     executable,
     args,
