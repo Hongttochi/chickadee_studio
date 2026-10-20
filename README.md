@@ -4,7 +4,7 @@
 
 공공 웹사이트에서 문자로 위장하거나 CSS로 숨긴 불법광고 의심 요소를 찾는 점검 도구입니다. URL을 시작으로 하위 페이지·동적 댓글·설정한 읽기 버튼·iframe을 탐색하고, 판정 근거와 평가용 `result.json`을 제공합니다.
 
-**0.3.0의 기본 실행은 로컬(loopback) 전용입니다.** 실제 사이트 검사는 별도 VM에서 `--network`로 실행하고, 사용자 PC에서는 **결과 불러오기**로 JSON만 확인하는 경로를 권장합니다. 프로그램은 VM을 생성하거나 VM 격리를 검증하지 않으며, 브라우저를 실행하는 환경의 보안을 보장하지 않습니다.
+**0.4.1부터 실행 파일을 더블클릭하고 외부 URL을 입력하면 바로 검사할 수 있습니다.** Python·Docker·VM 설치나 별도 실행 옵션은 필요하지 않습니다. [Windows 빠른 실행](docs/quickstart-windows.md)을 참고하세요. 로컬 주소만 허용하려면 선택적으로 `--local-only`를 사용합니다.
 
 행정안전부·한국지능정보사회진흥원의 **2026 공공 웹사이트 불법광고 탐지 도구 개발 공모전**을 목표로 개발하고 있습니다. 현재 필수 4종의 규칙 기반 탐지·화면·파일 출력을 구현했으며, 최종 제출본 수준의 탐지 성능 검증은 남아 있습니다.
 
@@ -28,6 +28,12 @@
 - 중단·시간/페이지 한도·수집 오류를 화면과 `scan-report.json`에 표시합니다.
 - 결과를 다시 불러와 필터링하고, 키워드 일치·CSS 속성·프레임·읽기 동작 근거를 확인할 수 있습니다.
 - 로컬 데모 사이트를 내장합니다. 외부 API·API 키·GPU 없이 작동합니다.
+
+0.4.0에서는 카드형 대시보드·원문/URL 검색·정렬·판정 근거/원시 JSON/실행 기록 탭·CSV 내보내기를 제공합니다. 혼합 `ㅋrㅈi노`, 주소 구분점, 파일명·기사 인용·문단 경계의 오탐을 보강했습니다. 위장·은닉이 없는 카지노·대출·투자·구매 유도는 별도 검토 후보로 분류합니다. 후보에 필수 4종 코드를 임의로 붙이지 않습니다.
+
+0.4.2에서는 게시판·상세 글을 일반 메뉴보다 먼저 방문하고, `data-url`·`data-href`·단순 `location.href` 주소를 추가로 수집합니다. 목록과 상세 글의 같은 광고 후보는 합치며, 실행 기록과 보고서에서 링크 발견 수·요소 수·방문 시간·본문 선택자 일치 여부를 확인할 수 있습니다. [실제 테스트 페이지 비교와 한계](docs/performance.md)를 참고하세요.
+
+![현재 점검 화면](docs/assets/app-dashboard.png)
 
 ## Dots 조사 자료 반영
 
@@ -69,25 +75,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 
 ## 결과 파일
 
-기본 저장 위치는 배포본에서는 실행 파일 폴더, 소스 실행에서는 저장소 최상위입니다. 화면에서 폴더를 바꾸거나 CLI에서 `--output-dir`를 지정할 수 있습니다.
+기본 저장 위치는 배포본에서는 실행 파일 옆 `results`, 소스 실행에서는 저장소의 `results`입니다. 화면에서 폴더를 바꾸거나 CLI에서 `--output-dir`를 지정할 수 있습니다.
 
 | 파일 | 내용 |
 | --- | --- |
 | `result.json` | `meta`와 `findings`, 필수 4종 평가용 결과. 0건도 빈 배열 저장 |
 | `scan-report.json` | 완료·일부 결과·중단·실패 상태, 점검 페이지, 오류·한도, 결과 파일 해시 |
+| `result.csv` | 필수 기법·광고 의심 후보를 고정된 17개 칼럼으로 저장. [칼럼 정의](docs/result-format.md) |
 
-새 실행 종료 시 이전 파일을 교체합니다. **일부 결과나 실패를 0건 정상 완료로 해석하지 마세요.** 추가 유형은 미구현이며 `result_extra.json`은 생성하지 않습니다.
+새 실행 종료 시 이전 파일을 교체합니다. **일부 결과나 실패를 0건 정상 완료로 해석하지 마세요.** 일반 광고 후보는 보고서 `ad_candidates`와 CSV에 저장하며, 위장·은닉이 없는 문구는 필수 `result.json`에 넣지 않습니다. `result_extra.json`은 생성하지 않습니다.
 
-## 실제 사이트 검사: 별도 VM
+## 실제 사이트 검사
 
-아래 명령은 개인 계정·비밀정보·호스트 공유 폴더를 연결하지 않은 별도 검사 환경에서 실행합니다. `--network`는 외부 URL 허용 스위치이며 VM 여부를 판별하지 않습니다. 이 PC에서 실제 광고 페이지를 열어 검증하지 않았습니다.
+GUI에서는 URL을 입력하고 점검 시작을 누릅니다. CLI도 기본적으로 외부 URL을 허용하며 기존 `--network` 옵션은 호환성을 위해 유지합니다.
 
 ```powershell
-# 별도 VM에서 실행. 정책브리핑은 검증 후보이며 실제 탐지 성능을 보증하지 않습니다.
+# CLI 사용 예시
 .\.venv\Scripts\python.exe -m chickadee --scan 'https://www.korea.kr/' --network --profile profiles/public-site.json --max-pages 3 --timeout 120 --interval 2 --output-dir artifacts/scan
 ```
 
-VM에서 `result.json`, `scan-report.json`만 가져온 뒤 화면의 **결과 불러오기**를 사용합니다. 이 기능은 출처 사이트에 접속하거나 HTML을 실행하지 않습니다. 자세한 [사용 절차와 실행 제한](docs/manual.md)을 확인하세요.
+저장한 결과는 화면의 **결과 불러오기**로 다시 확인합니다. 이 기능은 출처 사이트에 접속하거나 HTML을 실행하지 않습니다. 자세한 [사용 절차와 실행 제한](docs/manual.md)을 확인하세요.
 
 ## 아키텍처
 
@@ -102,7 +109,9 @@ VM에서 `result.json`, `scan-report.json`만 가져온 뒤 화면의 **결과 �
 | `chickadee/` | 탐지 규칙, 브라우저 탐색, 화면, CLI, 로컬 데모 |
 | `tests/` | 실제 Chromium 통합 검사와 화면·출력 검사 |
 | [실행·빌드·사용설명서](docs/manual.md) | 설치, 배포, 저장 경로, 오류·제한 |
-| [0.3.0 검증 기록](docs/validation.md) | 통과한 테스트·배포 확인과 미검증 항목 |
+| [탐색 성능·한계](docs/performance.md) / [실제 결과](examples/test-site-2026-10-20/) | 첫 결과·방문 범위 비교, 실제 CSV·보고서, 다음 개선 |
+| [검증 기록](docs/validation.md) | 통과한 테스트·배포 확인과 미검증 항목 |
+| [Windows 빠른 실행](docs/quickstart-windows.md) / [저장 칼럼](docs/result-format.md) | 실행 파일·고정 CSV 17개 칼럼 |
 | [Dots 자료 반영](docs/research-integration.md) / [조사 원본](research/README.md) | 관찰 수준·근거·코드 변경·회귀 검사 |
 | [요구사항](docs/requirements.md) | 모집요강과 필수 스키마·평가 조건 |
 | [개발 계획](docs/development-plan.md) | 구현 상태와 다음 작업 |

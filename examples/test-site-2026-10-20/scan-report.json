@@ -1,0 +1,1474 @@
+{
+  "status": "partial",
+  "pages_scanned": [
+    "http://113.198.66.73:18244/",
+    "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=60",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=59",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=58",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=57",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=56",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=55",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=54",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=53",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=52",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=51",
+    "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=1&field=title&q=",
+    "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=2&field=title&q=",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=50",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=49",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=48",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=47",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=46",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=45",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=44",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=43",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=42",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=41",
+    "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=3&field=title&q=",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=40",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=39",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=38",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=37",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=36",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=35",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=34",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=33",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=32",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=31",
+    "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=4&field=title&q=",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=30",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=29",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=28",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=27",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=26",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=25",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=24",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=23",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=22",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=21",
+    "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=5&field=title&q=",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=20",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=19",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=18",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=17",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=16",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=15",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=14",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=13",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=12",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=11",
+    "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=6&field=title&q=",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=10",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=9",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=8",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=7",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=6",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=5",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=4",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=3",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=2",
+    "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=1",
+    "http://113.198.66.73:18244/parents/index.do",
+    "http://113.198.66.73:18244/parents/index.do?section=resources"
+  ],
+  "pages_remaining": 35,
+  "page_diagnostics": [
+    {
+      "url": "http://113.198.66.73:18244/",
+      "priority": 20,
+      "status": "scanned",
+      "links_discovered": 38,
+      "links_queued": 37,
+      "elements_examined": 468,
+      "final_url": "http://113.198.66.73:18244/",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 1.156,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106",
+      "priority": 10,
+      "status": "scanned",
+      "links_discovered": 30,
+      "links_queued": 17,
+      "elements_examined": 374,
+      "final_url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.938,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=60",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=60",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=59",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=59",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=58",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=58",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=57",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=57",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=56",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=56",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=55",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=55",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=54",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=54",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=53",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=53",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=52",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=52",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.781,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=51",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=51",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=1&field=title&q=",
+      "priority": 10,
+      "status": "scanned",
+      "links_discovered": 30,
+      "links_queued": 0,
+      "elements_examined": 374,
+      "final_url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=1&field=title&q=",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.953,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=2&field=title&q=",
+      "priority": 10,
+      "status": "scanned",
+      "links_discovered": 30,
+      "links_queued": 10,
+      "elements_examined": 374,
+      "final_url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=2&field=title&q=",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.937,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=50",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=50",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.796,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=49",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=49",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.796,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=48",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=48",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.843,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=47",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=47",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.86,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=46",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=46",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=45",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=45",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=44",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=44",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=43",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=43",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=42",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=42",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=41",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=41",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=3&field=title&q=",
+      "priority": 10,
+      "status": "scanned",
+      "links_discovered": 30,
+      "links_queued": 10,
+      "elements_examined": 374,
+      "final_url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=3&field=title&q=",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 1.0,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=40",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=40",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=39",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=39",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.86,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=38",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=38",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.859,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=37",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=37",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=36",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=36",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=35",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=35",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=34",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=34",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=33",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=33",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=32",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=32",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=31",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=31",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=4&field=title&q=",
+      "priority": 10,
+      "status": "scanned",
+      "links_discovered": 30,
+      "links_queued": 10,
+      "elements_examined": 374,
+      "final_url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=4&field=title&q=",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.953,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=30",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=30",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=29",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=29",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=28",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=28",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=27",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=27",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.812,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=26",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=26",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.796,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=25",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=25",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.812,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=24",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=24",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=23",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=23",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=22",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=22",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=21",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=21",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.812,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=5&field=title&q=",
+      "priority": 10,
+      "status": "scanned",
+      "links_discovered": 30,
+      "links_queued": 10,
+      "elements_examined": 374,
+      "final_url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=5&field=title&q=",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.953,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=20",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=20",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=19",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=19",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=18",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=18",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.812,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=17",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=17",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=16",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=16",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.922,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=15",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=15",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.781,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=14",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=14",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=13",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=13",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.875,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=12",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=12",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=11",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=11",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.812,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=6&field=title&q=",
+      "priority": 10,
+      "status": "scanned",
+      "links_discovered": 29,
+      "links_queued": 10,
+      "elements_examined": 370,
+      "final_url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=6&field=title&q=",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.969,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=10",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=10",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.781,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=9",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=9",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.797,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=8",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=8",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.781,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=7",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=7",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=6",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=6",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.844,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=5",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 14,
+      "links_queued": 0,
+      "elements_examined": 150,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=5",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 1
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=4",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=4",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.828,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=3",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 152,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=3",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.812,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=2",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=2",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.813,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=1",
+      "priority": 0,
+      "status": "scanned",
+      "links_discovered": 13,
+      "links_queued": 0,
+      "elements_examined": 148,
+      "final_url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=1",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 0.812,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/index.do",
+      "priority": 20,
+      "status": "scanned",
+      "links_discovered": 37,
+      "links_queued": 0,
+      "elements_examined": 468,
+      "final_url": "http://113.198.66.73:18244/parents/index.do",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 1.047,
+      "findings_added": 0,
+      "candidates_added": 0
+    },
+    {
+      "url": "http://113.198.66.73:18244/parents/index.do?section=resources",
+      "priority": 20,
+      "status": "scanned",
+      "links_discovered": 37,
+      "links_queued": 0,
+      "elements_examined": 468,
+      "final_url": "http://113.198.66.73:18244/parents/index.do?section=resources",
+      "http_status": 200,
+      "title": "학부모 i-누리 | 로컬 테스트",
+      "elapsed_sec": 1.063,
+      "findings_added": 0,
+      "candidates_added": 0
+    }
+  ],
+  "crawl_summary": {
+    "discovered_urls": 105,
+    "pages_scanned": 70,
+    "queue_remaining": 35,
+    "scheduling": "content-first"
+  },
+  "errors": [
+    {
+      "url": "http://113.198.66.73:18244/",
+      "message": "최대 페이지 수에 도달했습니다. 일부 결과입니다."
+    }
+  ],
+  "finding_count": 0,
+  "states_scanned": 140,
+  "retry_count": 0,
+  "evidence_details": {},
+  "actions": [],
+  "ad_candidates": [
+    {
+      "id": "c_00001",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=60",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "이 게시판 회원만 특별 할인. 지금 https://shop.example.invalid 에서 상품 주문하고 추천 수당 받으세요.",
+      "category": "COMMERCIAL",
+      "review_required": true,
+      "matched_keywords": [
+        "상품 주문",
+        "추천 수당"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "특별 할인",
+        "추천 수당"
+      ],
+      "observed_at": "2026-10-20T17:45:14.986189+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00002",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=55",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "아이를 키우며 알아두면 좋은 정보입니다.\n\n추가 내용: 무료 체험 후 유료 가입, 수익 보장 투자 상담 https://offer.example.invalid",
+      "category": "INVESTMENT",
+      "review_required": true,
+      "matched_keywords": [
+        "투자"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "수익 보장"
+      ],
+      "observed_at": "2026-10-20T17:45:20.008065+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00004",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=50",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "카.지.노 특별 보너스! 가 입 문의는 casino [dot] example [dot] invalid 로 연락.",
+      "category": "GAMBLING",
+      "review_required": true,
+      "matched_keywords": [
+        "casino",
+        "카지노"
+      ],
+      "reasons": [
+        "광고 주제어와 근접한 권유 문맥"
+      ],
+      "observed_at": "2026-10-20T17:45:27.419660+09:00",
+      "analysis": {
+        "is_advertisement": true,
+        "matches": [
+          {
+            "keyword": "casino",
+            "source_span": [
+              22,
+              28
+            ],
+            "homoglyph": false,
+            "jamo": false
+          },
+          {
+            "keyword": "카지노",
+            "source_span": [
+              0,
+              5
+            ],
+            "homoglyph": false,
+            "jamo": false
+          }
+        ],
+        "contextual_homoglyphs": [],
+        "additional_patterns": [
+          {
+            "pattern": "PUNCTUATION_INSERTION",
+            "source_span": [
+              0,
+              5
+            ]
+          }
+        ],
+        "rules_version": "2026-10-20.1"
+      },
+      "summary_observations": [
+        {
+          "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=2&field=title&q=",
+          "location": "article.post-row:nth-of-type(1) > a.post-link > strong:nth-of-type(1)",
+          "evidence_text": " 카 지 노 신 규 가 입 혜 택"
+        }
+      ]
+    },
+    {
+      "id": "c_00005",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=45",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "원금 보장 고수익 투자 모집. 오늘 가입하면 추가 수익 지급! https://invest.example.invalid",
+      "category": "INVESTMENT",
+      "review_required": true,
+      "matched_keywords": [
+        "투자"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "원금 보장",
+        "고수익",
+        "투자 모집"
+      ],
+      "observed_at": "2026-10-20T17:45:32.568100+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00007",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=40",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "신용 확인 없이 즉시 입금! 대출 상담 신청은 https://loan.example.invalid 로 접수하세요.",
+      "category": "LOAN",
+      "review_required": true,
+      "matched_keywords": [
+        "대출"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "상담 신청",
+        "즉시 입금",
+        "신용 확인 없이"
+      ],
+      "observed_at": "2026-10-20T17:45:38.934672+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00008",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=35",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "신규 회원 이벤트! 카지노 가입하고 충전 보너스 받으세요. 지금 https://casino.example.invalid 에서 참여하세요.",
+      "category": "GAMBLING",
+      "review_required": true,
+      "matched_keywords": [
+        "카지노"
+      ],
+      "reasons": [
+        "광고 주제어와 근접한 권유 문맥"
+      ],
+      "observed_at": "2026-10-20T17:45:44.176100+09:00",
+      "analysis": {
+        "is_advertisement": true,
+        "matches": [
+          {
+            "keyword": "카지노",
+            "source_span": [
+              11,
+              14
+            ],
+            "homoglyph": false,
+            "jamo": false
+          }
+        ],
+        "contextual_homoglyphs": [],
+        "additional_patterns": [],
+        "rules_version": "2026-10-20.1"
+      },
+      "summary_observations": [
+        {
+          "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=3&field=title&q=",
+          "location": "article.post-row:nth-of-type(6) > a.post-link > strong:nth-of-type(1)",
+          "evidence_text": " 가입 즉시 카지노 포인트 지급"
+        }
+      ]
+    },
+    {
+      "id": "c_00009",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=30",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "이 게시판 회원만 특별 할인. 지금 https://shop.example.invalid 에서 상품 주문하고 추천 수당 받으세요.",
+      "category": "COMMERCIAL",
+      "review_required": true,
+      "matched_keywords": [
+        "상품 주문",
+        "추천 수당"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "특별 할인",
+        "추천 수당"
+      ],
+      "observed_at": "2026-10-20T17:45:50.457834+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00010",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=25",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "아이를 키우며 알아두면 좋은 정보입니다.\n\n추가 내용: 무료 체험 후 유료 가입, 수익 보장 투자 상담 https://offer.example.invalid",
+      "category": "INVESTMENT",
+      "review_required": true,
+      "matched_keywords": [
+        "투자"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "수익 보장"
+      ],
+      "observed_at": "2026-10-20T17:45:55.547068+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00012",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=20",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "카.지.노 특별 보너스! 가 입 문의는 casino [dot] example [dot] invalid 로 연락.",
+      "category": "GAMBLING",
+      "review_required": true,
+      "matched_keywords": [
+        "casino",
+        "카지노"
+      ],
+      "reasons": [
+        "광고 주제어와 근접한 권유 문맥"
+      ],
+      "observed_at": "2026-10-20T17:46:01.844163+09:00",
+      "analysis": {
+        "is_advertisement": true,
+        "matches": [
+          {
+            "keyword": "casino",
+            "source_span": [
+              22,
+              28
+            ],
+            "homoglyph": false,
+            "jamo": false
+          },
+          {
+            "keyword": "카지노",
+            "source_span": [
+              0,
+              5
+            ],
+            "homoglyph": false,
+            "jamo": false
+          }
+        ],
+        "contextual_homoglyphs": [],
+        "additional_patterns": [
+          {
+            "pattern": "PUNCTUATION_INSERTION",
+            "source_span": [
+              0,
+              5
+            ]
+          }
+        ],
+        "rules_version": "2026-10-20.1"
+      },
+      "summary_observations": [
+        {
+          "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=5&field=title&q=",
+          "location": "article.post-row:nth-of-type(1) > a.post-link > strong:nth-of-type(1)",
+          "evidence_text": " 카 지 노 신 규 가 입 혜 택"
+        }
+      ]
+    },
+    {
+      "id": "c_00013",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=15",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "원금 보장 고수익 투자 모집. 오늘 가입하면 추가 수익 지급! https://invest.example.invalid",
+      "category": "INVESTMENT",
+      "review_required": true,
+      "matched_keywords": [
+        "투자"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "원금 보장",
+        "고수익",
+        "투자 모집"
+      ],
+      "observed_at": "2026-10-20T17:46:07.047980+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00015",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=10",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "신용 확인 없이 즉시 입금! 대출 상담 신청은 https://loan.example.invalid 로 접수하세요.",
+      "category": "LOAN",
+      "review_required": true,
+      "matched_keywords": [
+        "대출"
+      ],
+      "reasons": [
+        "외부 주소가 포함된 모집·구매 권유",
+        "상담 신청",
+        "즉시 입금",
+        "신용 확인 없이"
+      ],
+      "observed_at": "2026-10-20T17:46:13.389796+09:00",
+      "analysis": {}
+    },
+    {
+      "id": "c_00016",
+      "url": "http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=5",
+      "location": "div.post-content",
+      "scope_location": "article.post-detail",
+      "evidence_text": "신규 회원 이벤트! 카지노 가입하고 충전 보너스 받으세요. 지금 https://casino.example.invalid 에서 참여하세요.",
+      "category": "GAMBLING",
+      "review_required": true,
+      "matched_keywords": [
+        "카지노"
+      ],
+      "reasons": [
+        "광고 주제어와 근접한 권유 문맥"
+      ],
+      "observed_at": "2026-10-20T17:46:18.495421+09:00",
+      "analysis": {
+        "is_advertisement": true,
+        "matches": [
+          {
+            "keyword": "카지노",
+            "source_span": [
+              11,
+              14
+            ],
+            "homoglyph": false,
+            "jamo": false
+          }
+        ],
+        "contextual_homoglyphs": [],
+        "additional_patterns": [],
+        "rules_version": "2026-10-20.1"
+      },
+      "summary_observations": [
+        {
+          "url": "http://113.198.66.73:18244/parents/board/index.do?menu_idx=8&manage_idx=106&page=6&field=title&q=",
+          "location": "article.post-row:nth-of-type(6) > a.post-link > strong:nth-of-type(1)",
+          "evidence_text": " 가입 즉시 카지노 포인트 지급"
+        }
+      ]
+    }
+  ],
+  "blocked_requests": [],
+  "stopped_origins": {},
+  "rules_version": "2026-10-20.1",
+  "profile": {
+    "name": "기본 공개 페이지 탐색",
+    "path_prefix": "/",
+    "controls": [],
+    "max_actions": 5,
+    "scroll_steps": 4,
+    "allowed_resource_origins": [],
+    "content_selector": null
+  },
+  "execution_mode": "network-explicit",
+  "limits": {
+    "max_pages": 70,
+    "timeout_sec": 150.0,
+    "page_timeout_sec": 15,
+    "settle_ms": 100,
+    "retries": 1,
+    "interval_sec": 0.15
+  },
+  "candidate_count": 12,
+  "csv_schema_version": "1.0",
+  "result_sha256": "d945a99ad148ccda7a6b8d93c256523706f3beafbe5ef6c94aa91344c36a360f",
+  "output_path": "result.json",
+  "csv_sha256": "81b26b9a0bc3b77ec925066506ae091f7d3e1bc201945747e0f18a5979448bfe",
+  "csv_columns": [
+    "schema_version",
+    "record_kind",
+    "id",
+    "url",
+    "category",
+    "technique",
+    "technique_name",
+    "is_violation",
+    "review_required",
+    "evidence_text",
+    "location",
+    "matched_keywords",
+    "style_reasons",
+    "frame_depth",
+    "observed_at",
+    "rules_version",
+    "tool_version"
+  ]
+}

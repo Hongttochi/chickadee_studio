@@ -1,0 +1,9 @@
+{
+  "name": "사용자 제공 i-누리 모의 게시판",
+  "path_prefix": "/parents/board/",
+  "content_selector": ".post-detail",
+  "controls": [],
+  "max_actions": 0,
+  "scroll_steps": 2,
+  "allowed_resource_origins": []
+}

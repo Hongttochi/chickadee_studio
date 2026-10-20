@@ -2,3 +2,5 @@
 research/ad-evidence/** -text -whitespace
 # The generated payload is compared byte-for-byte by --check on every platform.
 examples/mock-site-content.json text eol=lf
+# Preserve CSV CRLF and JSON hashes in the published test outputs.
+examples/test-site-2026-10-20/* -text -whitespace

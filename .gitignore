@@ -15,8 +15,12 @@ dist/
 
 # Generated findings and collected content
 result.json
+result.csv
+!examples/test-site-2026-10-20/result.json
+!examples/test-site-2026-10-20/result.csv
 result_extra.json
 scan-report.json
+!examples/test-site-2026-10-20/scan-report.json
 artifacts/
 logs/
 screenshots/

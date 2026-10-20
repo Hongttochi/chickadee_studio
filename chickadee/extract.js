@@ -1,14 +1,20 @@
 // Evaluated independently in every frame, including cross-origin frames.
-({limit = 20000, textLimit = 20000} = {}) => {
+({limit = 20000, textLimit = 20000, contentSelector = null} = {}) => {
   const ignored = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'TITLE', 'TEXTAREA']);
+  const blockTags = new Set(['BODY','DIV','P','ARTICLE','SECTION','MAIN','HEADER','FOOTER','NAV','ASIDE',
+    'H1','H2','H3','H4','H5','H6','LI','UL','OL','TABLE','TR','TD','TH','FORM','FIGURE','PRE','BLOCKQUOTE','BR','HR']);
   const all = [...document.querySelectorAll('body, body *')];
   const ids = new Map(all.map((e, i) => [e, i]));
   const styleCache = new WeakMap();
+  const appearanceCache = new WeakMap();
+  const selectorCache = new WeakMap();
+  const contentRoots = contentSelector ? [...document.querySelectorAll(contentSelector)] : null;
   const style = e => {
     if (!styleCache.has(e)) styleCache.set(e, getComputedStyle(e));
     return styleCache.get(e);
   };
   function selector(el, frame = false) {
+    if (!frame && selectorCache.has(el)) return selectorCache.get(el);
     const parts = [];
     for (let node = el; node; node = node.parentElement) {
       let part = node.tagName.toLowerCase();
@@ -23,6 +29,7 @@
       if (document.querySelectorAll(path).length === 1) break;
     }
     let path = parts.join(' > ');
+    if (!frame) selectorCache.set(el, path);
     if (frame && el.hasAttribute('src')) {
       // Absolute src is required by the contest; nth-of-type disambiguates
       // duplicate frames. Resolve relative attributes before replaying this.
@@ -37,6 +44,7 @@
     return values.length === 3 ? [...values, 1] : values;
   }
   function appearance(el) {
+    if (appearanceCache.has(el)) return appearanceCache.get(el);
     const cs = style(el);
     let alpha = 1, hidden = false, clipped = false, fixed = false;
     const hidingAncestors = [];
@@ -80,13 +88,15 @@
     if (['hidden', 'collapse'].includes(cs.visibility)) reasons.push('visibility:' + cs.visibility);
     if (parseFloat(cs.fontSize) <= 1) reasons.push('font-size <= 1px');
     if (outside) reasons.push('문서 원점 밖 또는 멀리 배치한 고정/절대 좌표');
-    return {transparent: !!transparent, offscreen: !!offscreen, reasons,
+    const result = {transparent: !!transparent, offscreen: !!offscreen, reasons,
       style: {color: cs.color, background: cs.backgroundColor, effective_opacity: alpha,
         font_size: cs.fontSize, display: cs.display, visibility: cs.visibility,
         position: cs.position, rect: {x:rect.x, y:rect.y, width:rect.width, height:rect.height},
         document_rect: {x:rect.x + scrollX, y:rect.y + scrollY, width:rect.width, height:rect.height},
         scroll: {x:scrollX, y:scrollY}, hiding_ancestors: hidingAncestors,
         viewport: {width:innerWidth, height:innerHeight}}};
+    appearanceCache.set(el, result);
+    return result;
   }
   const elements = [];
   // Build text from DOM text nodes, excluding executable/style source. Also
@@ -94,16 +104,22 @@
   // black, explicitly styled child look like hidden text.
   const textInfo = new Map();
   for (const el of [...all].reverse()) {
-    if (ignored.has(el.tagName)) { textInfo.set(el, {text: '', direct: '', count: 0, transparent: true, offscreen: true, reasons: []}); continue; }
+    if (ignored.has(el.tagName)) { textInfo.set(el, {text: '', direct: '', breaks: [], count: 0, transparent: true, offscreen: true, reasons: []}); continue; }
     let text = '', direct = '';
     let count = 0, transparent = true, offscreen = true;
     const reasons = new Set();
+    const breaks = new Set();
     for (const node of el.childNodes) {
       if (node.nodeType === Node.TEXT_NODE) { text += node.textContent; direct += node.textContent; }
       else if (node.nodeType === Node.ELEMENT_NODE) {
         const child = textInfo.get(node);
         if (child) {
+          const offset = text.length;
+          const block = blockTags.has(node.tagName) || /^(block|flex|grid|table|list-item)/.test(style(node).display);
+          if (block) breaks.add(offset);
+          child.breaks.forEach(p => breaks.add(offset + p));
           text = (text + child.text).slice(0, textLimit + 1);
+          if (block) breaks.add(text.length);
           count += child.count; transparent &&= child.transparent; offscreen &&= child.offscreen;
           child.reasons.forEach(r => reasons.add(r));
         }
@@ -114,11 +130,12 @@
       count++; transparent &&= own.transparent; offscreen &&= own.offscreen;
       own.reasons.forEach(r => reasons.add(r));
     }
-    textInfo.set(el, {text, direct, count, transparent, offscreen, reasons:[...reasons]});
+    textInfo.set(el, {text, direct, breaks:[...breaks].filter(p=>p>0 && p<text.length), count, transparent, offscreen, reasons:[...reasons]});
   }
   let truncated = false;
   for (const el of all) {
     if (ignored.has(el.tagName) || el.closest('script, style, noscript, template, textarea')) continue;
+    if (contentRoots && !contentRoots.some(root => root === el || root.contains(el))) continue;
     const info = textInfo.get(el);
     const text = info.text;
     if (!text.trim()) continue;
@@ -130,10 +147,44 @@
     if (elements.length >= limit) { truncated = true; break; }
     const visibility = {transparent: info.count > 0 && info.transparent,
       offscreen: info.count > 0 && info.offscreen};
+    const scope = el.closest('[data-comment-id], [role="article"], article, [data-post-id]');
+    const anchor = el.closest('a[href]');
+    let relatedContentUrl = null;
+    if (anchor) {
+      try {
+        const target = new URL(anchor.href);
+        target.hash = '';
+        if (/^https?:$/.test(target.protocol) && target.origin === location.origin && target.href !== location.href.split('#')[0]) relatedContentUrl = target.href;
+      } catch (_) { /* Malformed links must not prevent text extraction. */ }
+    }
     elements.push({node_id: ids.get(el), parent_id: ids.get(el.parentElement) ?? null,
       location: selector(el), text, direct_text: direct, reasons: info.reasons,
+      text_breaks: info.breaks,
+      content_scope: scope ? selector(scope) : null,
+      related_content_url: relatedContentUrl,
       computed_style: appearance(el).style, ...visibility});
   }
-  return {elements, truncated, links: [...document.querySelectorAll('a[href]')].slice(0, limit).map(a => a.href),
-    links_truncated: document.querySelectorAll('a[href]').length > limit};
+  const links = new Set();
+  let linksTruncated = false;
+  function addLink(value) {
+    if (!value || value.length > 8192) return;
+    try {
+      const url = new URL(value, document.baseURI);
+      if (!['http:', 'https:'].includes(url.protocol)) return;
+      url.hash = '';
+      if (links.size >= limit && !links.has(url.href)) { linksTruncated = true; return; }
+      links.add(url.href);
+    } catch (_) { /* Invalid DOM link, no navigation or code execution. */ }
+  }
+  for (const el of document.querySelectorAll('a[href], [data-href], [data-url], [data-link], [onclick]')) {
+    if (el.matches('a[href]')) addLink(el.getAttribute('href'));
+    for (const attribute of ['data-href', 'data-url', 'data-link']) addLink(el.getAttribute(attribute));
+    // Only literal location assignments/calls. Never evaluate onclick source,
+    // guess route arguments, click a form, or invoke arbitrary functions.
+    const handler = el.getAttribute('onclick') || '';
+    const literal = handler.match(/^\s*(?:(?:window\.|document\.)?location(?:\.href)?\s*=\s*(['"])([^'"\\\r\n]+)\1|(?:window\.)?location\.(?:assign|replace)\(\s*(['"])([^'"\\\r\n]+)\3\s*\))\s*;?\s*(?:return\s+false\s*;?)?\s*$/);
+    if (literal) addLink(literal[2] || literal[4]);
+  }
+  return {elements, truncated, links: [...links], links_truncated: linksTruncated,
+    content_roots_matched: contentRoots ? contentRoots.length : null};
 }

@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "encoding": "UTF-8 BOM",
+  "delimiter": ",",
+  "line_ending": "CRLF",
+  "columns": [
+    {
+      "name": "schema_version",
+      "description_ko": "CSV 칼럼 규격 버전"
+    },
+    {
+      "name": "record_kind",
+      "description_ko": "technique_finding 또는 ad_candidate"
+    },
+    {
+      "name": "id",
+      "description_ko": "항목 고유 ID"
+    },
+    {
+      "name": "url",
+      "description_ko": "항목을 관찰한 페이지 URL"
+    },
+    {
+      "name": "category",
+      "description_ko": "일반 후보의 주제 분류. 필수 기법 결과는 빈 값"
+    },
+    {
+      "name": "technique",
+      "description_ko": "필수 4종 코드. 일반 광고 후보는 빈 값"
+    },
+    {
+      "name": "technique_name",
+      "description_ko": "한글 유형 또는 후보 분류명"
+    },
+    {
+      "name": "is_violation",
+      "description_ko": "필수 기법 의심 결과는 true. 일반 후보는 미판정 빈 값"
+    },
+    {
+      "name": "review_required",
+      "description_ko": "사람의 검토 필요 여부"
+    },
+    {
+      "name": "evidence_text",
+      "description_ko": "DOM에서 수집한 원문"
+    },
+    {
+      "name": "location",
+      "description_ko": "프레임 경로를 포함한 CSS 선택자"
+    },
+    {
+      "name": "matched_keywords",
+      "description_ko": "일치 키워드의 JSON 배열"
+    },
+    {
+      "name": "style_reasons",
+      "description_ko": "스타일 또는 광고 문맥 판정 근거의 JSON 배열"
+    },
+    {
+      "name": "frame_depth",
+      "description_ko": "중첩 iframe 깊이"
+    },
+    {
+      "name": "observed_at",
+      "description_ko": "실제 관찰 시각(ISO 8601). 이전 파일에 없으면 빈 값"
+    },
+    {
+      "name": "rules_version",
+      "description_ko": "탐지 규칙 버전"
+    },
+    {
+      "name": "tool_version",
+      "description_ko": "프로그램 버전"
+    }
+  ],
+  "formula_safety_ko": "수식으로 해석될 수 있는 CSV 셀 앞에 작은따옴표를 붙인다. JSON의 원문은 변경하지 않는다.",
+  "null_ko": "빈 값은 미판정 또는 미수집이다. false나 0건 정상 완료로 해석하지 않는다."
+}

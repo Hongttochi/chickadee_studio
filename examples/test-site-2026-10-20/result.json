@@ -1,0 +1,11 @@
+{
+  "meta": {
+    "topic": "TOPIC",
+    "entry_url": "http://113.198.66.73:18244/",
+    "started_at": "2026-10-20T17:45:11.521372+09:00",
+    "finished_at": "2026-10-20T17:46:25.564667+09:00",
+    "elapsed_sec": 74.047,
+    "tool_version": "0.4.2"
+  },
+  "findings": []
+}

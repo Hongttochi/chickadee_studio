@@ -1,0 +1,11 @@
+**
+!requirements.txt
+!chickadee/
+!chickadee/**
+chickadee/**/__pycache__/
+!schemas/
+!schemas/result.schema.json
+!profiles/
+!profiles/**
+!deploy/
+!deploy/Dockerfile

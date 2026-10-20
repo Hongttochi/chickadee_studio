@@ -1,11 +1,13 @@
 import asyncio
-from collections import deque
+import heapq
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 import hashlib
 import ipaddress
+import itertools
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -15,6 +17,8 @@ from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
 from . import __version__
 from .detection import Rules, analyze, classify_elements
+from .candidates import classify_candidates, CATEGORY_LABELS
+from .exports import CSV_COLUMNS, csv_bytes, atomic_write
 from .profiles import SiteProfile
 
 # A browser installed with PLAYWRIGHT_BROWSERS_PATH=0 travels with the package.
@@ -44,6 +48,24 @@ def visit_key(url: str) -> tuple:
     return origin(url), parts.path or "/", tuple(sorted(parse_qsl(parts.query, keep_blank_values=True)))
 
 
+def navigation_priority(url: str) -> int:
+    """Visit content and pagination before global menus, without guessing URLs."""
+    parts = urlsplit(url)
+    path = parts.path.casefold()
+    keys = {k.casefold() for k, value in parse_qsl(parts.query) if value}
+    if re.search(r"/(?:login|logout|join|signup|admin|auth)(?:/|\.|$)", path):
+        return 40
+    if path.startswith('/api/'):
+        return 50
+    if keys & {'board_idx', 'post_id', 'postid', 'article_id', 'articleid', 'nttid', 'wr_id', 'document_srl'} or re.search(r"(?:^|/)(?:view|read|detail)(?:[./]|$)|/(?:posts|articles)/\d+", path):
+        return 0
+    if re.search(r"(?:board|bbs|forum|posts|articles)", path):
+        return 10
+    if keys & {'q', 'query', 'keyword', 'searchword'} or 'search' in path:
+        return 30
+    return 20
+
+
 def is_loopback(url: str) -> bool:
     host = urlsplit(url).hostname
     if host == "localhost":
@@ -68,7 +90,8 @@ def validate_result(result):
 
 
 def output_directory() -> Path:
-    return Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent.parent
+    base = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent.parent
+    return base / "results"
 
 
 @dataclass(frozen=True)
@@ -87,7 +110,7 @@ class ScanConfig:
     def __post_init__(self):
         normalize_url(self.entry_url)
         if not self.allow_network and not is_loopback(self.entry_url):
-            raise ValueError("이 실행은 로컬 전용입니다. 실제 사이트 검사는 별도 VM에서 --network 옵션으로 실행하고 이 PC에는 결과 JSON만 가져오세요. 이 옵션은 VM 격리를 검증하지 않습니다.")
+            raise ValueError("로컬 전용 모드입니다. 외부 사이트를 검사하려면 --local-only 옵션 없이 실행하세요.")
         if not 1 <= self.max_pages <= 10000:
             raise ValueError("최대 페이지 수는 1~10000 사이여야 합니다.")
         if not 0 < self.timeout_sec <= 1800 or not 0 < self.page_timeout_sec <= 120:
@@ -110,23 +133,21 @@ class ScanOutcome:
         folder = Path(folder).resolve()
         folder.mkdir(parents=True, exist_ok=True)
         payload = (json.dumps(self.result, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8")
-        report = {**self.report, "result_sha256": hashlib.sha256(payload).hexdigest(), "output_path": str(folder / "result.json")}
+        csv_payload = csv_bytes(self.result, self.report)
+        report = {**self.report, "result_sha256": hashlib.sha256(payload).hexdigest(), "output_path": str(folder / "result.json"),
+                  "csv_sha256": hashlib.sha256(csv_payload).hexdigest(), "csv_columns": list(CSV_COLUMNS), "csv_schema_version": "1.0"}
         # Each file replaces atomically. A matching SHA-256 in the sidecar lets
         # consumers detect an interrupted write between the two replacements.
-        for name, content in (("result.json", payload), ("scan-report.json", (json.dumps(report, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))):
-            temp_path = None
-            try:
-                with tempfile.NamedTemporaryFile(dir=folder, prefix=".chickadee-", delete=False) as stream:
-                    temp_path = Path(stream.name)
-                    stream.write(content)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                os.replace(temp_path, folder / name)
-            finally:
-                if temp_path is not None:
-                    temp_path.unlink(missing_ok=True)
+        for name, content in (("result.json", payload), ("result.csv", csv_payload),
+                              ("scan-report.json", (json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8"))):
+            atomic_write(folder / name, content)
         self.report.update(report)
         return folder / "result.json"
+
+    def save_csv(self, path):
+        validate_result(self.result)
+        atomic_write(path, csv_bytes(self.result, self.report))
+        return Path(path)
 
     @classmethod
     def load(cls, path: Path):
@@ -146,6 +167,20 @@ class ScanOutcome:
                 raise ValueError("결과와 보고서의 해시가 일치하지 않습니다. 같은 실행의 파일 쌍을 가져오세요.")
             if report.get("status") not in ("completed", "partial", "failed", "cancelled") or not isinstance(report.get("pages_scanned"), list) or not isinstance(report.get("errors"), list) or not isinstance(report.get("evidence_details", {}), dict):
                 raise ValueError("실행 보고서 형식이 올바르지 않습니다.")
+            candidates = report.get("ad_candidates", [])
+            ids = {f["id"] for f in result["findings"]}
+            if not isinstance(candidates, list) or len(candidates) > 20000:
+                raise ValueError("광고 후보 목록 형식이 올바르지 않습니다.")
+            for candidate in candidates:
+                if not isinstance(candidate, dict) or not all(isinstance(candidate.get(k), str) and candidate[k] for k in ("id", "url", "location", "evidence_text", "category")):
+                    raise ValueError("광고 후보 필수 필드가 올바르지 않습니다.")
+                normalize_url(candidate["url"])
+                if candidate["id"] in ids or candidate["category"] not in CATEGORY_LABELS:
+                    raise ValueError("광고 후보 ID 또는 분류가 올바르지 않습니다.")
+                ids.add(candidate["id"])
+                for key in ("matched_keywords", "reasons"):
+                    if not isinstance(candidate.get(key, []), list) or not all(isinstance(s, str) for s in candidate.get(key, [])):
+                        raise ValueError("광고 후보 근거는 문자열 배열이어야 합니다.")
         return cls(result, report)
 
 
@@ -162,6 +197,11 @@ class _State:
     retry_count: int = 0
     states_scanned: int = 0
     stopped_origins: dict = field(default_factory=dict)
+    ad_candidates: list = field(default_factory=list)
+    candidate_keys: dict = field(default_factory=dict)
+    finding_scopes: set = field(default_factory=set)
+    page_diagnostics: list = field(default_factory=list)
+    discovered_urls: int = 1
 
 
 async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> ScanOutcome:
@@ -209,9 +249,13 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> Scan
         "findings": state.findings,
     }
     report = {"status": status, "pages_scanned": state.pages, "pages_remaining": state.remaining,
+              "page_diagnostics": state.page_diagnostics,
+              "crawl_summary": {"discovered_urls": state.discovered_urls, "pages_scanned": len(state.pages),
+                                "queue_remaining": state.remaining, "scheduling": "content-first"},
               "errors": state.errors, "finding_count": len(state.findings),
               "states_scanned": state.states_scanned, "retry_count": state.retry_count,
               "evidence_details": state.evidence_details, "actions": state.actions,
+              "ad_candidates": _final_candidates(state),
               "blocked_requests": state.blocked_requests,
               "stopped_origins": {v["origin"]: v for v in state.stopped_origins.values()},
               "rules_version": rules.version, "profile": asdict(profile),
@@ -219,7 +263,25 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> Scan
               "limits": {"max_pages": config.max_pages, "timeout_sec": config.timeout_sec,
                          "page_timeout_sec": config.page_timeout_sec, "settle_ms": config.settle_ms,
                          "retries": config.retries, "interval_sec": config.interval_sec}}
+    report["candidate_count"] = len(report["ad_candidates"])
+    report["csv_schema_version"] = "1.0"
     return ScanOutcome(result, report)
+
+
+def _final_candidates(state):
+    candidates = [dict(c) for c in state.ad_candidates if (c['url'], c['scope_location']) not in state.finding_scopes]
+    detail_hits = {}
+    for candidate in candidates:
+        if not candidate.get('related_content_url'):
+            detail_hits.setdefault((candidate['url'], candidate['category']), candidate)
+    result = []
+    for candidate in candidates:
+        detail = detail_hits.get((candidate.get('related_content_url'), candidate['category']))
+        if detail is None:
+            result.append(candidate)
+        else:
+            detail.setdefault('summary_observations', []).append({k: candidate[k] for k in ('url', 'location', 'evidence_text')})
+    return result
 
 
 async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile: SiteProfile):
@@ -291,15 +353,17 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
             async def block_socket(socket):
                 await socket.close(reason="Chickadee: WebSocket connections are disabled")
             await context.route_web_socket("**/*", block_socket)
-            queue = deque([normalize_url(config.entry_url)])
-            queued = {visit_key(queue[0])}
+            sequence = itertools.count()
+            entry = normalize_url(config.entry_url)
+            queue = [(0, next(sequence), entry)]
+            queued = {visit_key(entry)}
             visited = set()
-            site = origin(queue[0])
+            site = origin(entry)
             attempts = 0
             while queue and attempts < config.max_pages:
                 if site in state.stopped_origins:
                     break
-                url = queue.popleft()
+                _, _, url = heapq.heappop(queue)
                 key = visit_key(url)
                 if key in visited:
                     continue
@@ -309,13 +373,23 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     await asyncio.sleep(config.interval_sec)
                 state.remaining = len(queue) + 1
                 emit({"kind": "status", "message": f"{attempts}/{config.max_pages} 페이지 점검 중: {url}"})
+                emit({"kind": "progress", "pages_scanned": len(state.pages), "attempts": attempts,
+                      "queue_remaining": len(queue), "max_pages": config.max_pages})
                 page = await context.new_page()
+                page_started = time.monotonic()
+                diagnostic = {"url": url, "priority": navigation_priority(url), "status": "inspecting",
+                              "links_discovered": 0, "links_queued": 0, "elements_examined": 0}
+                state.page_diagnostics.append(diagnostic)
+                findings_before, candidates_before = len(state.findings), len(state.ad_candidates)
                 page.on("dialog", lambda dialog: dialog.dismiss())
                 page.on("popup", lambda popup: popup.close())
                 try:
                     async def inspect():
                         nonlocal site
                         response = await _navigate(page, url, config, state, emit)
+                        diagnostic["final_url"] = page.url
+                        diagnostic["http_status"] = response.status if response else None
+                        diagnostic["title"] = await page.title()
                         if response and response.status >= 400:
                             raise RuntimeError(f"HTTP {response.status}")
                         if response and "html" not in response.headers.get("content-type", "text/html"):
@@ -330,6 +404,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         visited.add(final_key)
                         return await _inspect_dynamic(page, config, profile, rules, site, script, state, emit)
                     links = await asyncio.wait_for(inspect(), timeout=config.page_timeout_sec)
+                    diagnostic["links_discovered"] = len(links)
+                    diagnostic["status"] = "scanned"
                     if page.url not in state.pages:
                         state.pages.append(page.url)
                     for link in links:
@@ -343,12 +419,21 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                                 continue
                             if len(queued) >= 20000:
                                 raise RuntimeError("탐색 URL 안전 한도 20000개에 도달했습니다.")
-                            queue.append(candidate)
+                            heapq.heappush(queue, (navigation_priority(candidate), next(sequence), candidate))
                             queued.add(candidate_key)
+                            diagnostic["links_queued"] += 1
+                            state.discovered_urls = len(queued)
                 except Exception as exc:
+                    diagnostic["status"] = "error"
+                    diagnostic["error"] = str(exc) or "페이지 제한시간 초과"
                     state.errors.append({"url": url, "message": str(exc) or "페이지 제한시간을 초과했습니다."})
                     emit({"kind": "warning", "message": f"점검 누락: {url} - {exc or '페이지 제한시간 초과'}"})
                 finally:
+                    diagnostic["elapsed_sec"] = round(time.monotonic() - page_started, 3)
+                    diagnostic["findings_added"] = len(state.findings) - findings_before
+                    diagnostic["candidates_added"] = len(state.ad_candidates) - candidates_before
+                    emit({"kind": "page_complete", "page": diagnostic, "pages_scanned": len(state.pages),
+                          "queue_remaining": len(queue), "discovered_urls": state.discovered_urls})
                     await page.close()
                 state.remaining = len(queue)
             if queue and site not in state.stopped_origins:
@@ -361,6 +446,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
 
 async def _navigate(page, url, config, state, emit):
     for attempt in range(config.retries + 1):
+        if origin(url) in state.stopped_origins:
+            raise RuntimeError("HTTP 429 수신으로 해당 origin 재시도를 중단했습니다.")
         try:
             response = await page.goto(url, wait_until="domcontentloaded", timeout=int(config.page_timeout_sec * 1000))
             # Rate limiting ends collection for the origin; never retry 429.
@@ -372,7 +459,7 @@ async def _navigate(page, url, config, state, emit):
             except ValueError:
                 delay = 1
         except Exception:
-            if attempt == config.retries or any(r["url"] == url for r in state.blocked_requests):
+            if attempt == config.retries or origin(url) in state.stopped_origins or any(r["url"] == url for r in state.blocked_requests):
                 raise
             delay = min(5, 1 + attempt)
         state.retry_count += 1
@@ -381,11 +468,12 @@ async def _navigate(page, url, config, state, emit):
 
 
 _FINGERPRINT = """() => {
-    const body = document.body;
-    const text = body?.textContent || '';
-    return JSON.stringify([location.href, text.length, text.slice(0, 2000), text.slice(-2000),
-      body?.scrollHeight, document.querySelectorAll('*').length,
-      [...document.querySelectorAll('a[href]')].map(a=>a.href).join('|').slice(0,20000)]);
+    const html = document.body?.innerHTML || '';
+    let hash = 2166136261;
+    const limit = 4000000;
+    for (let i=0; i<Math.min(html.length, limit); i++) hash = Math.imul(hash ^ html.charCodeAt(i), 16777619);
+    return {signature: JSON.stringify([location.href, html.length, hash >>> 0,
+      scrollX, scrollY, innerWidth, innerHeight]), truncated: html.length > limit};
 }"""
 
 
@@ -397,10 +485,12 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
         if origin(page.url) != site:
             raise RuntimeError("설정된 동작이 다른 사이트로 이동하여 점검을 중단했습니다.")
         fingerprint = await page.evaluate(_FINGERPRINT)
-        if fingerprint not in seen:
-            seen.add(fingerprint)
+        if fingerprint['truncated'] and not any('DOM 상태 비교 한도' in e['message'] for e in state.errors):
+            state.errors.append({"url": page.url, "message": "DOM 상태 비교 한도(4MB) 초과: 일부 변경을 놓칠 수 있습니다."})
+        if fingerprint['signature'] not in seen:
+            seen.add(fingerprint['signature'])
             state.states_scanned += 1
-            links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules))
+            links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules, profile.content_selector))
             if page.url not in state.pages:
                 state.pages.append(page.url)
         return fingerprint
@@ -456,13 +546,21 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
     return list(dict.fromkeys(links))
 
 
-async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit, rules=None):
-    data = await frame.evaluate(script, {})
+async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit, rules=None, content_selector=None):
+    data = await frame.evaluate(script, {"contentSelector": content_selector})
+    if state.page_diagnostics:
+        diagnostic = state.page_diagnostics[-1]
+        diagnostic["elements_examined"] += len(data["elements"])
+        if content_selector:
+            diagnostic["content_selector"] = content_selector
+            diagnostic["content_roots_matched"] = data.get("content_roots_matched", 0)
     if data["truncated"] or data["links_truncated"]:
         state.errors.append({"url": page_url, "message": "요소·텍스트·링크 수집 한도 초과: 일부 콘텐츠가 누락되었습니다."})
     links = data["links"]
     for hit in classify_elements(data["elements"], inherited, rules):
         location = prefix + hit["location"]
+        scope = prefix + (hit.get("content_scope") or hit["location"])
+        state.finding_scopes.add((page_url, scope))
         key = page_url, location, hit["technique"]
         if key in state.seen_findings:
             continue
@@ -470,13 +568,31 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
         finding = {"id": f"f_{len(state.findings) + 1:05d}", "url": page_url, "is_violation": True,
                    "location": location, "evidence_text": hit["text"], "technique": hit["technique"]}
         state.findings.append(finding)
-        state.evidence_details[finding["id"]] = {"analysis": analyze(hit["text"], rules),
+        state.evidence_details[finding["id"]] = {"analysis": hit["analysis"],
             "style_reasons": hit.get("reasons", []), "computed_style": hit.get("computed_style", {}),
-            "frame_flags": inherited, "action_sequence": list(state.actions)}
+            "frame_flags": inherited, "action_sequence": list(state.actions),
+            "scope_location": scope, "observed_at": datetime.now().astimezone().isoformat()}
         emit({"kind": "finding", "finding": finding})
+    for hit in classify_candidates(data["elements"], rules):
+        scope = prefix + (hit.get("content_scope") or hit["location"])
+        key = page_url, scope, hit["category"]
+        if (page_url, scope) in state.finding_scopes or key in state.candidate_keys:
+            continue
+        candidate = {"id": f"c_{len(state.ad_candidates) + 1:05d}", "url": page_url,
+                     "location": prefix + hit["location"], "scope_location": scope,
+                     "evidence_text": hit["text"], "category": hit["category"], "review_required": True,
+                     "matched_keywords": hit["matched_keywords"], "reasons": hit["reasons"],
+                     "observed_at": datetime.now().astimezone().isoformat(), "analysis": hit.get("analysis", {})}
+        if hit.get('related_content_url'):
+            candidate['related_content_url'] = hit['related_content_url']
+        state.candidate_keys[key] = candidate["id"]
+        state.ad_candidates.append(candidate)
+        emit({"kind": "candidate", "candidate": candidate})
     for child in frame.child_frames:
         try:
             element = await child.frame_element()
+            if content_selector and not await element.evaluate("(el, selector) => !!el.closest(selector)", content_selector):
+                continue
             # Frame DOM elements appear in extract.js whenever they own fallback
             # text. Use a dedicated selector/style probe even for empty frames.
             probe = await element.evaluate(_FRAME_PROBE)

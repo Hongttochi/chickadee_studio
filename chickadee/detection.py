@@ -41,6 +41,12 @@ def skeleton(text: str) -> str:
 
 
 JAMO_RE = re.compile(r"[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\ud7b0-\ud7ff]")
+EDITORIAL_RE = re.compile(r"(?:사칭|현혹|취재|위장한다)|광고를\s*누르지|(?:판매|가입).{0,18}권(?:하는|유하는).{0,10}(?:아닌|아닙)|(?:문구|광고).{0,8}(?:인용|비판)", re.I)
+DIRECT_CTA_RE = re.compile(r"가입(?:하세요|하고)|(?:충전|접속|신청)하세요|받으세요|join\s+now|claim\s+(?:your\s+)?(?:welcome\s+)?bonus", re.I)
+
+
+def is_editorial_context(text):
+    return bool(EDITORIAL_RE.search(text))
 
 
 @dataclass(frozen=True)
@@ -73,16 +79,16 @@ DEFAULT_RULES = Rules.load()
 
 def _canonical(text, digits=False):
     result, flags = [], []
-    # A Latin r resembles the vowel in ㅋr/ㅂr only in this Hangul context.
-    # Do not globally turn an ordinary English r into a Hangul vowel.
+    # Only recognize Latin vowel lookalikes inside complete Korean matches.
+    latin_vowels = {"r": "ㅏ", "R": "ㅏ", "i": "ㅣ", "I": "ㅣ"}
     mixed = set()
     for i in range(len(text) - 2):
-        if text[i] in LEADS and text[i + 1] in "rR" and (JAMO_RE.match(text[i + 2]) or '\uac00' <= text[i + 2] <= '\ud7a3'):
+        if text[i] in LEADS and text[i + 1] in latin_vowels and (JAMO_RE.match(text[i + 2]) or '\uac00' <= text[i + 2] <= '\ud7a3'):
             mixed.update((i, i + 1))
     for index, char in enumerate(text):
         mapped = unicodedata.normalize("NFKC", char).translate(LOOKALIKES)
-        if index in mixed and char in "rR":
-            mapped = "ㅏ"
+        if index in mixed and char in latin_vowels:
+            mapped = latin_vowels[char]
         if digits:
             mapped = mapped.translate(DIGITS)
         fragment = skeleton(mapped)
@@ -95,8 +101,11 @@ def _canonical(text, digits=False):
 
 @lru_cache(maxsize=256)
 def analyze(text: str, rules: Rules | None = None) -> dict:
-    """Attach obfuscation only to characters inside an actual keyword match."""
+    """Keep source spans and separate keyword changes from contextual features."""
     rules = rules or DEFAULT_RULES
+    if re.fullmatch(r"[^\s/\\]+\.(?:png|jpe?g|gif|webp|pdf|hwp|hwpx|docx)", text.strip(), re.I):
+        return {"is_advertisement": False, "matches": [], "contextual_homoglyphs": [],
+                "additional_patterns": [], "filename_only": True, "rules_version": rules.version}
     matches, contexts = [], []
     boundaries = [m.start() for m in re.finditer(r"[\n!?;。！？]|\.(?=\s|$)", text)]
     for digits in (False, True):
@@ -112,8 +121,14 @@ def analyze(text: str, rules: Rules | None = None) -> dict:
                 before = max((n for n in boundaries if n < first), default=-1)
                 after = min((n for n in boundaries if n > last), default=len(text))
                 before, after = max(before, first - 161), min(after, last + 161)
-                context = skeleton(text[before + 1:after].translate(LOOKALIKES))
-                if any(skeleton(term) in context for term in rules.prevention):
+                raw_context = text[before + 1:after]
+                context = skeleton(raw_context.translate(LOOKALIKES))
+                if is_editorial_context(raw_context):
+                    continue
+                exclusions = [term for term in rules.prevention if skeleton(term) in context]
+                # A direct solicitation can coexist with a responsibility
+                # disclaimer. Product/editorial exclusions still take priority.
+                if exclusions and (any(term not in {"예방", "주의", "금지", "차단"} for term in exclusions) or not DIRECT_CTA_RE.search(raw_context)):
                     continue
                 # A topic alone is also a book title, place name, brand or lesson.
                 # Require a local promotional signal, even for short text.
@@ -132,16 +147,57 @@ def analyze(text: str, rules: Rules | None = None) -> dict:
         if any(start <= token.start() and token.end() <= end for start, end in contexts):
             contextual.append({"source_span": list(token.span()), "original": raw,
                                "canonical": "com", "reason": "같은 문장 내 광고 키워드·권유 문맥의 닮은꼴 COM 표기"})
+    for token in re.finditer(r"[｡。．](?:com|net|org)\b", text, re.I):
+        if any(start <= token.start() and token.end() <= end for start, end in contexts):
+            contextual.append({"source_span": list(token.span()), "original": token.group(),
+                               "canonical": '.' + token.group()[1:].lower(), "reason": "광고 주소 구분점의 시각적 대체"})
+    additional = []
+    for match in unique.values():
+        first, last = match["source_span"]
+        if '\u00ad' in text[first:last]:
+            additional.append({"pattern": "SOFT_HYPHEN_INSERTION", "source_span": [first, last]})
+        elif re.search(r"[.·ㆍ_-]", text[first:last]):
+            additional.append({"pattern": "PUNCTUATION_INSERTION", "source_span": [first, last]})
     return {"is_advertisement": bool(matches), "matches": list(unique.values()),
-            "contextual_homoglyphs": contextual, "rules_version": rules.version}
+            "contextual_homoglyphs": contextual, "additional_patterns": additional, "rules_version": rules.version}
 
 
 def is_advertisement(text: str) -> bool:
     return analyze(text)["is_advertisement"]
 
 
+def text_ranges(text, breaks=()):
+    cuts = sorted({0, len(text), *(p for p in breaks if isinstance(p, int) and 0 < p < len(text))})
+    return list(zip(cuts, cuts[1:]))
+
+
+def merge_analyses(parts, rules=None):
+    merged = {"is_advertisement": False, "matches": [], "contextual_homoglyphs": [],
+              "additional_patterns": [], "rules_version": (rules or DEFAULT_RULES).version}
+    for offset, analysis in parts:
+        merged['is_advertisement'] |= analysis['is_advertisement']
+        for key in ('matches', 'contextual_homoglyphs', 'additional_patterns'):
+            for match in analysis.get(key, []):
+                shifted = {**match, 'source_span': [p + offset for p in match['source_span']]}
+                if shifted not in merged[key]:
+                    merged[key].append(shifted)
+    return merged
+
+
+def analyze_element(element, rules=None):
+    text = element['text']
+    if not element.get('text_breaks'):
+        return analyze(text, rules)
+    return merge_analyses([(start, analyze(text[start:end], rules))
+                           for start, end in text_ranges(text, element['text_breaks'])], rules)
+
+
 def techniques(text: str, transparent: bool = False, offscreen: bool = False, rules: Rules | None = None) -> list[str]:
     analysis = analyze(text, rules)
+    return technique_codes(analysis, transparent, offscreen)
+
+
+def technique_codes(analysis, transparent=False, offscreen=False):
     if not analysis["is_advertisement"]:
         return []
     codes = []
@@ -163,8 +219,9 @@ def classify_elements(elements: list[dict], inherited: dict | None = None, rules
     for element in elements:
         transparent = element["transparent"] or inherited.get("transparent", False)
         offscreen = element["offscreen"] or inherited.get("offscreen", False)
-        for code in techniques(element["text"], transparent, offscreen, rules):
-            hits.append({**element, "technique": code})
+        analysis = analyze_element(element, rules)
+        for code in technique_codes(analysis, transparent, offscreen):
+            hits.append({**element, "technique": code, "analysis": analysis})
     # Prefer the smallest owner of the evidence. A wrapper containing several
     # independently classified descendants must not inflate the finding count.
     ancestors_with_hit = set()
