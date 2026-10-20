@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 import json
 from pathlib import Path
+from .unicode_security import fold_letters, DATA as UNICODE_DATA
 
 LABELS = {
     "HOMOGLYPH": "닮은꼴 글자 위장",
@@ -87,6 +88,7 @@ def _canonical(text, digits=False):
             mixed.update((i, i + 1))
     for index, char in enumerate(text):
         mapped = unicodedata.normalize("NFKC", char).translate(LOOKALIKES)
+        mapped = fold_letters(mapped)
         if index in mixed and char in latin_vowels:
             mapped = latin_vowels[char]
         if digits:
@@ -122,7 +124,7 @@ def analyze(text: str, rules: Rules | None = None) -> dict:
                 after = min((n for n in boundaries if n > last), default=len(text))
                 before, after = max(before, first - 161), min(after, last + 161)
                 raw_context = text[before + 1:after]
-                context = skeleton(raw_context.translate(LOOKALIKES))
+                context = skeleton(fold_letters(raw_context.translate(LOOKALIKES)))
                 if is_editorial_context(raw_context):
                     continue
                 exclusions = [term for term in rules.prevention if skeleton(term) in context]
@@ -158,8 +160,14 @@ def analyze(text: str, rules: Rules | None = None) -> dict:
             additional.append({"pattern": "SOFT_HYPHEN_INSERTION", "source_span": [first, last]})
         elif re.search(r"[.·ㆍ_-]", text[first:last]):
             additional.append({"pattern": "PUNCTUATION_INSERTION", "source_span": [first, last]})
+        if any(unicodedata.category(c) == 'Cf' for c in text[first:last]):
+            additional.append({"pattern": "FORMAT_CHARACTER_INSERTION", "source_span": [first, last]})
+        scripts = {unicodedata.name(c, '').split(' ')[0] for c in text[first:last] if c.isalpha()}
+        if len(scripts & {'LATIN', 'CYRILLIC', 'GREEK'}) > 1:
+            additional.append({"pattern": "MIXED_SCRIPT", "source_span": [first, last]})
     return {"is_advertisement": bool(matches), "matches": list(unique.values()),
-            "contextual_homoglyphs": contextual, "additional_patterns": additional, "rules_version": rules.version}
+            "contextual_homoglyphs": contextual, "additional_patterns": additional, "rules_version": rules.version,
+            "unicode_data_version": UNICODE_DATA['unicode_version']}
 
 
 def is_advertisement(text: str) -> bool:

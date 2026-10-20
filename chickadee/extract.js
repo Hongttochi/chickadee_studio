@@ -161,6 +161,8 @@
       location: selector(el), text, direct_text: direct, reasons: info.reasons,
       text_breaks: info.breaks,
       content_scope: scope ? selector(scope) : null,
+      link_targets: [...new Set((scope === el ? [...el.querySelectorAll('a[href]')].slice(0, 20) :
+        anchor ? [anchor] : []).map(a => a.href).filter(href => /^https?:/.test(href)))],
       related_content_url: relatedContentUrl,
       computed_style: appearance(el).style, ...visibility});
   }

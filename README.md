@@ -120,6 +120,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 
 ## 결과 파일
 
+개발 소스에는 **검사 분석 → 탐색 그래프 / 변경 비교 / Groq 검토**가 추가되었습니다. [사용법·Groq 전송 범위·사용량 한도](docs/inspection-agent.md)를 확인하세요. 외부 유료 API는 Groq만 사용하며 자동 호출은 없습니다. 기존 배포 ZIP은 해당 기능을 포함하도록 다시 빌드해야 합니다.
+
 새 앱은 문서 폴더의 `Chickadee/results/실행별폴더`에 저장합니다. **검사 설정**에서 변경할 수 있습니다. Python CLI와 Tkinter 호환 화면은 기존 `results` 경로와 `--output-dir`를 사용합니다.
 
 | 파일 | 내용 |

@@ -14,6 +14,9 @@
 | React Flow | 노드·포트·연결 편집 | https://github.com/xyflow/xyflow/blob/main/LICENSE |
 | Lucide | 기능 아이콘 | https://github.com/lucide-icons/lucide/blob/main/LICENSE |
 | Pretendard | 로컬 글꼴, SIL Open Font License | https://github.com/orioncactus/pretendard/blob/main/LICENSE |
+| Unicode confusables | 제한된 닮은꼴 문자 매핑, Unicode License V3 | https://www.unicode.org/reports/tr39/ |
+
+Unicode 데이터는 `chickadee/data/confusables-ascii.json`에 버전·원본 SHA-256·필터와 함께 고정하며, 원문 라이선스는 `chickadee/data/LICENSE-UNICODE.txt`에 보존합니다. 이 폴더도 검사 엔진 패키지에 포함합니다. 외부 참고 프로젝트의 실행 코드·모델은 가져오지 않았습니다.
 
 Playwright가 동봉하는 Node.js·브라우저 및 의존성의 라이선스·고지 파일도 배포본 내부에 유지해야 합니다. Electron 배포본의 `resources`, Chromium 라이선스 파일과 검사 프로그램의 `_internal`을 유지합니다. Pretendard 라이선스는 `desktop/licenses/Pretendard-OFL.txt`에 보관합니다. 이 목록은 최종 제출 시 필요한 전체 의존성·라이선스 검토를 대신하지 않습니다.
 

@@ -175,6 +175,9 @@ async function initialize() {
   handler("pause", () => backend.request("pause"));
   handler("resume", () => backend.request("resume"));
   handler("capabilities", () => backend.request("capabilities"));
+  for (const name of ["inspection", "compare", "agent-configure", "agent-run", "agent-stop"]) {
+    handler(name, (value) => backend.request(name, value || {}));
+  }
   handler("preferences", (value) => savePreferences(value));
   handler("review", (value) => {
     if (!value || typeof value !== "object")

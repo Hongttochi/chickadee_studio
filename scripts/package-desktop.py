@@ -39,7 +39,7 @@ def main():
         raise RuntimeError('Build scripts/build-desktop.ps1 first.')
     count = frontend_licenses()
     shutil.copytree(DESKTOP / 'licenses', APP / 'licenses', dirs_exist_ok=True)
-    for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md', 'agent-extension.md']:
+    for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md', 'agent-extension.md', 'inspection-agent.md']:
         target = APP / 'docs' / name
         target.parent.mkdir(exist_ok=True)
         shutil.copy2(ROOT / 'docs' / name, target)
