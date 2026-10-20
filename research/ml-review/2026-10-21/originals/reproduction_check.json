@@ -1,0 +1,6 @@
+{
+  "snapshot_reproduction": "PASS",
+  "identical_oof_metrics": true,
+  "identical_prediction_bytes": true,
+  "original_source_unchanged": true
+}

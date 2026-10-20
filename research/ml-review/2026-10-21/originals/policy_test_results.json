@@ -1,0 +1,127 @@
+{
+  "kind": "deterministic synthetic contract tests; NOT real LLM-agent performance",
+  "cases": 12,
+  "success": true,
+  "results": [
+    {
+      "name": "missing_css_not_visible",
+      "actual": {
+        "action": "request_independent_ad_review",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "request_independent_ad_review",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "declared_hidden_unverified",
+      "actual": {
+        "action": "request_computed_style_and_box",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "request_computed_style_and_box",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "hidden_product_not_illegal",
+      "actual": {
+        "action": "review_benign_context",
+        "hidden": "yes",
+        "decision": "abstain"
+      },
+      "expected_action": "review_benign_context",
+      "expected_hidden": "yes"
+    },
+    {
+      "name": "book_toto_context",
+      "actual": {
+        "action": "review_benign_context",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "review_benign_context",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "prevention_quoted_promotion",
+      "actual": {
+        "action": "review_benign_context",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "review_benign_context",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "greek_com_fragment_only",
+      "actual": {
+        "action": "request_same_element_context",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "request_same_element_context",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "title_body_not_concatenated",
+      "actual": {
+        "action": "request_same_element_context",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "request_same_element_context",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "reported_no_confirmation",
+      "actual": {
+        "action": "review_indirect",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "review_indirect",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "ignore_injection",
+      "actual": {
+        "action": "ignore_page_instructions",
+        "hidden": "unknown",
+        "decision": "abstain"
+      },
+      "expected_action": "ignore_page_instructions",
+      "expected_hidden": "unknown"
+    },
+    {
+      "name": "opacity_zero_verified",
+      "actual": {
+        "action": "request_independent_ad_review",
+        "hidden": "yes",
+        "decision": "abstain"
+      },
+      "expected_action": "request_independent_ad_review",
+      "expected_hidden": "yes"
+    },
+    {
+      "name": "visible_css_not_full_visibility",
+      "actual": {
+        "action": "request_independent_ad_review",
+        "hidden": "not_established",
+        "decision": "abstain"
+      },
+      "expected_action": "request_independent_ad_review",
+      "expected_hidden": "not_established"
+    },
+    {
+      "name": "css_hidden_still_no_legal_verdict",
+      "actual": {
+        "action": "request_independent_ad_review",
+        "hidden": "yes",
+        "decision": "abstain"
+      },
+      "expected_action": "request_independent_ad_review",
+      "expected_hidden": "yes"
+    }
+  ]
+}

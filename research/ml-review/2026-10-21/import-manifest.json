@@ -1,0 +1,16 @@
+{
+  "archive_sha256": "5c8b5ef11ee5b82a32a9ee810f8e448e380ecec1bf5399e2e7e6ee2b8f47c5d2",
+  "source": "User-supplied chickadee-ml-review-20261021.zip and matching review-and-results.md",
+  "handling": "Explicit allowlist of inert text/JSON only; archive Python programs not copied or executed. URLs remain provenance strings.",
+  "files": {
+    "originals/review-and-results.md": "1eb28be731a30031592779c4de2dcb6f72364e85c91ad30a6d953ea18b128a15",
+    "originals/reference-review.md": "b9eac3d60730b0d61ab6478e89523153729e400e294ee728eb1b65b57cbcbfd0",
+    "originals/metrics.json": "8cdce176d897f8b9e4339a1e03993d9188dab4f8736d2be17be5e79c05027b76",
+    "originals/predictions.jsonl": "46c0c18981bdb60049c04b2845549ffb05d0a956a0bc6a33882e00ec79abbf72",
+    "originals/policy_test_results.json": "8da41489130e0d4bd2d653975aa8ef67c2fdf04c26d00df9c02fd40a194c57f0",
+    "originals/provenance.json": "25d78c19e4079f4aeb7048309dee7e6f901670e2a8747fad69cf4a68eef9cf49",
+    "originals/reproduction_check.json": "b0a4f9d25e448b2536c2eecd53949c7a4fe33ab64ccf5067bd0b030d8c992d7f",
+    "originals/bundled_inputs/samples.jsonl": "3c32493b3a9a1fe6c44a00e2e7b17d518acba87b2104f13bafc8f54a6a5cf7f4",
+    "originals/bundled_inputs/negatives.jsonl": "de6effd784a167a2b56b2817807de5018fd8135ec0f319f682e1ddf3240c9bbc"
+  }
+}

@@ -1,0 +1,780 @@
+{
+  "scope": "Selected-fragment candidate coverage only; NOT live-site, mandatory-technique, phishing or legal accuracy.",
+  "engine_version": "0.6.2",
+  "engine_sha256": {
+    "candidates.py": "1365e749e47b469c501c5956d614e20a5f83c722fbd070f3f91fc3f32a6ddbad",
+    "detection.py": "d58cd021388b42aa2b5f72bbd9c1e69d4100c25881033194ea580a39d7faf80f",
+    "rules.json": "979e4efe12afe9ed84af6c11ef57bf32060c441ae9764a88e552a004b2e5fd7d"
+  },
+  "review_archive_sha256": "5c8b5ef11ee5b82a32a9ee810f8e448e380ecec1bf5399e2e7e6ee2b8f47c5d2",
+  "input_sha256": {
+    "samples.jsonl": "abd09b20a3cff7c1f92b3c32da895281ef3f837d770da5f4a431f6e8123222ca",
+    "negatives.jsonl": "278c9084532f709a0dc2d33a972ddac21e8f8e1040dc617242bb2cb21145238c"
+  },
+  "n": 73,
+  "labels": {
+    "ad_suspected": 50,
+    "normal": 23
+  },
+  "excluded_indirect": 5,
+  "input": "evidence_text verbatim; no source URL, HTML, CSS, label or annotation supplied to current engine",
+  "current_rules": {
+    "tp": 18,
+    "fp": 0,
+    "fn": 32,
+    "tn": 23,
+    "precision": 1.0,
+    "recall": 0.36,
+    "balanced_accuracy": 0.6799999999999999
+  },
+  "supplied_prototypes_recounted": {
+    "majority": {
+      "tp": 50,
+      "fp": 23,
+      "fn": 0,
+      "tn": 0,
+      "precision": 0.684931506849315,
+      "recall": 1.0,
+      "balanced_accuracy": 0.5
+    },
+    "keyword_raw": {
+      "tp": 37,
+      "fp": 12,
+      "fn": 13,
+      "tn": 11,
+      "precision": 0.7551020408163265,
+      "recall": 0.74,
+      "balanced_accuracy": 0.6091304347826088
+    },
+    "keyword_nfkc": {
+      "tp": 40,
+      "fp": 12,
+      "fn": 10,
+      "tn": 11,
+      "precision": 0.7692307692307693,
+      "recall": 0.8,
+      "balanced_accuracy": 0.6391304347826088
+    },
+    "rf_char_tfidf": {
+      "tp": 33,
+      "fp": 6,
+      "fn": 17,
+      "tn": 17,
+      "precision": 0.8461538461538461,
+      "recall": 0.66,
+      "balanced_accuracy": 0.6995652173913043
+    }
+  },
+  "hypothetical_rule_or_supplied_rf": {
+    "tp": 39,
+    "fp": 6,
+    "fn": 11,
+    "tn": 17,
+    "precision": 0.8666666666666667,
+    "recall": 0.78,
+    "balanced_accuracy": 0.7595652173913043
+  },
+  "limitations": [
+    "Reference RF predictions were recounted, not retrained or independently reproduced.",
+    "Current fixed rules have seen research-derived regressions; this is not an untouched evaluation set.",
+    "RF used collector-marker removal; current rules received verbatim evidence_text. Inputs differ in preprocessing.",
+    "Not flagged means unresolved, not a verified normal result; no missing CSS is fabricated.",
+    "Union combines fixed rules and supplied out-of-fold RF only as a diagnostic; not a deployed hybrid or performance promise.",
+    "Only already selected fragments tested. Scope retrieval, DOM/frame location and unseen campaigns not tested."
+  ],
+  "cases": [
+    {
+      "id": "A001",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A002",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A003",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A004",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A005",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A006",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A007",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A008",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A009",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A010",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A011",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A012",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A013",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": false,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "A014",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A015",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A016",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": false,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "A017",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A018",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A020",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": false,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "A021",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A022",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A023",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": false,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "A024",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A025",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A026",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A027",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "ADULT"
+      ],
+      "supplied_rf_candidate": false,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "A028",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A029",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A030",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A031",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A032",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A033",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A034",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A035",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A036",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A037",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A038",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A039",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A040",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A041",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "A042",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": false,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "A043",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A044",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": true
+    },
+    {
+      "id": "A045",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A046",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A047",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A048",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A049",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A050",
+      "label": "ad_suspected",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": true
+    },
+    {
+      "id": "A051",
+      "label": "ad_suspected",
+      "current_candidate": true,
+      "categories": [
+        "GAMBLING"
+      ],
+      "supplied_rf_candidate": true,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N001",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N002",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N003",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "N004",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N005",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N006",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N007",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N008",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N009",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N010",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N011",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N012",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N013",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N014",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "N015",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "N016",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "N017",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N018",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N019",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "N020",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": true,
+      "agreement": false,
+      "needs_more_context": false
+    },
+    {
+      "id": "N021",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N022",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    },
+    {
+      "id": "N023",
+      "label": "normal",
+      "current_candidate": false,
+      "categories": [],
+      "supplied_rf_candidate": false,
+      "agreement": true,
+      "needs_more_context": false
+    }
+  ]
+}

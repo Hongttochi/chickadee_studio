@@ -1,0 +1,796 @@
+{
+  "purpose": "exploratory selected-fragment ad suspicion classification, NOT phishing or legal determination",
+  "versions": {
+    "sklearn": "1.8.0",
+    "numpy": "2.3.5"
+  },
+  "input_sha256": {
+    "samples.jsonl": "abd09b20a3cff7c1f92b3c32da895281ef3f837d770da5f4a431f6e8123222ca",
+    "negatives.jsonl": "278c9084532f709a0dc2d33a972ddac21e8f8e1040dc617242bb2cb21145238c"
+  },
+  "n": 73,
+  "label_counts": {
+    "ad_suspected": 50,
+    "normal": 23
+  },
+  "excluded_reported": 5,
+  "groups": 63,
+  "domain_rule": "last 2 labels; last 3 for explicit ac/co/go/or/ne.kr and ac/co/go.id suffixes; conservative overgrouping for hosted platforms",
+  "group_links": [
+    {
+      "ids": [
+        "A010",
+        "A011"
+      ],
+      "reasons": [
+        "exact_text"
+      ]
+    },
+    {
+      "ids": [
+        "A014",
+        "A031"
+      ],
+      "reasons": [
+        "exact_text"
+      ]
+    },
+    {
+      "ids": [
+        "A030",
+        "A032"
+      ],
+      "reasons": [
+        "domain"
+      ]
+    },
+    {
+      "ids": [
+        "A039",
+        "A040"
+      ],
+      "reasons": [
+        "domain"
+      ]
+    },
+    {
+      "ids": [
+        "A037",
+        "A043"
+      ],
+      "reasons": [
+        "domain"
+      ]
+    },
+    {
+      "ids": [
+        "N001",
+        "N002"
+      ],
+      "reasons": [
+        "domain",
+        "source_group"
+      ]
+    },
+    {
+      "ids": [
+        "N005",
+        "N006"
+      ],
+      "reasons": [
+        "domain",
+        "source_group"
+      ]
+    },
+    {
+      "ids": [
+        "A004",
+        "N007"
+      ],
+      "reasons": [
+        "domain",
+        "source_group"
+      ]
+    },
+    {
+      "ids": [
+        "N010",
+        "N011"
+      ],
+      "reasons": [
+        "domain",
+        "source_group"
+      ]
+    },
+    {
+      "ids": [
+        "A003",
+        "N017"
+      ],
+      "reasons": [
+        "domain"
+      ]
+    }
+  ],
+  "short_text_under_20_ids": [
+    "A003",
+    "A010",
+    "A011",
+    "A012",
+    "A013",
+    "A014",
+    "A015",
+    "A020",
+    "A026",
+    "A029",
+    "A031",
+    "A044",
+    "N002",
+    "N003",
+    "N006",
+    "N007",
+    "N010",
+    "N011",
+    "N015",
+    "N017",
+    "N021"
+  ],
+  "feature_input": "evidence_text ONLY; redaction markers removed; NFKC lower case and format-character removal",
+  "forbidden_feature_fields": [
+    "source_url",
+    "source_group",
+    "label_reason",
+    "techniques",
+    "limitations",
+    "page_title",
+    "observation_status",
+    "metadata",
+    "dom_excerpt"
+  ],
+  "split": "5-fold StratifiedGroupKFold shuffle=True random_state=20261021; groups union domain/source_group/exact and >=.9 similar text",
+  "fixed_keyword_list": [
+    "카지노",
+    "바카라",
+    "토토",
+    "슬롯",
+    "야동",
+    "성인",
+    "꽁머니",
+    "첫충",
+    "매충",
+    "casino",
+    "slot",
+    "toto",
+    "bahis",
+    "1xbet"
+  ],
+  "rf_parameters": {
+    "bootstrap": true,
+    "ccp_alpha": 0.0,
+    "class_weight": "balanced",
+    "criterion": "gini",
+    "max_depth": null,
+    "max_features": "sqrt",
+    "max_leaf_nodes": null,
+    "max_samples": null,
+    "min_impurity_decrease": 0.0,
+    "min_samples_leaf": 2,
+    "min_samples_split": 2,
+    "min_weight_fraction_leaf": 0.0,
+    "monotonic_cst": null,
+    "n_estimators": 300,
+    "n_jobs": 1,
+    "oob_score": false,
+    "random_state": 20261021,
+    "verbose": 0,
+    "warm_start": false
+  },
+  "vectorizer": "char 2-4 grams, max_features=5000 fit separately on training fold only",
+  "oof_metrics": {
+    "majority": {
+      "confusion_matrix_labels": [
+        "normal",
+        "ad_suspected"
+      ],
+      "confusion_matrix": [
+        [
+          0,
+          23
+        ],
+        [
+          0,
+          50
+        ]
+      ],
+      "accuracy": 0.684931506849315,
+      "balanced_accuracy": 0.5,
+      "ad_precision": 0.684931506849315,
+      "ad_recall": 1.0,
+      "ad_f1": 0.8130081300813008,
+      "normal_recall": 0.0
+    },
+    "keyword_raw": {
+      "confusion_matrix_labels": [
+        "normal",
+        "ad_suspected"
+      ],
+      "confusion_matrix": [
+        [
+          11,
+          12
+        ],
+        [
+          13,
+          37
+        ]
+      ],
+      "accuracy": 0.6575342465753424,
+      "balanced_accuracy": 0.6091304347826088,
+      "ad_precision": 0.7551020408163265,
+      "ad_recall": 0.74,
+      "ad_f1": 0.7474747474747475,
+      "normal_recall": 0.4782608695652174
+    },
+    "keyword_nfkc": {
+      "confusion_matrix_labels": [
+        "normal",
+        "ad_suspected"
+      ],
+      "confusion_matrix": [
+        [
+          11,
+          12
+        ],
+        [
+          10,
+          40
+        ]
+      ],
+      "accuracy": 0.6986301369863014,
+      "balanced_accuracy": 0.6391304347826088,
+      "ad_precision": 0.7692307692307693,
+      "ad_recall": 0.8,
+      "ad_f1": 0.7843137254901961,
+      "normal_recall": 0.4782608695652174
+    },
+    "rf_char_tfidf": {
+      "confusion_matrix_labels": [
+        "normal",
+        "ad_suspected"
+      ],
+      "confusion_matrix": [
+        [
+          17,
+          6
+        ],
+        [
+          17,
+          33
+        ]
+      ],
+      "accuracy": 0.684931506849315,
+      "balanced_accuracy": 0.6995652173913043,
+      "ad_precision": 0.8461538461538461,
+      "ad_recall": 0.66,
+      "ad_f1": 0.7415730337078652,
+      "normal_recall": 0.7391304347826086
+    }
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "train_n": 57,
+      "test_n": 16,
+      "test_normal": 5,
+      "test_ad_suspected": 11,
+      "train_groups": 50,
+      "test_groups": 13,
+      "domain_overlap": false,
+      "group_overlap": false,
+      "metrics": {
+        "majority": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              0,
+              5
+            ],
+            [
+              0,
+              11
+            ]
+          ],
+          "accuracy": 0.6875,
+          "balanced_accuracy": 0.5,
+          "ad_precision": 0.6875,
+          "ad_recall": 1.0,
+          "ad_f1": 0.8148148148148148,
+          "normal_recall": 0.0
+        },
+        "keyword_raw": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              3,
+              2
+            ],
+            [
+              2,
+              9
+            ]
+          ],
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.7090909090909091,
+          "ad_precision": 0.8181818181818182,
+          "ad_recall": 0.8181818181818182,
+          "ad_f1": 0.8181818181818182,
+          "normal_recall": 0.6
+        },
+        "keyword_nfkc": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              3,
+              2
+            ],
+            [
+              2,
+              9
+            ]
+          ],
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.7090909090909091,
+          "ad_precision": 0.8181818181818182,
+          "ad_recall": 0.8181818181818182,
+          "ad_f1": 0.8181818181818182,
+          "normal_recall": 0.6
+        },
+        "rf_char_tfidf": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              4,
+              1
+            ],
+            [
+              3,
+              8
+            ]
+          ],
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.7636363636363637,
+          "ad_precision": 0.8888888888888888,
+          "ad_recall": 0.7272727272727273,
+          "ad_f1": 0.8,
+          "normal_recall": 0.8
+        }
+      }
+    },
+    {
+      "fold": 1,
+      "train_n": 59,
+      "test_n": 14,
+      "test_normal": 4,
+      "test_ad_suspected": 10,
+      "train_groups": 51,
+      "test_groups": 12,
+      "domain_overlap": false,
+      "group_overlap": false,
+      "metrics": {
+        "majority": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              10
+            ]
+          ],
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.5,
+          "ad_precision": 0.7142857142857143,
+          "ad_recall": 1.0,
+          "ad_f1": 0.8333333333333334,
+          "normal_recall": 0.0
+        },
+        "keyword_raw": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              1,
+              3
+            ],
+            [
+              3,
+              7
+            ]
+          ],
+          "accuracy": 0.5714285714285714,
+          "balanced_accuracy": 0.475,
+          "ad_precision": 0.7,
+          "ad_recall": 0.7,
+          "ad_f1": 0.7,
+          "normal_recall": 0.25
+        },
+        "keyword_nfkc": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              1,
+              3
+            ],
+            [
+              3,
+              7
+            ]
+          ],
+          "accuracy": 0.5714285714285714,
+          "balanced_accuracy": 0.475,
+          "ad_precision": 0.7,
+          "ad_recall": 0.7,
+          "ad_f1": 0.7,
+          "normal_recall": 0.25
+        },
+        "rf_char_tfidf": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              3,
+              1
+            ],
+            [
+              3,
+              7
+            ]
+          ],
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.725,
+          "ad_precision": 0.875,
+          "ad_recall": 0.7,
+          "ad_f1": 0.7777777777777778,
+          "normal_recall": 0.75
+        }
+      }
+    },
+    {
+      "fold": 2,
+      "train_n": 59,
+      "test_n": 14,
+      "test_normal": 4,
+      "test_ad_suspected": 10,
+      "train_groups": 51,
+      "test_groups": 12,
+      "domain_overlap": false,
+      "group_overlap": false,
+      "metrics": {
+        "majority": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              10
+            ]
+          ],
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.5,
+          "ad_precision": 0.7142857142857143,
+          "ad_recall": 1.0,
+          "ad_f1": 0.8333333333333334,
+          "normal_recall": 0.0
+        },
+        "keyword_raw": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              7
+            ]
+          ],
+          "accuracy": 0.6428571428571429,
+          "balanced_accuracy": 0.6,
+          "ad_precision": 0.7777777777777778,
+          "ad_recall": 0.7,
+          "ad_f1": 0.7368421052631579,
+          "normal_recall": 0.5
+        },
+        "keyword_nfkc": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              2,
+              2
+            ],
+            [
+              2,
+              8
+            ]
+          ],
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.65,
+          "ad_precision": 0.8,
+          "ad_recall": 0.8,
+          "ad_f1": 0.8,
+          "normal_recall": 0.5
+        },
+        "rf_char_tfidf": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              2,
+              2
+            ],
+            [
+              6,
+              4
+            ]
+          ],
+          "accuracy": 0.42857142857142855,
+          "balanced_accuracy": 0.45,
+          "ad_precision": 0.6666666666666666,
+          "ad_recall": 0.4,
+          "ad_f1": 0.5,
+          "normal_recall": 0.5
+        }
+      }
+    },
+    {
+      "fold": 3,
+      "train_n": 58,
+      "test_n": 15,
+      "test_normal": 5,
+      "test_ad_suspected": 10,
+      "train_groups": 50,
+      "test_groups": 13,
+      "domain_overlap": false,
+      "group_overlap": false,
+      "metrics": {
+        "majority": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              0,
+              5
+            ],
+            [
+              0,
+              10
+            ]
+          ],
+          "accuracy": 0.6666666666666666,
+          "balanced_accuracy": 0.5,
+          "ad_precision": 0.6666666666666666,
+          "ad_recall": 1.0,
+          "ad_f1": 0.8,
+          "normal_recall": 0.0
+        },
+        "keyword_raw": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              2,
+              3
+            ],
+            [
+              2,
+              8
+            ]
+          ],
+          "accuracy": 0.6666666666666666,
+          "balanced_accuracy": 0.6000000000000001,
+          "ad_precision": 0.7272727272727273,
+          "ad_recall": 0.8,
+          "ad_f1": 0.7619047619047619,
+          "normal_recall": 0.4
+        },
+        "keyword_nfkc": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              2,
+              3
+            ],
+            [
+              1,
+              9
+            ]
+          ],
+          "accuracy": 0.7333333333333333,
+          "balanced_accuracy": 0.65,
+          "ad_precision": 0.75,
+          "ad_recall": 0.9,
+          "ad_f1": 0.8181818181818182,
+          "normal_recall": 0.4
+        },
+        "rf_char_tfidf": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              4,
+              1
+            ],
+            [
+              2,
+              8
+            ]
+          ],
+          "accuracy": 0.8,
+          "balanced_accuracy": 0.8,
+          "ad_precision": 0.8888888888888888,
+          "ad_recall": 0.8,
+          "ad_f1": 0.8421052631578947,
+          "normal_recall": 0.8
+        }
+      }
+    },
+    {
+      "fold": 4,
+      "train_n": 59,
+      "test_n": 14,
+      "test_normal": 5,
+      "test_ad_suspected": 9,
+      "train_groups": 50,
+      "test_groups": 13,
+      "domain_overlap": false,
+      "group_overlap": false,
+      "metrics": {
+        "majority": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              0,
+              5
+            ],
+            [
+              0,
+              9
+            ]
+          ],
+          "accuracy": 0.6428571428571429,
+          "balanced_accuracy": 0.5,
+          "ad_precision": 0.6428571428571429,
+          "ad_recall": 1.0,
+          "ad_f1": 0.782608695652174,
+          "normal_recall": 0.0
+        },
+        "keyword_raw": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              3,
+              2
+            ],
+            [
+              3,
+              6
+            ]
+          ],
+          "accuracy": 0.6428571428571429,
+          "balanced_accuracy": 0.6333333333333333,
+          "ad_precision": 0.75,
+          "ad_recall": 0.6666666666666666,
+          "ad_f1": 0.7058823529411765,
+          "normal_recall": 0.6
+        },
+        "keyword_nfkc": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              3,
+              2
+            ],
+            [
+              2,
+              7
+            ]
+          ],
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.6888888888888889,
+          "ad_precision": 0.7777777777777778,
+          "ad_recall": 0.7777777777777778,
+          "ad_f1": 0.7777777777777778,
+          "normal_recall": 0.6
+        },
+        "rf_char_tfidf": {
+          "confusion_matrix_labels": [
+            "normal",
+            "ad_suspected"
+          ],
+          "confusion_matrix": [
+            [
+              4,
+              1
+            ],
+            [
+              3,
+              6
+            ]
+          ],
+          "accuracy": 0.7142857142857143,
+          "balanced_accuracy": 0.7333333333333334,
+          "ad_precision": 0.8571428571428571,
+          "ad_recall": 0.6666666666666666,
+          "ad_f1": 0.75,
+          "normal_recall": 0.8
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Hand-selected small nonrandom dataset; no representative accuracy estimate.",
+    "Labels assigned by prior evidence collector, no independent adjudication; suspicion labels not confirmed unlawful advertising.",
+    "Selected fragments can lack parent context. CΟΜ alone and generic event wording cannot justify content classification.",
+    "Source selection and excerpt selection already bias lexical distribution; group split cannot remove this bias.",
+    "Group heuristic is not Public Suffix List; near duplicate threshold misses some campaign/template paraphrases.",
+    "Keywords designed after knowledge of dataset topic; no untouched holdout and no significance claim.",
+    "No live rendering, DOM location, computed-style visibility, phishing, agent, or end-to-end bot performance evaluated.",
+    "Existing Chickadee code was not executed; baselines are newly authored prototypes."
+  ]
+}

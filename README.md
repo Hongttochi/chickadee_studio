@@ -160,6 +160,7 @@ GUI에서는 URL을 입력하고 점검 시작을 누릅니다. CLI도 기본적
 | [Dots 자료 반영](docs/research-integration.md) / [조사 원본](research/README.md) | 관찰 수준·근거·코드 변경·회귀 검사 |
 | [요구사항](docs/requirements.md) | 모집요강과 필수 스키마·평가 조건 |
 | [개발 계획](docs/development-plan.md) | 구현 상태와 다음 작업 |
+| [ML·에이전트 일반화 설계](docs/ml-agent-generalization.md) / [오프라인 대조](research/ml-review/2026-10-21/) | 참고 프로젝트·전달 리뷰 검토, 현재 규칙 대조, Groq 연결 제안과 검증 기준 |
 | [제출 체크리스트](docs/submission-checklist.md) | 신청 서류·실행 파일·최종 검증 |
 | [결과 스키마](schemas/result.schema.json) | 자체 개발용 검증 규칙, 공식 배포 파일 아님 |
 | [검출 예시](examples/result.sample.json) / [0건 예시](examples/result.empty.json) | 형식 설명용 가상 데이터 |

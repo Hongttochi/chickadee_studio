@@ -1,0 +1,8 @@
+{
+  "original_input_sha256": {
+    "samples.jsonl": "abd09b20a3cff7c1f92b3c32da895281ef3f837d770da5f4a431f6e8123222ca",
+    "negatives.jsonl": "278c9084532f709a0dc2d33a972ddac21e8f8e1040dc617242bb2cb21145238c"
+  },
+  "source": "chickadee-evidence-v4",
+  "snapshot": "bundled_inputs: inert text and split/label metadata only. No HTML, JS, model pickle, external code or executable content."
+}

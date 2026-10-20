@@ -1,5 +1,7 @@
 # Preserve evidence bytes and original whitespace across Windows/Linux checkouts.
 research/ad-evidence/** -text -whitespace
+# Imported ML review documents and predictions are verified by their original hashes.
+research/ml-review/**/originals/** -text -whitespace
 # The generated payload is compared byte-for-byte by --check on every platform.
 examples/mock-site-content.json text eol=lf
 # Preserve CSV CRLF and JSON hashes in the published test outputs.
