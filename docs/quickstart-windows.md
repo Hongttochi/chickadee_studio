@@ -3,7 +3,7 @@
 1. ZIP 파일을 전부 압축 해제합니다.
 2. `Chickadee.exe`를 더블클릭합니다. `resources` 등 함께 들어 있는 파일과 폴더를 유지합니다.
 3. 검사할 URL을 입력하고 **검사 실행**을 누릅니다. 실행 옆 화살표 메뉴의 **데모 검사**로 로컬 예제를 먼저 확인할 수도 있습니다.
-4. 결과는 기본적으로 `문서/Chickadee/results` 아래 실행별 폴더에 `result.json`, `result.csv`, `scan-report.json`으로 저장됩니다. **저장 폴더**에서 실제 위치를 확인합니다.
+4. 결과는 기본적으로 `문서/Chickadee/results` 아래 실행별 폴더에 `result.json`, `result.csv`, `scan-report.json`으로 저장됩니다. **결과 폴더**에서 실제 위치를 확인합니다.
 
 Python·Docker·VM 설치나 별도 옵션은 필요하지 않습니다.
 

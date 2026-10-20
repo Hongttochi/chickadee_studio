@@ -105,7 +105,7 @@ async function initialize() {
     title: "Chickadee",
     icon: path.join(__dirname, "../assets/app.ico"),
     titleBarStyle: "hidden",
-    titleBarOverlay: { color: "#ffffff", symbolColor: "#4b5563", height: 40 },
+    titleBarOverlay: { color: "#e9eef5", symbolColor: "#4b5563", height: 40 },
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       nodeIntegration: false,

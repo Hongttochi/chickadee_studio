@@ -146,7 +146,7 @@ const LABELS = {
   COMMERCIAL: "구매·추천 유도",
 };
 const STATUS = {
-  idle: "검사 준비",
+  idle: "",
   running: "검사 진행 중",
   stopping: "중단 처리 중",
   pausing: "일시정지 요청",
@@ -186,7 +186,10 @@ function relativeUrl(value) {
   }
 }
 function time(value) {
-  return new Date(value).toLocaleTimeString("ko-KR", { hour12: false });
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleTimeString("ko-KR", { hour12: false });
 }
 function formatElapsed(seconds) {
   return seconds < 60
@@ -231,19 +234,7 @@ function FlowNode({ id, data, selected }) {
         <span className="node-icon">
           <Icon name={def.icon} size={20} />
         </span>
-        <span className="node-subtitle">{def.subtitle}</span>
-        <span className="node-number">
-          {
-            {
-              target: "01",
-              browser: "02",
-              collector: "03",
-              techniques: "04A",
-              candidates: "04B",
-              report: "05",
-            }[id]
-          }
-        </span>
+
         <span
           className={`node-state ${data.state}`}
           title={
@@ -258,9 +249,9 @@ function FlowNode({ id, data, selected }) {
         />
       </div>
       <strong>{def.title}</strong>
-      <p>{id === "target" ? shortUrl(data.url) : def.detail}</p>
+      {id === "target" && <p title={data.url}>{shortUrl(data.url)}</p>}
       <div className="node-bottom">
-        <span>{data.caption || "실행 대기"}</span>
+        <span>{data.state ? data.caption : ""}</span>
         <Icon
           name={
             data.state === "done"
@@ -519,6 +510,16 @@ function App() {
   }, []);
   const applyOutcome = useCallback((value) => {
     setOutcome(value);
+    setSelectedNode(null);
+    setZoomPreview(false);
+    if (value.events) {
+      setSearch("");
+      setFilter("all");
+      setReviewFilter("all");
+      setPageSearch("");
+      setPageFilter("visited");
+      setEventFilter("all");
+    }
     setRunTarget(value.result.meta.entry_url);
     setSelectedRecord(null);
     setReviewData(value.reviews || { revision: 0, items: {} });
@@ -650,7 +651,6 @@ function App() {
         setRecords((items) => [...items, event.candidate]);
       if (event.kind === "done") {
         applyOutcome(event);
-        tell("검사 결과와 진행 기록을 저장했습니다.", "success");
       }
       if (event.kind === "error") {
         setStatus("failed");
@@ -745,7 +745,7 @@ function App() {
                 : node.id === "candidates"
                   ? `${candidates.length}건 광고 의심`
                   : node.id === "target"
-                    ? "HTTP / HTTPS"
+                    ? ""
                     : outcome
                       ? "JSON · CSV 저장 완료"
                       : "실행 종료 후 저장";
@@ -796,7 +796,7 @@ function App() {
                     blue: "#438dff",
                     teal: "#00d99a",
                     purple: "#a780ff",
-                    amber: "#ff9b57",
+                    amber: "#57a5cf",
                   }[DEFINITIONS[edge.source].tone]
                 : "#61738e",
           strokeWidth: edge.target === active ? 2.8 : 1.8,
@@ -884,6 +884,9 @@ function App() {
     setStatus("running");
     setRunTarget(demo ? "" : entry);
     setRecords([]);
+    setSearch("");
+    setFilter("all");
+    setReviewFilter("all");
     setPages([]);
     setPending([]);
     setEvents([]);
@@ -1063,6 +1066,11 @@ function App() {
     : active
       ? STAGE_NAMES[active]
       : STATUS[status];
+  const displayedPreviewUrl = preview
+    ? typeof preview.url === "string"
+      ? preview.url
+      : ""
+    : currentUrl || url;
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -1074,15 +1082,7 @@ function App() {
             chickadee<span className="brand-dot">.</span>
           </span>
         </div>
-        <button className="workspace-switch" onClick={() => setSettings(true)}>
-          <span className="workspace-avatar">C</span>
-          <div>
-            <strong>웹사이트 검사</strong>
-            <small>{profile === "test" ? "게시판 구성" : "표준 구성"}</small>
-          </div>
-          <Icon name="ChevronsUpDown" size={14} />
-        </button>
-        <p className="nav-label">INSPECTION / 검사실</p>
+
         <nav>
           {[
             ["workflow", "Workflow", "검사 구성"],
@@ -1114,30 +1114,10 @@ function App() {
             <Icon name="SlidersHorizontal" />
             <span>검사 설정</span>
           </button>
-          <button
-            className="engine-indicator"
-            onClick={() => setSettings(true)}
-          >
-            <span className={booted ? "ready-dot" : "muted-dot"} />
-            <div>
-              <strong>
-                {booted
-                  ? running
-                    ? STATUS[status]
-                    : "검사 준비"
-                  : "환경 확인"}
-              </strong>
-              <small>Desktop · v0.6.0</small>
-            </div>
-            <Icon name="ChevronRight" size={15} />
-          </button>
         </div>
       </aside>
       <main className="main">
         <header className="topbar">
-          <span>워크스페이스</span>
-          <Icon name="ChevronRight" size={13} />
-          <strong>웹사이트 점검</strong>
           <div className="topbar-right">
             <button
               className="command-launcher"
@@ -1148,39 +1128,13 @@ function App() {
               <span>빠른 명령</span>
               <kbd>Ctrl K</kbd>
             </button>
-            <span className="local-label">
-              <Icon name="Monitor" size={13} />{" "}
-              {visualPreview
-                ? "디자인 미리보기 · 저장된 데모"
-                : "LOCAL WORKSPACE"}
-            </span>
+            {visualPreview && (
+              <span className="local-label">디자인 미리보기 · 저장된 데모</span>
+            )}
           </div>
         </header>
-        <section
-          className="heading"
-          data-section={
-            {
-              workflow: "01",
-              results: "02",
-              pages: "03",
-              activity: "04",
-              history: "05",
-            }[view]
-          }
-        >
+        <section className="heading">
           <div>
-            <div className="eyebrow">
-              CHICKADEE /{" "}
-              {
-                {
-                  workflow: "INSPECTION STUDIO",
-                  results: "EVIDENCE REVIEW",
-                  pages: "CRAWL EXPLORER",
-                  activity: "EXECUTION TIMELINE",
-                  history: "SCAN ARCHIVE",
-                }[view]
-              }
-            </div>
             <h1>
               {view === "history"
                 ? "검사 기록"
@@ -1192,11 +1146,6 @@ function App() {
                       ? "진행 기록"
                       : "검사 구성"}
             </h1>
-            <p>
-              {view === "workflow"
-                ? "노드를 연결하고, 검사의 모든 단계를 직접 확인하세요."
-                : "관측한 데이터와 탐지 근거를 한곳에서 검토하세요."}
-            </p>
           </div>
           <div className="heading-actions">
             <Button
@@ -1215,7 +1164,6 @@ function App() {
           <div className="target-field">
             <label htmlFor="target-url">
               {outcome ? "다음 검사 대상" : "검사 대상"}{" "}
-              <span>HTTP / HTTPS</span>
             </label>
             <input
               id="target-url"
@@ -1309,7 +1257,10 @@ function App() {
             )}
           </div>
         </section>
-        <section className="summary-strip">
+        <section
+          className="summary-strip"
+          hidden={!running && !outcome && status !== "failed"}
+        >
           <div className="scan-status">
             <span
               className={
@@ -1399,14 +1350,21 @@ function App() {
             <div className="studio">
               <section className="canvas-shell">
                 <div className="canvas-toolbar">
-                  <span>
-                    <Icon name="Workflow" size={16} />
-                    <strong>검사 흐름</strong>
-                    <small>
-                      {flow.nodes.length} nodes · {flow.edges.length}{" "}
-                      connections
-                    </small>
-                  </span>
+                  <button
+                    className="follow-toggle"
+                    aria-pressed={flow.follow_links}
+                    disabled={running}
+                    title="하위 링크 탐색"
+                    onClick={() =>
+                      setFlow((value) => ({
+                        ...value,
+                        follow_links: !value.follow_links,
+                      }))
+                    }
+                  >
+                    <Icon name="GitBranch" size={14} />
+                    <span>하위 링크</span>
+                  </button>
                   <div>
                     <button
                       title="기본 구성"
@@ -1465,7 +1423,7 @@ function App() {
                           blue: "#3182f6",
                           teal: "#00d38b",
                           purple: "#a57aff",
-                          amber: "#ff934f",
+                          amber: "#57a5cf",
                         })[DEFINITIONS[node.id].tone]
                       }
                       maskColor="rgba(16,20,28,.8)"
@@ -1480,30 +1438,6 @@ function App() {
                       {error}
                     </div>
                   )}
-                  <div className="flow-caption">
-                    <span>
-                      <i className="legend-dot" /> 실행 단계
-                    </span>
-                    <span>
-                      포트를 드래그해 연결 · 연결 선택 후 Delete로 제거
-                    </span>
-                  </div>
-                </div>
-                <div className="canvas-footer">
-                  <Icon name="GitBranch" size={14} />
-                  <span>
-                    {flow.follow_links
-                      ? "하위 링크 탐색 켜짐"
-                      : "입력 페이지 한정"}
-                  </span>
-                  <span>
-                    필수 탐지 {branchEnabled(flow, "techniques") ? "ON" : "OFF"}{" "}
-                    · 광고 문맥{" "}
-                    {branchEnabled(flow, "candidates") ? "ON" : "OFF"}
-                  </span>
-                  <button onClick={() => setSelectedNode("collector")}>
-                    구성 설정 <Icon name="ArrowUpRight" size={12} />
-                  </button>
                 </div>
               </section>
               <aside className="monitor-panel">
@@ -1521,10 +1455,8 @@ function App() {
                   <>
                     <div className="panel-heading">
                       <span>
-                        <i className={running ? "live-dot" : "muted-dot"} />
-                        <strong>실시간 화면</strong>
+                        <strong>미리보기</strong>
                       </span>
-                      <small>{running ? "LIVE" : "STANDBY"}</small>
                     </div>
                     <div className="browser-preview">
                       <div className="browser-chrome">
@@ -1533,16 +1465,18 @@ function App() {
                           <i />
                           <i />
                         </span>
-                        <span title={currentUrl || url}>
+                        <span title={displayedPreviewUrl}>
                           <Icon
                             name={
-                              (currentUrl || url).startsWith("https:")
+                              displayedPreviewUrl.startsWith("https:")
                                 ? "LockKeyhole"
                                 : "Globe2"
                             }
                             size={11}
                           />
-                          {shortUrl(currentUrl || url)}
+                          {displayedPreviewUrl
+                            ? shortUrl(displayedPreviewUrl)
+                            : "캡처 주소 없음"}
                         </span>
                         <button
                           title="화면 확대"
@@ -1566,30 +1500,26 @@ function App() {
                         <div className="preview-placeholder">
                           <Icon name="PanelsTopLeft" size={34} />
                           <strong>
-                            {livePreview ? "화면 대기" : "화면 미리보기 꺼짐"}
+                            {livePreview ? "검사 화면 없음" : "미리보기 꺼짐"}
                           </strong>
-                          <span>검사를 시작하면 실제 화면이 표시됩니다.</span>
                         </div>
                       )}
                       <div className="preview-caption">
-                        <span>
-                          {preview
-                            ? "실제 Chromium 화면"
-                            : "아직 관측한 화면이 없습니다"}
-                        </span>
                         <span>
                           {preview?.timestamp ? time(preview.timestamp) : "—"}
                         </span>
                       </div>
                     </div>
-                    <div className="current-location">
-                      <span>검사 위치</span>
-                      <strong title={currentUrl}>
-                        {currentUrl
-                          ? relativeUrl(currentUrl)
-                          : "검사를 시작해 주세요."}
-                      </strong>
-                    </div>
+                    {currentUrl && currentUrl !== preview?.url && (
+                      <div className="current-location">
+                        <span>검사 위치</span>
+                        <strong title={currentUrl}>
+                          {currentUrl
+                            ? relativeUrl(currentUrl)
+                            : "검사를 시작해 주세요."}
+                        </strong>
+                      </div>
+                    )}
                     <div className="activity-heading">
                       <strong>진행 기록</strong>
                       <button onClick={() => setView("activity")}>
@@ -1846,7 +1776,6 @@ function App() {
                 </div>
                 <div className="table-footer">
                   {filteredRecords.length}개 항목{" "}
-                  <span>일반 광고 후보는 법적 불법성 판정이 아닙니다.</span>
                 </div>
               </section>
               <RecordDetail
@@ -1969,9 +1898,6 @@ function App() {
                   />
                 )}
               </div>
-              <div className="table-footer">
-                페이지를 선택하면 수집 수치와 응답 내역을 확인할 수 있습니다.
-              </div>
             </section>
           )}
           {view === "activity" && (
@@ -2075,26 +2001,6 @@ function App() {
             </section>
           )}
         </div>
-        <footer className="statusbar">
-          <span>
-            <span className={running ? "pulse-dot" : "ready-dot"} />
-            {STATUS[status]}
-          </span>
-          <span>
-            {running
-              ? status === "paused"
-                ? "다음 페이지 대기 · 재개 가능"
-                : status === "pausing"
-                  ? "현재 페이지 정리 후 정지"
-                  : "실제 페이지 검사 중"
-              : outcome
-                ? `${pages.length}페이지 · ${STATUS[status]}`
-                : "URL 입력 · 구성 선택"}
-          </span>
-          <span>
-            로컬 검사 <i /> JSON · CSV
-          </span>
-        </footer>
       </main>
       {notice && (
         <div className={`toast ${notice.type}`} role="status">
@@ -2124,7 +2030,6 @@ function App() {
           >
             <div className="modal-heading">
               <div>
-                <span className="eyebrow">SCAN SETTINGS</span>
                 <h2>검사 설정</h2>
               </div>
               <button onClick={() => setSettings(false)}>
@@ -2226,7 +2131,6 @@ function App() {
           >
             <div className="modal-heading">
               <div>
-                <span className="eyebrow">OBSERVED EVENT</span>
                 <h2>실행 내역</h2>
               </div>
               <button onClick={() => setSelectedEvent(null)}>
@@ -2251,12 +2155,18 @@ function App() {
         >
           <section
             className="preview-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="검사 화면"
             onClick={(event) => event.stopPropagation()}
           >
             <div>
-              <strong>실제 검사 브라우저</strong>
+              <strong>검사 화면</strong>
               <span>{preview.url}</span>
-              <button onClick={() => setZoomPreview(false)}>
+              <button
+                aria-label="미리보기 닫기"
+                onClick={() => setZoomPreview(false)}
+              >
                 <Icon name="X" />
               </button>
             </div>
@@ -2274,7 +2184,6 @@ function Empty({ icon, title, text }) {
         <Icon name={icon} size={28} />
       </span>
       <strong>{title}</strong>
-      <p>{text}</p>
     </div>
   );
 }

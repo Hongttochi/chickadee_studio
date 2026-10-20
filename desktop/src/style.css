@@ -338,9 +338,9 @@ input:disabled {
   border-color: #18583f;
 }
 .button.stop-button {
-  background: #fff3ef;
-  color: #a95839;
-  border-color: #edd5ca;
+  background: #edf2f8;
+  color: #496f9c;
+  border-color: #dae4f1;
 }
 .target-bar {
   display: flex;
@@ -460,7 +460,7 @@ input:disabled {
   background: #e3e9e5;
 }
 .summary-numbers .amber-text {
-  color: #af8853;
+  color: #6a819e;
 }
 .content-area {
   flex: 1;
@@ -626,8 +626,8 @@ input:disabled {
 }
 .tone-amber .node-icon,
 .tone-amber .config-icon {
-  background: #faf4e9;
-  color: #bf9e61;
+  background: #edf2f8;
+  color: #6885a7;
 }
 .tone-teal .node-icon,
 .tone-teal .config-icon {
@@ -663,7 +663,7 @@ input:disabled {
   bottom: -7px;
 }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #dc8b69 !important;
+  stroke: #799cbd !important;
   stroke-width: 3 !important;
 }
 .react-flow__controls {
@@ -723,9 +723,9 @@ input:disabled {
   gap: 7px;
   align-items: center;
   white-space: nowrap;
-  background: #fff8e9e8;
-  color: #ac8852;
-  border: 1px solid #e5d9b8;
+  background: #edf2f8e8;
+  color: #6c819e;
+  border: 1px solid #d3deed;
   border-radius: 7px;
   padding: 9px 12px;
   font-size: 10px;
@@ -986,8 +986,8 @@ input:disabled {
   color: #a18bc0;
 }
 .event-icon.amber {
-  background: #faf4eb;
-  color: #c6a373;
+  background: #edf2f8;
+  color: #7b95b4;
 }
 .event-row.compact {
   padding: 9px 5px;
@@ -1301,8 +1301,8 @@ th:last-child {
   color: #a18ebc;
 }
 .type-badge.amber {
-  background: #faf4e9;
-  color: #baa06d;
+  background: #edf2f8;
+  color: #657f9f;
 }
 .review-label {
   font-size: 9px;
@@ -1461,9 +1461,9 @@ th:last-child {
   font-size: 9px;
 }
 .http-badge.bad {
-  background: #fbf0eb;
-  color: #c09b86;
-  border-color: #f1e0d7;
+  background: #edf2f8;
+  color: #7b91ad;
+  border-color: #e3eaf5;
 }
 .path-cell {
   color: #7a9685;
@@ -1748,8 +1748,8 @@ input[type="checkbox"]:checked:after {
   animation: fadein 0.2s;
 }
 .toast.error {
-  color: #b27d65;
-  border-color: #ebd8cd;
+  color: #657f9f;
+  border-color: #dae4f1;
 }
 .toast button {
   display: flex;
@@ -2087,7 +2087,7 @@ input[type="checkbox"]:checked:after {
   color: #191f28;
 }
 .summary-numbers .amber-text {
-  color: #d86716;
+  color: #2c6a9f;
 }
 .summary-numbers i {
   background: #cfd6df;
@@ -2184,8 +2184,8 @@ input[type="checkbox"]:checked:after {
 }
 .tone-amber .node-icon,
 .tone-amber .config-icon {
-  background: #ff934f;
-  color: #331a0b;
+  background: #57a5cf;
+  color: #172c45;
 }
 .tone-blue .config-icon {
   background: #3182f6;
@@ -2245,10 +2245,10 @@ input[type="checkbox"]:checked:after {
   background: #a57aff;
 }
 .tone-amber .react-flow__handle {
-  background: #ff934f;
+  background: #57a5cf;
 }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #ff934f !important;
+  stroke: #57a5cf !important;
 }
 .react-flow__controls {
   border-color: #46546a;
@@ -2284,9 +2284,9 @@ input[type="checkbox"]:checked:after {
 }
 .flow-warning {
   border-radius: 2px;
-  background: #ff934f;
-  color: #2c180a;
-  border-color: #ff934f;
+  background: #57a5cf;
+  color: #10243b;
+  border-color: #57a5cf;
   font-size: 11px;
   font-weight: 650;
   box-shadow: none;
@@ -2429,8 +2429,8 @@ input[type="checkbox"]:checked:after {
   color: #8054d4;
 }
 .event-icon.amber {
-  background: #fff0e4;
-  color: #c36825;
+  background: #e7f0f8;
+  color: #2c6a9f;
 }
 .timeline-empty p {
   color: #6b7684;
@@ -2565,8 +2565,8 @@ tbody tr.selected {
   background: #efe6ff;
 }
 .type-badge.amber {
-  color: #c36825;
-  background: #fff0e4;
+  color: #2c6a9f;
+  background: #e7f0f8;
 }
 .review-label {
   font-size: 10px;
@@ -2894,7 +2894,7 @@ input[type="checkbox"]:after {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ff934f;
+  background: #57a5cf;
 }
 
 /* Action hierarchy: one primary action, quiet tools, explicit stop control. */

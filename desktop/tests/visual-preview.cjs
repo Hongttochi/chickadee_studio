@@ -143,7 +143,6 @@ const assert = require("node:assert/strict");
     await page.goto(origin);
     await page.locator(".react-flow__node").first().waitFor();
     await page.evaluate(() => window.__showPreview());
-    await page.locator(".toast button").click();
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(400);
     await page.screenshot({

@@ -4,15 +4,15 @@
 
 공공 웹사이트의 광고 의심 요소를 검사하는 **Electron 기반 Windows 앱**입니다. 노드를 연결해 검사 구성을 바꾸고, 실제 검사 화면·방문 경로·HTTP 응답·판정 근거를 확인합니다. 필수 4종 결과는 `result.json`, 전체 내역은 고정 17칼럼 CSV와 보고서로 저장합니다.
 
-**[Windows v0.6.0 다운로드](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.6.0)** → ZIP 전체 압축 해제 → `Chickadee.exe` 실행. Python·Node.js·Docker 설치는 필요하지 않습니다. 외부 URL은 기본 허용이며 Chromium과 검사 프로그램을 함께 제공합니다. [Windows 빠른 실행](docs/quickstart-windows.md) · [데스크톱 앱](docs/desktop.md) · [디자인 기준](DESIGN.md)
+**[Windows v0.6.1 다운로드](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.6.1)** → ZIP 전체 압축 해제 → `Chickadee.exe` 실행. Python·Node.js·Docker 설치는 필요하지 않습니다. 외부 URL은 기본 허용이며 Chromium과 검사 프로그램을 함께 제공합니다. [Windows 빠른 실행](docs/quickstart-windows.md) · [데스크톱 앱](docs/desktop.md) · [디자인 기준](DESIGN.md)
 
 ## 다운로드하고 바로 실행하기 — Windows 앱
 
 **배포 패키지에는 앱과 검사 프로그램·Chromium이 모두 들어 있습니다.** Windows x64 PC에서 압축을 풀고 실행하면 URL 입력·실제 검사·결과 조회·JSON/CSV 저장을 바로 사용할 수 있습니다. Python, Node.js, Docker, 개발 도구 설치나 빌드 명령은 필요하지 않습니다.
 
-1. **[Chickadee Studio 0.6.0 Windows ZIP 다운로드](https://github.com/orqan137/chickadee_Bot/releases/download/v0.6.0/Chickadee-Studio-0.6.0-win-x64.zip)**를 누릅니다. 배포 페이지에서 받는 경우 Assets의 `Chickadee-Studio-0.6.0-win-x64.zip`을 선택합니다.
+1. **[Chickadee Studio 0.6.1 Windows ZIP 다운로드](https://github.com/orqan137/chickadee_Bot/releases/download/v0.6.1/Chickadee-Studio-0.6.1-win-x64.zip)**를 누릅니다. 배포 페이지에서 받는 경우 Assets의 `Chickadee-Studio-0.6.1-win-x64.zip`을 선택합니다.
 2. 다운로드한 ZIP을 원하는 폴더에 **전체 압축 해제**합니다.
-3. `Chickadee-0.6.0` 폴더 안의 **`Chickadee.exe`를 더블클릭**합니다.
+3. `Chickadee-0.6.1` 폴더 안의 **`Chickadee.exe`를 더블클릭**합니다.
 4. 검사할 URL을 입력하고 **검사 실행**을 누릅니다. 먼저 동작을 확인하려면 **데모 검사**를 누릅니다.
 
 결과는 앱에서 바로 확인하고, **결과 폴더** 버튼으로 저장된 파일을 엽니다. 기본 저장 위치는 `문서/Chickadee/results` 아래 실행별 폴더입니다. 사용자가 선택한 사이트를 검사하려면 인터넷 연결이 필요하며, 로컬 데모는 오프라인으로 실행할 수 있습니다.
@@ -36,7 +36,7 @@
 
 ![검사 구성 화면](docs/assets/studio-workflow.png)
 
-화면 이미지는 저장된 합성 데모 결과를 로컬 UI 렌더러로 표시한 디자인 미리보기입니다. 최종 Windows 파일의 실행 검증 상태는 [검증 기록](docs/validation.md)에 구분했습니다.
+화면 이미지는 로컬 UI와 실제 Python 검사 브리지를 연결해 데모를 실행하고 저장된 기록을 다시 연 소스 통합 검사 화면입니다. 미리보기·확대·기록 복원·CSV·재시작 설정 복원을 확인했습니다. 최종 Windows 파일의 실행 검증 상태는 [검증 기록](docs/validation.md)에 구분했습니다.
 
 ## 구현한 탐지 기능
 
@@ -86,7 +86,7 @@ npm run build
 npm start
 ```
 
-루트의 `scripts/build-desktop.ps1`로 검사 프로그램과 Electron Windows 앱을 함께 빌드합니다. 생성 위치는 `artifacts/electron-0.6.0/win-unpacked/Chickadee.exe`입니다. `resources/engine`을 포함한 폴더 전체를 배포합니다. [개발·배포·검증 절차](docs/desktop.md)를 확인하세요.
+루트의 `scripts/build-desktop.ps1`로 검사 프로그램과 Electron Windows 앱을 함께 빌드합니다. 생성 위치는 `artifacts/electron-0.6.1/win-unpacked/Chickadee.exe`입니다. `resources/engine`을 포함한 폴더 전체를 배포합니다. [개발·배포·검증 절차](docs/desktop.md)를 확인하세요.
 
 ## Python CLI·Tkinter 호환 화면
 
