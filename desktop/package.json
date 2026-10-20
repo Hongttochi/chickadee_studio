@@ -7,7 +7,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "build": "vite build",
-    "start": "electron .",
+    "start": "node electron/launch.cjs",
     "package": "npm run build && electron-builder --win --x64 --dir --publish never",
     "test": "node --test tests/*.test.cjs",
     "smoke": "node tests/smoke.cjs",
@@ -36,6 +36,7 @@
       "electron/**/*",
       "package.json",
       "assets/app.ico",
+      "assets/app-mark.png",
       "licenses/**/*"
     ],
     "extraResources": [
@@ -48,6 +49,9 @@
       "target": "dir",
       "signAndEditExecutable": true,
       "icon": "assets/app.ico"
+    },
+    "mac": {
+      "icon": "assets/app-mark.png"
     },
     "asar": true
   }

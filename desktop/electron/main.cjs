@@ -310,7 +310,12 @@ else {
   });
   app
     .whenReady()
-    .then(initialize)
+    .then(() => {
+      if (process.platform === "darwin") {
+        app.dock.setIcon(path.join(__dirname, "../assets/app-mark.png"));
+      }
+      return initialize();
+    })
     .catch((error) => {
       dialog.showErrorBox("Chickadee", error.message);
       app.quit();
