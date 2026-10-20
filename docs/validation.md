@@ -1,5 +1,12 @@
 # 검증 기록
 
+## 0.6.2 Windows CI 검증 (2026-10-20)
+
+- [Windows CI 실행](https://github.com/orqan137/chickadee_Bot/actions/runs/39424790396)에서 Python 테스트 58개와 데스크톱 단위 테스트 2개가 통과했습니다.
+- 패키징한 `Chickadee.exe`의 Electron 통합 검사에서 데모 4페이지·필수 탐지 14건, 정지·재개, 미리보기 확대·복원·끄기, 필터 초기화, HTTP 기록, CSV, 구성 연결, 개별·일괄 검토, 단일 페이지 재검사와 재시작 후 설정 복원을 확인했습니다.
+- 첫 CI 실행은 ZIP 내 Chromium 이름 검사 오류로 게시 전에 중단됐습니다. 실제 포함 파일 `chrome-headless-shell.exe`를 확인해 검사기를 수정했습니다.
+- 이 검증은 GitHub Windows runner에서 수행했습니다. 사용자 PC별 Device Guard 정책, 네이티브 파일 선택 창의 수동 사용, 실제 웹사이트의 탐지 정확도 검증과는 구분합니다.
+
 ## 0.6.1 화면 정리·미리보기·기록 (2026-10-20)
 
 - 로컬 Chromium의 소스 UI와 **실제 Python 검사 브리지**를 연결해 통합 검사를 통과했습니다. 가짜 검사 결과를 반환하는 목업 검사가 아닙니다. Windows 실행 파일과 네이티브 파일 선택 창 검증은 포함하지 않습니다.

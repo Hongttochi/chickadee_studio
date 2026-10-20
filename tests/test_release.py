@@ -13,7 +13,7 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTests(unittest.TestCase):
-    def make_archive(self, directory, include_browser=True):
+    def make_archive(self, directory, include_browser=True, browser_name="chrome-headless-shell.exe"):
         value = "0.6.2"
         archive = directory / f"Chickadee-Studio-{value}-win-x64.zip"
         files = [
@@ -22,7 +22,7 @@ class ReleaseTests(unittest.TestCase):
             "docs/quickstart-windows.md", "licenses/Frontend-Third-Party.txt",
         ]
         if include_browser:
-            files.append("resources/engine/_internal/playwright/driver/package/.local-browsers/chromium_headless_shell-1/chrome-win/headless_shell.exe")
+            files.append(f"resources/engine/_internal/playwright/driver/package/.local-browsers/chromium_headless_shell-1/chrome-win/{browser_name}")
         with zipfile.ZipFile(archive, "w") as output:
             for name in files:
                 output.writestr(f"Chickadee-{value}/{name}", "fixture")
@@ -46,6 +46,12 @@ class ReleaseTests(unittest.TestCase):
                 stream.write(b"tampered")
             with self.assertRaisesRegex(ValueError, "SHA256"):
                 release.verify("0.6.2", directory)
+
+    def test_legacy_browser_name_passes(self):
+        with tempfile.TemporaryDirectory() as folder:
+            directory = Path(folder)
+            self.make_archive(directory, browser_name="headless_shell.exe")
+            release.verify("0.6.2", directory)
 
     def test_missing_browser_is_rejected_even_with_valid_checksum(self):
         with tempfile.TemporaryDirectory() as folder:

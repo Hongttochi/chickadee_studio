@@ -71,7 +71,8 @@ def verify(value, directory):
         ]
         if any(prefix + name not in files for name in required):
             raise ValueError("ZIP is missing required app, engine, documentation or licenses")
-        if not any("/.local-browsers/" in name and name.endswith("/headless_shell.exe") for name in files):
+        browser_names = ("/headless_shell.exe", "/chrome-headless-shell.exe")
+        if not any("/.local-browsers/" in name and name.endswith(browser_names) for name in files):
             raise ValueError("ZIP is missing bundled Chromium headless shell")
         bad = archive.testzip()
         if bad:
