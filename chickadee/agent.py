@@ -208,7 +208,7 @@ class EvidenceAgent:
         except Exception:
             # Never expose provider response bodies (which may echo input).
             raise ValueError('에이전트 판정 형식 또는 근거 ID 검증 실패') from None
-        if packet.get('truncated') or len(packet['text']) < 10 or not any(r['tool'] == 'evidence_read' for r in reads):
+        if packet.get('truncated') or packet.get('scope_quality') == 'overlapping' or len(packet['text']) < 10 or not any(r['tool'] == 'evidence_read' for r in reads):
             result.update(assessment='uncertain', recommended_next_action='collect_more_evidence')
             result['missing_evidence'] = list(dict.fromkeys([*result['missing_evidence'], '충분한 동일 영역 문맥']))
         result['summary'] = redact(result['summary'])

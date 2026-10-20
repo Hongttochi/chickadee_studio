@@ -204,6 +204,8 @@ class AgentTests(unittest.TestCase):
         result = EvidenceAgent(self.config(), transport=groq_stub).investigate(value)
         self.assertEqual(result['assessment'], 'uncertain')
         self.assertEqual(result['recommended_next_action'], 'collect_more_evidence')
+        value = packet(); value['scope_quality'] = 'overlapping'
+        self.assertEqual(EvidenceAgent(self.config(), transport=groq_stub).investigate(value)['assessment'], 'uncertain')
 
     def test_fixed_groq_endpoint_and_provider_error_not_echoed(self):
         class Response:

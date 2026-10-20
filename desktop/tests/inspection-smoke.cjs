@@ -1,5 +1,6 @@
 // Actual renderer + Python bridge + localhost fixture. No paid API requests.
-const { launch } = require("./source-ui-harness.cjs");
+const packaged = Boolean(process.env.CHICKADEE_PACKAGED_EXE);
+const launch = packaged ? require("playwright")._electron.launch : require("./source-ui-harness.cjs").launch;
 const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -18,13 +19,14 @@ const http = require("node:http");
   const env = { ...process.env, CHICKADEE_TEST_DATA: data };
   let app;
   try {
-    app = await launch({ env });
+    app = await launch({ env, ...(packaged ? { executablePath: process.env.CHICKADEE_PACKAGED_EXE, args: [] } : {}) });
     const page = await app.firstWindow();
     page.setDefaultTimeout(15000);
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.getByRole("dialog", { name: "사용 가이드" }).getByRole("button", { name: "사용 가이드 닫기", exact: true }).click();
     await page.locator(".header-run-controls button.primary:not(:disabled)").waitFor();
+    await page.locator('.react-flow__node[data-id="target"]').click();
     await page.getByRole("textbox", { name: "검사 대상 URL" }).fill(`http://127.0.0.1:${server.address().port}/`);
     await page.getByRole("button", { name: "검사 분석", exact: true }).click();
     async function wait(count) {
@@ -77,7 +79,7 @@ const http = require("node:http");
     await page.getByRole('tab', { name: '변경 비교', exact: true }).click();
     await page.locator('.inspection-changes article').first().waitFor();
     assert.equal(errors.length, 0, errors.join('\n'));
-    console.log(JSON.stringify({ status: 'passed', mode: 'source-ui-real-python', explorationGraph: true,
+    console.log(JSON.stringify({ status: 'passed', mode: packaged ? 'electron-packaged' : 'source-ui-real-python', explorationGraph: true,
       textStyleLinkComparison: true, comparisonReload: true, groqConfiguration: true,
       budgetBlockedBeforeNetwork: true, immutableResult: true, secretNotPersisted: true, data }));
   } finally {

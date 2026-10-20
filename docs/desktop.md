@@ -1,4 +1,4 @@
-# Chickadee Studio 0.6.2
+# Chickadee Studio 0.7.0
 
 Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. 사용자에게 Node.js·Python·Docker 설치를 요구하지 않습니다. 디자인 기준과 참고 제품은 [DESIGN.md](../DESIGN.md)에 기록합니다.
 
@@ -53,7 +53,7 @@ Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. �
 
 루트의 Python 3.12 가상환경에 requirements-dev.txt를 설치하고 Chromium headless shell을 준비합니다. desktop에서 Node.js 24로 npm ci, npm run build, npm start를 실행합니다. scripts/build-desktop.ps1은 Python 프로그램과 Electron 앱을 함께 빌드합니다.
 
-scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복된 headed Chromium은 제외합니다. artifacts/electron-0.6.2/win-unpacked 전체를 배포합니다. exe 한 파일만 배포하면 안 됩니다.
+scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복된 headed Chromium은 제외합니다. artifacts/electron-0.7.0/win-unpacked 전체를 배포합니다. exe 한 파일만 배포하면 안 됩니다.
 
 빌드 후 루트에서 `.venv/Scripts/python.exe scripts/package-desktop.py`를 실행하면 사용법·프런트엔드 라이선스와 함께 ZIP·SHA-256 파일을 만듭니다. ZIP을 다시 읽어 각 파일의 CRC도 검사합니다.
 

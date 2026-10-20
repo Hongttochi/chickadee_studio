@@ -93,9 +93,11 @@ class InspectionTrace:
                     'offscreen': element.get('offscreen') or inherited.get('offscreen', False) if style is not None else None,
                     'frame_flags': deepcopy(inherited),
                     'style_reasons': element.get('reasons', []), 'text_breaks': element.get('text_breaks', []),
-                    'scope_quality': 'semantic' if element.get('content_scope') else 'element',
+                    'scope_quality': 'overlapping' if element.get('nested_content_scopes') else
+                                     'semantic' if element.get('content_scope') else 'element',
                     'truncated': len(element['text']) > len(text),
-                    'missing_evidence': ([] if style is not None else ['computed_style']),
+                    'missing_evidence': ([] if style is not None else ['computed_style']) +
+                                        (['isolated_scope_context'] if element.get('nested_content_scopes') else []),
                     'snapshot_id': self.active, 'observed_at': datetime.now().astimezone().isoformat(),
                 }
                 size = len(json.dumps(self.packets[key], ensure_ascii=False).encode('utf-8'))
