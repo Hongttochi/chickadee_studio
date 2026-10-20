@@ -214,7 +214,7 @@ class _State:
     pending_urls: dict = field(default_factory=dict)
 
 
-async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> ScanOutcome:
+async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control=None) -> ScanOutcome:
     stop = stop or Event()
     emit = emit or (lambda event: None)
     started = datetime.now().astimezone()
@@ -224,14 +224,14 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> Scan
     profile = SiteProfile.load(config.profile_path)
     status = "completed"
     emit({"kind": "status", "message": "브라우저를 준비하고 있습니다."})
-    worker = asyncio.create_task(_crawl(config, state, emit, rules, profile))
+    worker = asyncio.create_task(_crawl(config, state, emit, rules, profile, control))
     try:
         while not worker.done():
             if stop.is_set():
                 status = "cancelled"
                 worker.cancel()
                 break
-            if time.monotonic() - clock >= config.timeout_sec:
+            if time.monotonic() - clock - (control.paused_seconds if control else 0) >= config.timeout_sec:
                 status = "partial"
                 state.errors.append({"url": config.entry_url, "message": "전체 제한시간에 도달했습니다. 일부 결과입니다."})
                 worker.cancel()
@@ -277,6 +277,8 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None) -> Scan
               "enabled_stages": {"follow_links": config.follow_links, "techniques": config.detect_techniques,
                                  "candidates": config.detect_candidates, "live_preview": config.capture_previews}}
     report["candidate_count"] = len(report["ad_candidates"])
+    report['paused_sec'] = round(control.paused_seconds if control else 0, 3)
+    report['active_elapsed_sec'] = round(time.monotonic() - clock - report['paused_sec'], 3)
     report["csv_schema_version"] = "1.0"
     return ScanOutcome(result, report)
 
@@ -297,7 +299,7 @@ def _final_candidates(state):
     return result
 
 
-async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile: SiteProfile):
+async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile: SiteProfile, control=None):
     from playwright.async_api import async_playwright
 
     script = Path(__file__).with_name("extract.js").read_text(encoding="utf-8")
@@ -375,10 +377,15 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
             queued = {visit_key(entry)}
             parents = {visit_key(entry): None}
             state.pending_urls[visit_key(entry)] = {'url': entry, 'discovered_from': None, 'priority': 0}
+            state.remaining = 1
             visited = set()
             site = origin(entry)
             attempts = 0
             while queue and attempts < config.max_pages:
+                if attempts:
+                    await asyncio.sleep(config.interval_sec)
+                if control:
+                    await control.checkpoint(emit)
                 if site in state.stopped_origins:
                     break
                 _, _, url = heapq.heappop(queue)
@@ -388,8 +395,6 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     continue
                 visited.add(key)
                 attempts += 1
-                if attempts > 1:
-                    await asyncio.sleep(config.interval_sec)
                 state.remaining = len(queue) + 1
                 emit({"kind": "status", "message": f"{attempts}/{config.max_pages} 페이지 점검 중: {url}"})
                 emit({"kind": "progress", "pages_scanned": len(state.pages), "attempts": attempts,

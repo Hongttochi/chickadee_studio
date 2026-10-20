@@ -52,6 +52,9 @@ import {
   Network,
   PanelsTopLeft,
   Play,
+  Pause,
+  Command,
+  MoreHorizontal,
   RotateCcw,
   Save,
   ScanLine,
@@ -76,6 +79,7 @@ import {
   branchEnabled,
 } from "./workflow.mjs";
 import "./style.css";
+import "./theme.css";
 import brandMark from "../assets/app-mark.png";
 
 const api = window.chickadee;
@@ -113,6 +117,9 @@ const Icons = {
   Network,
   PanelsTopLeft,
   Play,
+  Pause,
+  Command,
+  MoreHorizontal,
   RotateCcw,
   Save,
   ScanLine,
@@ -142,6 +149,8 @@ const STATUS = {
   idle: "검사 준비",
   running: "검사 진행 중",
   stopping: "중단 처리 중",
+  pausing: "일시정지 요청",
+  paused: "일시정지",
   completed: "검사 완료",
   partial: "일부 결과",
   cancelled: "사용자 중단",
@@ -163,7 +172,7 @@ function Icon({ name, size = 18, ...props }) {
 function shortUrl(value) {
   try {
     const u = new URL(value);
-    return u.host + (u.pathname === "/" ? "" : u.pathname);
+    return u.host + (u.pathname === "/" ? "" : u.pathname) + u.search;
   } catch {
     return value || "대상 URL을 입력하세요";
   }
@@ -184,9 +193,15 @@ function formatElapsed(seconds) {
     ? `${Math.floor(seconds)}초`
     : `${Math.floor(seconds / 60)}분 ${Math.floor(seconds % 60)}초`;
 }
-function Button({ icon, children, className = "", ...props }) {
+function Button({
+  icon,
+  children,
+  className = "",
+  variant = "secondary",
+  ...props
+}) {
   return (
-    <button className={`button ${className}`} {...props}>
+    <button className={`button button-${variant} ${className}`} {...props}>
       {icon && <Icon name={icon} size={16} />}
       <span>{children}</span>
     </button>
@@ -217,14 +232,28 @@ function FlowNode({ id, data, selected }) {
           <Icon name={def.icon} size={20} />
         </span>
         <span className="node-subtitle">{def.subtitle}</span>
+        <span className="node-number">
+          {
+            {
+              target: "01",
+              browser: "02",
+              collector: "03",
+              techniques: "04A",
+              candidates: "04B",
+              report: "05",
+            }[id]
+          }
+        </span>
         <span
           className={`node-state ${data.state}`}
           title={
             data.state === "active"
               ? "실행 중"
-              : data.state === "done"
-                ? "실행됨"
-                : "대기"
+              : data.state === "paused"
+                ? "일시정지"
+                : data.state === "done"
+                  ? "실행됨"
+                  : "대기"
           }
         />
       </div>
@@ -256,6 +285,169 @@ function FlowNode({ id, data, selected }) {
   );
 }
 const nodeTypes = { stage: FlowNode };
+const REVIEW_LABELS = {
+  unreviewed: "미검토",
+  confirmed: "검토 확인",
+  dismissed: "제외",
+};
+
+function ActionMenu({ label, items, className = "" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    ref.current.querySelector('[role="menuitem"]:not(:disabled)')?.focus();
+    const dismiss = (event) => {
+      if (!ref.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [open]);
+  return (
+    <div className={`action-menu ${className}`} ref={ref}>
+      <button
+        className="menu-trigger"
+        aria-label={label}
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <Icon name="ChevronDown" size={16} />
+      </button>
+      {open && (
+        <div
+          className="action-menu-panel"
+          role="menu"
+          aria-label={label}
+          onKeyDown={(event) => {
+            const buttons = [
+              ...event.currentTarget.querySelectorAll("button:not(:disabled)"),
+            ];
+            const index = buttons.indexOf(document.activeElement);
+            if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+              event.preventDefault();
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? buttons.length - 1
+                    : (index +
+                        (event.key === "ArrowDown" ? 1 : -1) +
+                        buttons.length) %
+                      buttons.length;
+              buttons[next]?.focus();
+            }
+            if (event.key === "Escape") {
+              setOpen(false);
+              ref.current.querySelector(".menu-trigger").focus();
+            }
+          }}
+        >
+          {items.map((item) => (
+            <button
+              role="menuitem"
+              key={item.label}
+              disabled={item.disabled}
+              className={item.danger ? "danger-text" : ""}
+              onClick={() => {
+                setOpen(false);
+                item.action();
+              }}
+            >
+              <Icon name={item.icon} size={16} />
+              <span>{item.label}</span>
+              {item.shortcut && <kbd>{item.shortcut}</kbd>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommandPalette({ commands, onClose }) {
+  const [query, setQuery] = useState("");
+  const [index, setIndex] = useState(0);
+  const choices = commands.filter(
+    (command) =>
+      command.label.includes(query) ||
+      command.keywords?.includes(query.toLowerCase()),
+  );
+  const run = (command) => {
+    if (command && !command.disabled) {
+      onClose();
+      command.action();
+    }
+  };
+  return (
+    <div className="modal-backdrop command-backdrop" onClick={onClose}>
+      <section
+        className="command-palette"
+        role="dialog"
+        aria-modal="true"
+        aria-label="빠른 명령"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onClose();
+          if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+            event.preventDefault();
+            setIndex(
+              (value) =>
+                (value +
+                  (event.key === "ArrowDown" ? 1 : -1) +
+                  choices.length) %
+                Math.max(1, choices.length),
+            );
+          }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            run(choices[index]);
+          }
+        }}
+      >
+        <div className="command-search">
+          <Icon name="Search" />
+          <input
+            autoFocus
+            aria-label="명령 검색"
+            placeholder="무엇을 할까요?"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setIndex(0);
+            }}
+          />
+          <kbd>ESC</kbd>
+        </div>
+        <div className="command-results" role="listbox" aria-label="명령 목록">
+          {choices.map((command, i) => (
+            <button
+              role="option"
+              aria-selected={i === index}
+              key={command.label}
+              disabled={command.disabled}
+              onMouseEnter={() => setIndex(i)}
+              onClick={() => run(command)}
+            >
+              <Icon name={command.icon} size={17} />
+              <span>
+                {command.label}
+                <small>{command.description}</small>
+              </span>
+              {command.shortcut && <kbd>{command.shortcut}</kbd>}
+            </button>
+          ))}
+          {!choices.length && <p>일치하는 명령 없음</p>}
+        </div>
+        <footer>
+          ↑↓ 이동 <span>Enter 실행</span>
+          <span>Ctrl K 열기</span>
+        </footer>
+      </section>
+    </div>
+  );
+}
 
 function App() {
   const [flow, setFlow] = useState(defaultWorkflow),
@@ -292,9 +484,18 @@ function App() {
   const [startTime, setStartTime] = useState(null),
     [elapsed, setElapsed] = useState(0),
     [booted, setBooted] = useState(false);
+  const [reviewData, setReviewData] = useState({ revision: 0, items: {} });
+  const [reviewFilter, setReviewFilter] = useState("all");
+  const [pageSearch, setPageSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [palette, setPalette] = useState(false);
+  const [capabilities, setCapabilities] = useState(null);
+  const [visualPreview, setVisualPreview] = useState(false);
+  const [runTarget, setRunTarget] = useState("");
   const timelineRef = useRef(null),
     autoScroll = useRef(true);
-  const running = ["running", "stopping"].includes(status);
+  const running = ["running", "pausing", "paused", "stopping"].includes(status);
   const tell = (message, type = "info") =>
     setNotice({ message, type, key: Date.now() });
   const action = async (fn) => {
@@ -318,6 +519,10 @@ function App() {
   }, []);
   const applyOutcome = useCallback((value) => {
     setOutcome(value);
+    setRunTarget(value.result.meta.entry_url);
+    setSelectedRecord(null);
+    setReviewData(value.reviews || { revision: 0, items: {} });
+    setSelectedIds(new Set());
     setRecords([
       ...value.result.findings,
       ...(value.report.ad_candidates || []),
@@ -335,7 +540,9 @@ function App() {
     if (value.events)
       setVisited(
         new Set(
-          value.events.filter((e) => e.kind === "phase").map((e) => e.stage),
+          value.events
+            .filter((e) => e.kind === "phase" || e.kind === "started")
+            .map((e) => (e.kind === "started" ? "target" : e.stage)),
         ),
       );
     setStatus(value.report.status);
@@ -347,7 +554,8 @@ function App() {
           ? value.result.meta.entry_url
           : previous || value.result.meta.entry_url),
     );
-    setUrl(value.result.meta.entry_url);
+    if (!value.report.desktop_options?.demo)
+      setUrl(value.result.meta.entry_url);
     setDiscovered(
       value.report.crawl_summary?.discovered_urls ||
         value.report.pages_scanned.length,
@@ -373,6 +581,19 @@ function App() {
       .then((state) => {
         setHistory(state.history);
         setOutputRoot(state.outputRoot);
+        setVisualPreview(Boolean(state.preview_only));
+        const prefs = state.preferences || {};
+        if (typeof prefs.url === "string") setUrl(prefs.url);
+        if (Number.isInteger(prefs.maxPages)) setMaxPages(prefs.maxPages);
+        if (Number.isFinite(prefs.timeout)) setTimeoutValue(prefs.timeout);
+        if (["default", "test", "public"].includes(prefs.profile))
+          setProfile(prefs.profile);
+        if (typeof prefs.livePreview === "boolean")
+          setLivePreview(prefs.livePreview);
+        api
+          .capabilities()
+          .then(setCapabilities)
+          .catch(() => {});
         if (state.workflow) {
           try {
             setFlow(normalizeWorkflow(state.workflow));
@@ -388,12 +609,17 @@ function App() {
         return;
       }
       appendEvent(event);
+      if (event.kind === "control")
+        setStatus((previous) =>
+          previous === "stopping" ? previous : event.state,
+        );
       if (
         event.url &&
         ["phase", "started", "page_complete"].includes(event.kind)
       )
         setCurrentUrl(event.url);
       if (event.kind === "started") {
+        setRunTarget(event.url);
         setStartTime(Date.now());
         setStatus("running");
         setCurrentUrl(event.url);
@@ -433,6 +659,51 @@ function App() {
     });
   }, [appendEvent, applyOutcome]);
   useEffect(() => {
+    if (
+      !booted ||
+      !Number.isInteger(Number(maxPages)) ||
+      Number(maxPages) < 1 ||
+      Number(maxPages) > 10000 ||
+      !Number.isFinite(Number(timeout)) ||
+      Number(timeout) <= 0 ||
+      Number(timeout) > 1800
+    )
+      return;
+    const id = window.setTimeout(
+      () =>
+        api
+          .preferences({
+            url,
+            maxPages: Number(maxPages),
+            timeout: Number(timeout),
+            profile,
+            livePreview,
+          })
+          .catch((error) => tell(error.message, "error")),
+      450,
+    );
+    return () => window.clearTimeout(id);
+  }, [booted, url, maxPages, timeout, profile, livePreview]);
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filter, reviewFilter, search]);
+  useEffect(() => {
+    const keydown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPalette((value) => !value);
+      }
+      if (event.key === "Escape") {
+        setPalette(false);
+        setSettings(false);
+        setSelectedEvent(null);
+        setZoomPreview(false);
+      }
+    };
+    window.addEventListener("keydown", keydown);
+    return () => window.removeEventListener("keydown", keydown);
+  }, []);
+  useEffect(() => {
     if (!running || !startTime) return;
     const id = window.setInterval(
       () => setElapsed((Date.now() - startTime) / 1000),
@@ -458,7 +729,9 @@ function App() {
           : active === node.id
             ? status === "failed"
               ? "error"
-              : "active"
+              : status === "paused"
+                ? "paused"
+                : "active"
             : visited.has(node.id)
               ? "done"
               : "";
@@ -481,7 +754,14 @@ function App() {
           ...node,
           type: "stage",
           deletable: false,
-          data: { state, caption, url, editable: !running },
+          data: {
+            state,
+            caption,
+            url:
+              outcome?.result.meta.entry_url ||
+              (running ? runTarget || url : url),
+            editable: !running,
+          },
         };
       }),
     [
@@ -496,6 +776,7 @@ function App() {
       url,
       running,
       status,
+      runTarget,
     ],
   );
   const flowEdges = useMemo(
@@ -503,13 +784,25 @@ function App() {
       flow.edges.map((edge) => ({
         ...edge,
         type: "default",
-        animated: running && (edge.target === active || edge.source === active),
+        animated:
+          status === "running" &&
+          (edge.target === active || edge.source === active),
         style: {
-          stroke: edge.target === active ? "#c4ff1a" : "#66788e",
+          stroke:
+            edge.target === active
+              ? "#53f0bc"
+              : visited.has(edge.source)
+                ? {
+                    blue: "#438dff",
+                    teal: "#00d99a",
+                    purple: "#a780ff",
+                    amber: "#ff9b57",
+                  }[DEFINITIONS[edge.source].tone]
+                : "#61738e",
           strokeWidth: edge.target === active ? 2.8 : 1.8,
         },
       })),
-    [flow.edges, running, active],
+    [flow.edges, status, active, visited],
   );
   const onNodesChange = useCallback(
     (changes) =>
@@ -539,7 +832,7 @@ function App() {
     },
     [running],
   );
-  const start = async (demo = false) => {
+  const start = async (demo = false, overrides = {}) => {
     if (error) {
       tell(error, "error");
       return;
@@ -560,18 +853,44 @@ function App() {
       tell("제한시간은 1~1800초로 지정하세요.", "error");
       return;
     }
-    let entry = url.trim();
+    let entry = (overrides.url || url).trim();
+    if (!entry && !demo) {
+      tell("검사할 URL을 입력하세요.", "error");
+      return;
+    }
     if (!entry.includes("://"))
       entry = /^(?:\d{1,3}\.){3}|^localhost/.test(entry)
         ? "http://" + entry
         : "https://" + entry;
+    if (!demo) {
+      try {
+        const target = new URL(entry);
+        if (
+          !["http:", "https:"].includes(target.protocol) ||
+          target.username ||
+          target.password
+        )
+          throw new Error();
+      } catch {
+        tell("http 또는 https 웹사이트 주소를 입력하세요.", "error");
+        return;
+      }
+    }
+    const nextFlow = overrides.singlePage
+      ? { ...flow, follow_links: false }
+      : flow;
+    if (!demo) setUrl(entry);
+    if (overrides.singlePage) setFlow(nextFlow);
     setStatus("running");
+    setRunTarget(demo ? "" : entry);
     setRecords([]);
     setPages([]);
     setPending([]);
     setEvents([]);
     setPreview(null);
     setOutcome(null);
+    setReviewData({ revision: 0, items: {} });
+    setSelectedIds(new Set());
     setActive("target");
     setVisited(new Set(["target"]));
     setDiscovered(0);
@@ -589,7 +908,7 @@ function App() {
         profile,
         preview: livePreview,
         demo,
-        workflow: flow,
+        workflow: nextFlow,
       });
     } catch (error) {
       setStatus("failed");
@@ -617,8 +936,104 @@ function App() {
         tell("구성 불러오기 완료", "success");
       }
     });
+  const pause = () =>
+    action(async () => {
+      const resuming = status === "paused" || status === "pausing";
+      setStatus(resuming ? "running" : "pausing");
+      try {
+        await (resuming ? api.resume() : api.pause());
+      } catch (error) {
+        const value = await api.state();
+        setStatus(value.status);
+        throw error;
+      }
+    });
+  const stop = () =>
+    action(async () => {
+      setStatus("stopping");
+      await api.stop();
+    });
+  const updateReview = (ids, status, note) =>
+    action(async () => {
+      setReviewSaving(true);
+      try {
+        const value = await api.review({
+          ids,
+          status,
+          ...(note === undefined ? {} : { note }),
+          expected_revision: reviewData.revision,
+        });
+        setReviewData(value);
+        setSelectedIds(new Set());
+        tell(`${ids.length}건 검토 저장`, "success");
+      } finally {
+        setReviewSaving(false);
+      }
+    });
+  const commands = [
+    {
+      label: "검사 실행",
+      keywords: "run scan",
+      description: "현재 URL과 구성으로 검사",
+      icon: "Play",
+      disabled: running || !booted,
+      action: () => start(),
+    },
+    {
+      label: "데모 검사",
+      keywords: "demo",
+      description: "로컬 예제 · 필수 탐지 14건",
+      icon: "FlaskConical",
+      disabled: running || !booted,
+      action: () => start(true),
+    },
+    {
+      label:
+        status === "paused" || status === "pausing" ? "검사 재개" : "일시정지",
+      icon: "Pause",
+      disabled: !running || status === "stopping",
+      action: pause,
+    },
+    {
+      label: "검사 중단",
+      icon: "Square",
+      disabled: !running || status === "stopping",
+      action: stop,
+    },
+    ...[
+      ["workflow", "검사 구성", "Workflow"],
+      ["results", "탐지 내역", "ListFilter"],
+      ["pages", "탐색 경로", "Network"],
+      ["activity", "진행 기록", "Activity"],
+      ["history", "검사 기록", "History"],
+    ].map(([id, label, icon]) => ({ label, icon, action: () => setView(id) })),
+    {
+      label: "결과 불러오기",
+      icon: "FolderOpen",
+      disabled: running,
+      action: load,
+    },
+    {
+      label: "CSV 저장",
+      icon: "Download",
+      disabled: !outcome || running,
+      action: () =>
+        action(async () => {
+          const value = await api.exportCSV();
+          if (value) tell("CSV를 저장했습니다.", "success");
+        }),
+    },
+    {
+      label: "검사 설정",
+      icon: "SlidersHorizontal",
+      action: () => setSettings(true),
+    },
+  ];
   const filteredRecords = records.filter(
     (record) =>
+      (reviewFilter === "all" ||
+        (reviewData.items[record.id]?.status || "unreviewed") ===
+          reviewFilter) &&
       (filter === "all" ||
         (filter === "required" && record.technique) ||
         (filter === "candidates" && record.category) ||
@@ -643,7 +1058,11 @@ function App() {
       (eventFilter === "findings" &&
         ["finding", "candidate", "warning", "error"].includes(event.kind)),
   );
-  const phaseTitle = active ? STAGE_NAMES[active] : STATUS[status];
+  const phaseTitle = ["paused", "pausing", "stopping"].includes(status)
+    ? STATUS[status]
+    : active
+      ? STAGE_NAMES[active]
+      : STATUS[status];
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -663,7 +1082,7 @@ function App() {
           </div>
           <Icon name="ChevronsUpDown" size={14} />
         </button>
-        <p className="nav-label">WORKSPACE</p>
+        <p className="nav-label">INSPECTION / 검사실</p>
         <nav>
           {[
             ["workflow", "Workflow", "검사 구성"],
@@ -701,8 +1120,14 @@ function App() {
           >
             <span className={booted ? "ready-dot" : "muted-dot"} />
             <div>
-              <strong>{booted ? "검사 준비" : "환경 확인"}</strong>
-              <small>Desktop · v0.5.0</small>
+              <strong>
+                {booted
+                  ? running
+                    ? STATUS[status]
+                    : "검사 준비"
+                  : "환경 확인"}
+              </strong>
+              <small>Desktop · v0.6.0</small>
             </div>
             <Icon name="ChevronRight" size={15} />
           </button>
@@ -714,14 +1139,48 @@ function App() {
           <Icon name="ChevronRight" size={13} />
           <strong>웹사이트 점검</strong>
           <div className="topbar-right">
+            <button
+              className="command-launcher"
+              onClick={() => setPalette(true)}
+              aria-label="빠른 명령"
+            >
+              <Icon name="Search" size={14} />
+              <span>빠른 명령</span>
+              <kbd>Ctrl K</kbd>
+            </button>
             <span className="local-label">
-              <Icon name="Monitor" size={13} /> LOCAL
+              <Icon name="Monitor" size={13} />{" "}
+              {visualPreview
+                ? "디자인 미리보기 · 저장된 데모"
+                : "LOCAL WORKSPACE"}
             </span>
           </div>
         </header>
-        <section className="heading">
+        <section
+          className="heading"
+          data-section={
+            {
+              workflow: "01",
+              results: "02",
+              pages: "03",
+              activity: "04",
+              history: "05",
+            }[view]
+          }
+        >
           <div>
-            <div className="eyebrow">CHICKADEE STUDIO</div>
+            <div className="eyebrow">
+              CHICKADEE /{" "}
+              {
+                {
+                  workflow: "INSPECTION STUDIO",
+                  results: "EVIDENCE REVIEW",
+                  pages: "CRAWL EXPLORER",
+                  activity: "EXECUTION TIMELINE",
+                  history: "SCAN ARCHIVE",
+                }[view]
+              }
+            </div>
             <h1>
               {view === "history"
                 ? "검사 기록"
@@ -741,14 +1200,8 @@ function App() {
           </div>
           <div className="heading-actions">
             <Button
-              icon="FlaskConical"
-              disabled={running || !booted}
-              onClick={() => start(true)}
-            >
-              데모 검사
-            </Button>
-            <Button
               icon="FolderOpen"
+              variant="ghost"
               onClick={() => action(() => api.openFolder())}
             >
               결과 폴더
@@ -759,16 +1212,23 @@ function App() {
           <span className="target-icon">
             <Icon name="Globe2" size={20} />
           </span>
-          <input
-            aria-label="검사 대상 URL"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            disabled={running}
-            placeholder="https://example.go.kr"
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !running) start();
-            }}
-          />
+          <div className="target-field">
+            <label htmlFor="target-url">
+              {outcome ? "다음 검사 대상" : "검사 대상"}{" "}
+              <span>HTTP / HTTPS</span>
+            </label>
+            <input
+              id="target-url"
+              aria-label="검사 대상 URL"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              disabled={running}
+              placeholder="https://example.go.kr"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !running) start();
+              }}
+            />
+          </div>
           <button
             className="profile-selector"
             onClick={() => setSettings(true)}
@@ -783,37 +1243,80 @@ function App() {
             <Icon name="ChevronDown" size={14} />
           </button>
           <span className="separator" />
-          {running ? (
-            <Button
-              icon="Square"
-              className="stop-button"
-              onClick={() =>
-                action(async () => {
-                  setStatus("stopping");
-                  await api.stop();
-                })
-              }
-              disabled={status === "stopping"}
-            >
-              검사 중단
-            </Button>
-          ) : (
-            <Button
-              icon="Play"
-              className="primary"
-              disabled={!booted}
-              onClick={() => start()}
-            >
-              검사 실행
-            </Button>
-          )}
+          <div className="run-actions">
+            {running ? (
+              <>
+                <Button
+                  icon={
+                    status === "paused" || status === "pausing"
+                      ? "Play"
+                      : "Pause"
+                  }
+                  variant="secondary"
+                  disabled={status === "stopping"}
+                  onClick={pause}
+                  title="현재 페이지 검사가 끝나면 일시정지합니다."
+                >
+                  {status === "paused"
+                    ? "검사 재개"
+                    : status === "pausing"
+                      ? "정지 요청 취소"
+                      : "일시정지"}
+                </Button>
+                <Button
+                  icon="Square"
+                  variant="danger"
+                  className="stop-button"
+                  onClick={stop}
+                  disabled={status === "stopping"}
+                >
+                  검사 중단
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  icon="Play"
+                  className="primary"
+                  disabled={!booted}
+                  onClick={() => start()}
+                >
+                  검사 실행
+                </Button>
+                <ActionMenu
+                  label="검사 옵션"
+                  items={[
+                    {
+                      label: "데모 검사",
+                      icon: "FlaskConical",
+                      disabled: !booted,
+                      action: () => start(true),
+                    },
+                    {
+                      label: "이 페이지만 검사",
+                      icon: "ScanLine",
+                      disabled: !booted,
+                      action: () => start(false, { singlePage: true }),
+                    },
+                    {
+                      label: "검사 설정",
+                      icon: "SlidersHorizontal",
+                      action: () => setSettings(true),
+                    },
+                  ]}
+                />
+              </>
+            )}
+          </div>
         </section>
         <section className="summary-strip">
           <div className="scan-status">
             <span
               className={
                 running
-                  ? "pulse-dot"
+                  ? status === "paused"
+                    ? "warning-dot"
+                    : "pulse-dot"
                   : status === "failed"
                     ? "error-dot"
                     : "ready-dot"
@@ -821,6 +1324,16 @@ function App() {
             />
             <strong>{phaseTitle}</strong>
             {elapsed > 0 && <span>{formatElapsed(elapsed)}</span>}
+            {outcome && (
+              <span
+                className="outcome-target"
+                title={outcome.result.meta.entry_url}
+              >
+                {outcome.report.desktop_options?.demo
+                  ? "로컬 데모 결과"
+                  : shortUrl(outcome.result.meta.entry_url)}
+              </span>
+            )}
           </div>
           <div className="summary-numbers">
             <button
@@ -944,7 +1457,7 @@ function App() {
                     maxZoom={1.5}
                     proOptions={{ hideAttribution: true }}
                   >
-                    <Background color="#303947" gap={20} size={1} />
+                    <Background color="#34425c" gap={24} size={1} />
                     <Controls showInteractive={false} />
                     <MiniMap
                       nodeColor={(node) =>
@@ -1021,7 +1534,14 @@ function App() {
                           <i />
                         </span>
                         <span title={currentUrl || url}>
-                          <Icon name="LockKeyhole" size={11} />
+                          <Icon
+                            name={
+                              (currentUrl || url).startsWith("https:")
+                                ? "LockKeyhole"
+                                : "Globe2"
+                            }
+                            size={11}
+                          />
                           {shortUrl(currentUrl || url)}
                         </span>
                         <button
@@ -1150,6 +1670,19 @@ function App() {
                       onChange={(event) => setSearch(event.target.value)}
                     />
                   </div>
+                  <select
+                    className="review-select"
+                    aria-label="검토 상태 필터"
+                    value={reviewFilter}
+                    onChange={(event) => setReviewFilter(event.target.value)}
+                  >
+                    <option value="all">검토 전체</option>
+                    {Object.entries(REVIEW_LABELS).map(([id, label]) => (
+                      <option value={id} key={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
                   <Button
                     icon="Download"
                     disabled={!outcome || running}
@@ -1163,10 +1696,78 @@ function App() {
                     CSV 저장
                   </Button>
                 </div>
+                {selectedIds.size > 0 && (
+                  <div className="bulk-toolbar">
+                    <strong>{selectedIds.size}개 선택</strong>
+                    <Button
+                      icon="CheckCheck"
+                      variant="ghost"
+                      disabled={reviewSaving || running}
+                      onClick={() =>
+                        updateReview([...selectedIds], "confirmed")
+                      }
+                    >
+                      검토 확인
+                    </Button>
+                    <Button
+                      icon="X"
+                      variant="ghost"
+                      disabled={reviewSaving || running}
+                      onClick={() =>
+                        updateReview([...selectedIds], "dismissed")
+                      }
+                    >
+                      검토 제외
+                    </Button>
+                    <Button
+                      icon="RotateCcw"
+                      variant="ghost"
+                      disabled={reviewSaving || running}
+                      onClick={() =>
+                        updateReview([...selectedIds], "unreviewed")
+                      }
+                    >
+                      미검토
+                    </Button>
+                    <button
+                      aria-label="선택 해제"
+                      className="bulk-clear"
+                      onClick={() => setSelectedIds(new Set())}
+                    >
+                      <Icon name="X" size={15} />
+                    </button>
+                  </div>
+                )}
                 <div className="table-scroll">
                   <table>
                     <thead>
                       <tr>
+                        <th className="selection-cell">
+                          <input
+                            type="checkbox"
+                            aria-label="표시 항목 전체 선택"
+                            disabled={
+                              running || !outcome || !filteredRecords.length
+                            }
+                            checked={
+                              filteredRecords.length > 0 &&
+                              filteredRecords
+                                .slice(0, 500)
+                                .every((record) => selectedIds.has(record.id))
+                            }
+                            onChange={(event) =>
+                              setSelectedIds(
+                                event.target.checked
+                                  ? new Set(
+                                      filteredRecords
+                                        .slice(0, 500)
+                                        .map((record) => record.id),
+                                    )
+                                  : new Set(),
+                              )
+                            }
+                          />
+                        </th>
                         <th>유형</th>
                         <th>탐지 원문</th>
                         <th>페이지</th>
@@ -1182,6 +1783,26 @@ function App() {
                           }
                           onClick={() => setSelectedRecord(record)}
                         >
+                          <td
+                            className="selection-cell"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              aria-label={`${record.id} 선택`}
+                              disabled={running || !outcome || reviewSaving}
+                              checked={selectedIds.has(record.id)}
+                              onChange={(event) =>
+                                setSelectedIds((previous) => {
+                                  const next = new Set(previous);
+                                  if (event.target.checked) {
+                                    if (next.size < 500) next.add(record.id);
+                                  } else next.delete(record.id);
+                                  return next;
+                                })
+                              }
+                            />
+                          </td>
                           <td>
                             <button
                               className={`type-badge type-filter ${record.technique ? "purple" : "amber"}`}
@@ -1200,7 +1821,16 @@ function App() {
                             {shortUrl(record.url)}
                           </td>
                           <td>
-                            <span className="review-label">확인 필요</span>
+                            <span
+                              className={`review-label review-${reviewData.items[record.id]?.status || "unreviewed"}`}
+                            >
+                              {
+                                REVIEW_LABELS[
+                                  reviewData.items[record.id]?.status ||
+                                    "unreviewed"
+                                ]
+                              }
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -1220,8 +1850,22 @@ function App() {
                 </div>
               </section>
               <RecordDetail
+                key={selectedRecord?.id || "empty"}
                 record={selectedRecord}
                 outcome={outcome}
+                review={
+                  selectedRecord ? reviewData.items[selectedRecord.id] : null
+                }
+                onReview={(status, note) =>
+                  updateReview([selectedRecord.id], status, note)
+                }
+                reviewDisabled={running || !outcome || reviewSaving}
+                onRecheck={() =>
+                  start(false, { url: selectedRecord.url, singlePage: true })
+                }
+                recheckDisabled={
+                  running || !booted || outcome?.report.desktop_options?.demo
+                }
                 onCopy={(text) => action(() => api.copy(text))}
               />
             </div>
@@ -1248,8 +1892,8 @@ function App() {
                   <Icon name="Search" size={15} />
                   <input
                     placeholder="경로 검색"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
+                    value={pageSearch}
+                    onChange={(event) => setPageSearch(event.target.value)}
                   />
                 </div>
               </div>
@@ -1268,7 +1912,9 @@ function App() {
                   <tbody>
                     {(pageFilter === "pending" ? pending : pages)
                       .filter((page) =>
-                        page.url.toLowerCase().includes(search.toLowerCase()),
+                        page.url
+                          .toLowerCase()
+                          .includes(pageSearch.toLowerCase()),
                       )
                       .map((page, index) => (
                         <tr
@@ -1436,7 +2082,11 @@ function App() {
           </span>
           <span>
             {running
-              ? "실제 페이지 검사 중"
+              ? status === "paused"
+                ? "다음 페이지 대기 · 재개 가능"
+                : status === "pausing"
+                  ? "현재 페이지 정리 후 정지"
+                  : "실제 페이지 검사 중"
               : outcome
                 ? `${pages.length}페이지 · ${STATUS[status]}`
                 : "URL 입력 · 구성 선택"}
@@ -1462,6 +2112,9 @@ function App() {
             <Icon name="X" size={15} />
           </button>
         </div>
+      )}
+      {palette && (
+        <CommandPalette commands={commands} onClose={() => setPalette(false)} />
       )}
       {settings && (
         <div className="modal-backdrop" onClick={() => setSettings(false)}>
@@ -1549,6 +2202,19 @@ function App() {
                 완료
               </Button>
             </div>
+            <details className="automation-info">
+              <summary>에이전트 확장 규격</summary>
+              <p>
+                로컬 도구 {capabilities?.tools?.length || 0}개 · 규격 v
+                {capabilities?.protocol_version || 1}. 실행 ID와 입력 형식을
+                검증하며, 검사 제어·근거 조회·검토 기록에 같은 기능을
+                사용합니다.
+              </p>
+              <small>
+                현재 AI 제공자는 연결하지 않았습니다. 페이지 본문과 광고 문구는
+                분석 대상 데이터로 취급합니다.
+              </small>
+            </details>
           </section>
         </div>
       )}
@@ -1794,7 +2460,18 @@ function EventRow({ event, onClick, compact = false }) {
     </button>
   );
 }
-function RecordDetail({ record, outcome, onCopy }) {
+function RecordDetail({
+  record,
+  outcome,
+  onCopy,
+  review,
+  onReview,
+  reviewDisabled,
+  onRecheck,
+  recheckDisabled,
+}) {
+  const [note, setNote] = useState(review?.note || "");
+  useEffect(() => setNote(review?.note || ""), [record?.id, review?.note]);
   if (!record)
     return (
       <aside className="record-panel">
@@ -1811,6 +2488,21 @@ function RecordDetail({ record, outcome, onCopy }) {
   const keywords = detail.matched_keywords || [
     ...new Set((detail.analysis?.matches || []).map((match) => match.keyword)),
   ];
+  const reasons = [...(detail.style_reasons || detail.reasons || [])];
+  for (const match of detail.analysis?.matches || []) {
+    if (
+      (record.technique === "HOMOGLYPH" && match.homoglyph) ||
+      (record.technique === "JAMO" && match.jamo)
+    ) {
+      const span = record.evidence_text.slice(...match.source_span);
+      reasons.push(
+        `원문 ‘${span}’에서 ${record.technique === "JAMO" ? "분리된 자모" : "닮은꼴 문자"}를 확인했습니다. 광고 키워드: ${match.keyword}`,
+      );
+    }
+  }
+  if (record.technique === "HOMOGLYPH")
+    for (const match of detail.analysis?.contextual_homoglyphs || [])
+      reasons.push(`${match.reason}: ${match.original} → ${match.canonical}`);
   return (
     <aside className="record-panel">
       <div className="panel-heading">
@@ -1822,6 +2514,36 @@ function RecordDetail({ record, outcome, onCopy }) {
           {LABELS[record.technique || record.category]}
         </span>
         <h2>{record.technique ? "위장·은닉 의심 항목" : "광고 의심"}</h2>
+        <div className="review-control">
+          <span
+            className={`review-label review-${review?.status || "unreviewed"}`}
+          >
+            {REVIEW_LABELS[review?.status || "unreviewed"]}
+          </span>
+          <ActionMenu
+            label="항목 작업"
+            items={[
+              {
+                label: outcome?.report.desktop_options?.demo
+                  ? "데모 재실행은 검사 옵션에서"
+                  : "이 페이지만 재검사",
+                icon: "RotateCcw",
+                disabled: recheckDisabled,
+                action: onRecheck,
+              },
+              {
+                label: "원문 복사",
+                icon: "Copy",
+                action: () => onCopy(record.evidence_text),
+              },
+              {
+                label: "URL 복사",
+                icon: "Globe2",
+                action: () => onCopy(record.url),
+              },
+            ]}
+          />
+        </div>
         <label>탐지 원문</label>
         <blockquote>{record.evidence_text}</blockquote>
         <label>탐지 키워드</label>
@@ -1832,12 +2554,69 @@ function RecordDetail({ record, outcome, onCopy }) {
         </div>
         <label>탐지 사유</label>
         <ul>
-          {(detail.style_reasons || detail.reasons || []).map(
-            (reason, index) => (
-              <li key={index}>{reason}</li>
-            ),
-          )}
+          {(reasons.length
+            ? [...new Set(reasons)]
+            : [
+                "광고 키워드와 해당 기법의 분석 결과를 근거로 검출했습니다. 상세 값은 원시 데이터에서 확인할 수 있습니다.",
+              ]
+          ).map((reason, index) => (
+            <li key={index}>{reason}</li>
+          ))}
         </ul>
+        <div className="review-editor">
+          <label htmlFor="review-note">
+            검토 메모 <small>{note.length}/2000</small>
+          </label>
+          <textarea
+            id="review-note"
+            aria-label="검토 메모"
+            maxLength={2000}
+            disabled={reviewDisabled}
+            placeholder="판단 근거, 확인할 사항"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          <div className="review-actions">
+            <Button
+              icon="CheckCheck"
+              disabled={reviewDisabled}
+              onClick={() => onReview("confirmed", note)}
+            >
+              검토 확인
+            </Button>
+            <Button
+              icon="X"
+              variant="ghost"
+              disabled={reviewDisabled}
+              onClick={() => onReview("dismissed", note)}
+            >
+              제외
+            </Button>
+            <ActionMenu
+              label="검토 작업"
+              items={[
+                {
+                  label: "메모 저장",
+                  icon: "Save",
+                  disabled: reviewDisabled,
+                  action: () => onReview(review?.status || "unreviewed", note),
+                },
+                {
+                  label: "미검토로 변경",
+                  icon: "RotateCcw",
+                  disabled: reviewDisabled,
+                  action: () => onReview("unreviewed", note),
+                },
+              ]}
+            />
+          </div>
+          {review?.updated_at && (
+            <small>
+              {review.actor === "agent" ? "에이전트" : "사용자"} ·{" "}
+              {new Date(review.updated_at).toLocaleString("ko-KR")}
+            </small>
+          )}
+        </div>
         <label>
           페이지 URL{" "}
           <button onClick={() => onCopy(record.url)} title="URL 복사">

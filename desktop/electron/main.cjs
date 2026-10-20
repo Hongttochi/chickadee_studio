@@ -16,6 +16,8 @@ let window,
   outputRoot,
   currentPath,
   closing = false;
+let preferences = {};
+let preferenceWrites = Promise.resolve();
 app.setName("Chickadee");
 app.setAppUserModelId("org.chickadee.inspector");
 const root = path.resolve(__dirname, "../..");
@@ -23,6 +25,41 @@ const smoke = process.env.CHICKADEE_TEST_DATA;
 if (smoke) app.setPath("userData", smoke);
 const page = path.resolve(__dirname, "../dist/index.html");
 const workflowPath = () => path.join(app.getPath("userData"), "workflow.json");
+const preferencesPath = () =>
+  path.join(app.getPath("userData"), "preferences.json");
+function savePreferences(value, folder) {
+  const saved = preferenceWrites.then(() => writePreferences(value, folder));
+  preferenceWrites = saved.catch(() => {});
+  return saved;
+}
+async function writePreferences(value, folder) {
+  const next = { ...preferences };
+  if (folder !== undefined) next.outputRoot = folder;
+  if (!value || typeof value !== "object")
+    throw new Error("설정 형식이 올바르지 않습니다.");
+  for (const key of ["url", "maxPages", "timeout", "profile", "livePreview"]) {
+    if (!Object.hasOwn(value, key)) continue;
+    const entry = value[key];
+    const valid =
+      key === "url"
+        ? typeof entry === "string" && entry.length <= 4096
+        : key === "maxPages"
+          ? Number.isInteger(entry) && entry >= 1 && entry <= 10000
+          : key === "timeout"
+            ? Number.isFinite(entry) && entry > 0 && entry <= 1800
+            : key === "profile"
+              ? ["default", "test", "public"].includes(entry)
+              : typeof entry === "boolean";
+    if (!valid) throw new Error("검사 설정 값이 올바르지 않습니다.");
+    next[key] = entry;
+  }
+  await fs.mkdir(app.getPath("userData"), { recursive: true });
+  const temporary = preferencesPath() + ".tmp";
+  await fs.writeFile(temporary, JSON.stringify(next, null, 2), "utf8");
+  await fs.rename(temporary, preferencesPath());
+  preferences = next;
+  return preferences;
+}
 function authorize(event) {
   try {
     if (
@@ -41,7 +78,22 @@ function handler(name, callback) {
   });
 }
 async function initialize() {
+  preferences = await fs
+    .readFile(preferencesPath(), "utf8")
+    .then(JSON.parse)
+    .catch(() => ({}));
+  if (
+    !preferences ||
+    typeof preferences !== "object" ||
+    Array.isArray(preferences)
+  )
+    preferences = {};
   outputRoot = path.join(app.getPath("documents"), "Chickadee", "results");
+  if (
+    typeof preferences.outputRoot === "string" &&
+    path.isAbsolute(preferences.outputRoot)
+  )
+    outputRoot = preferences.outputRoot;
   if (smoke) outputRoot = path.join(smoke, "results");
   const area = screen.getPrimaryDisplay().workAreaSize;
   window = new BrowserWindow({
@@ -91,6 +143,7 @@ async function initialize() {
   handler("state", async () => ({
     ...(await backend.request("state")),
     outputRoot,
+    preferences,
     workflow: await fs
       .readFile(workflowPath(), "utf8")
       .then(JSON.parse)
@@ -119,6 +172,22 @@ async function initialize() {
     return backend.request("start", { ...clean, output_root: outputRoot });
   });
   handler("stop", () => backend.request("stop"));
+  handler("pause", () => backend.request("pause"));
+  handler("resume", () => backend.request("resume"));
+  handler("capabilities", () => backend.request("capabilities"));
+  handler("preferences", (value) => savePreferences(value));
+  handler("review", (value) => {
+    if (!value || typeof value !== "object")
+      throw new Error("검토 항목이 필요합니다.");
+    const { ids, status, note, expected_revision } = value;
+    return backend.request("review", {
+      ids,
+      status,
+      note,
+      expected_revision,
+      actor: "human",
+    });
+  });
   handler("load", async () => {
     const selected = await dialog.showOpenDialog(window, {
       title: "검사 결과 불러오기",
@@ -152,7 +221,10 @@ async function initialize() {
     const selected = await dialog.showOpenDialog(window, {
       properties: ["openDirectory", "createDirectory"],
     });
-    if (!selected.canceled) outputRoot = selected.filePaths[0];
+    if (!selected.canceled) {
+      outputRoot = selected.filePaths[0];
+      await savePreferences({}, outputRoot);
+    }
     return outputRoot;
   });
   handler("open-folder", async () => {

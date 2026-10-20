@@ -1,4 +1,4 @@
-# Chickadee Studio 0.5.0
+# Chickadee Studio 0.6.0
 
 Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. 사용자에게 Node.js·Python·Docker 설치를 요구하지 않습니다. 디자인 기준과 참고 제품은 [DESIGN.md](../DESIGN.md)에 기록합니다.
 
@@ -14,6 +14,16 @@ Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. �
 
 화면은 실제 Chromium의 JPEG 스크린샷입니다. 콘텐츠 변경 스냅샷에서 갱신하며 연속 영상은 아닙니다. 대상 HTML·스크립트를 앱의 표시 창에 넣지 않습니다. 미리보기는 설정에서 끌 수 있고, 생성 실패 시 본문 검사는 계속합니다.
 
+**일시정지**는 현재 페이지 정리 후 적용됩니다. 요청 중과 실제 정지를 구분하며 **검사 재개**로 대기 큐를 이어갑니다. 확정 정지 시간은 검사 제한시간에서 제외합니다. 정지 중에도 **검사 중단**으로 수집한 결과를 저장할 수 있습니다.
+
+## 조작과 검토
+
+검사 실행 옆 펼침 메뉴에 **데모 검사**, **이 페이지만 검사**, **검사 설정**을 모았습니다. 단일 페이지 검사는 하위 링크 탐색을 끕니다. 결과의 항목 작업 메뉴로 해당 원문 페이지를 다시 검사할 수 있습니다. URL의 쿼리 문자열도 화면에 표시해 게시글 주소를 구분합니다.
+
+`Ctrl K`로 빠른 명령을 열고 검색·방향키·Enter로 실행합니다. Esc로 닫습니다. 검사 한도·사이트 설정·미리보기·입력 URL·저장 폴더는 다음 실행에도 유지합니다.
+
+완료된 항목을 선택하면 **검토 확인**, **제외**, **미검토** 상태와 메모를 저장합니다. 체크박스로 최대 500개를 함께 처리할 수 있으며 검토 상태 필터로 목록을 좁힙니다. 검토는 별도 review.json에 저장하며 원문 result.json과 17칼럼 CSV는 바꾸지 않습니다. 동시에 바뀐 검토 기록은 덮어쓰지 않고 재불러오기를 안내합니다.
+
 ## 출력과 이력
 
 기본 출력은 운영체제 문서 폴더 아래 `Chickadee/results/YYYYMMDD-HHMMSS-식별자`입니다. 설정에서 변경할 수 있습니다.
@@ -24,6 +34,7 @@ Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. �
 | result.csv | 필수 탐지·광고 의심, 고정 17개 칼럼 |
 | scan-report.json | 상태·한도·방문/대기·근거·노드 구성·해시 |
 | events.jsonl | 진행 단계·HTTP 응답·발견 경로·판정 이벤트 |
+| review.json | 검토 저장 시 생성. 결과 해시·검토 상태·메모·변경 순번·작성 주체와 상태 변경 이력 |
 | last-preview.jpg / last-preview.json | 마지막 화면과 실제 촬영 URL |
 
 최근 30개 실행은 앱 데이터 폴더의 history.json에 보관합니다. 결과 불러오기에서 result.json을 고르고 나머지 파일을 같은 폴더에 두면 근거·경로·기록을 함께 읽습니다. UI는 최근 2,000개 이벤트, 저장 로그는 최대 100,000개입니다. 마지막 화면만 보관하며 모든 스크린샷을 동영상처럼 저장하지 않습니다.
@@ -40,8 +51,10 @@ Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. �
 
 루트의 Python 3.12 가상환경에 requirements-dev.txt를 설치하고 Chromium headless shell을 준비합니다. desktop에서 Node.js 24로 npm ci, npm run build, npm start를 실행합니다. scripts/build-desktop.ps1은 Python 프로그램과 Electron 앱을 함께 빌드합니다.
 
-scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복된 headed Chromium은 제외합니다. artifacts/electron-0.5.0/win-unpacked 전체를 배포합니다. exe 한 파일만 배포하면 안 됩니다.
+scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복된 headed Chromium은 제외합니다. artifacts/electron-0.6.0/win-unpacked 전체를 배포합니다. exe 한 파일만 배포하면 안 됩니다.
 
 빌드 후 루트에서 `.venv/Scripts/python.exe scripts/package-desktop.py`를 실행하면 사용법·프런트엔드 라이선스와 함께 ZIP·SHA-256 파일을 만듭니다. ZIP을 다시 읽어 각 파일의 CRC도 검사합니다.
 
 검증은 루트의 unittest discover, desktop의 npm test와 npm run smoke를 사용합니다. CHICKADEE_PACKAGED_EXE에 실행 파일 절대 경로를 지정하면 배포본으로 통합 검사합니다. 별도 테스트 폴더에서 실제 데모·화면·CSV·연결선 해제와 재연결을 확인합니다.
+
+향후 에이전트는 [로컬 도구 규격](agent-extension.md)을 사용합니다. 검사 제어·페이지 조회·검토 서비스와 AI 제공자 계층을 분리했으며 현재 AI 제공자는 연결하지 않았습니다.

@@ -39,7 +39,7 @@ def main():
         raise RuntimeError('Build scripts/build-desktop.ps1 first.')
     count = frontend_licenses()
     shutil.copytree(DESKTOP / 'licenses', APP / 'licenses', dirs_exist_ok=True)
-    for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md']:
+    for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md', 'agent-extension.md']:
         target = APP / 'docs' / name
         target.parent.mkdir(exist_ok=True)
         shutil.copy2(ROOT / 'docs' / name, target)
@@ -48,10 +48,13 @@ def main():
         f'Chickadee Studio {VERSION} / Windows x64\n\n'
         'ZIP 전체를 압축 해제한 다음 Chickadee.exe를 실행하세요.\n'
         'resources 등 함께 있는 폴더를 유지하세요. Python/Node.js/Docker 설치는 필요하지 않습니다.\n'
-        'URL 입력 → 검사 실행. 로컬 예제는 데모 검사를 누르세요.\n'
+        'URL 입력 → 검사 실행. 로컬 예제는 실행 옆 화살표 메뉴 → 데모 검사.\n'
+        '일시정지·재개, 검토 상태·메모·일괄 처리, Ctrl K 빠른 명령을 지원합니다.\n'
         '기본 저장: 문서/Chickadee/results/실행별 폴더\n'
         '검사 구성의 포트를 연결하면 실제 실행 단계가 변경됩니다.\n'
         '사용 안내: docs/quickstart-windows.md, docs/desktop.md\n'
+        '이 프리릴리스는 인증서 서명이 없습니다. 0.6.0 재빌드본이 개발 PC의 Device Guard에 차단됐습니다.\n'
+        '직전 빌드 검증과 최종 파일의 실행 검증 한계는 docs/validation.md를 확인하세요.\n'
         'https://github.com/orqan137/chickadee_Bot\n', encoding='utf-8-sig')
     output = ROOT / 'artifacts' / f'Chickadee-Studio-{VERSION}-win-x64.zip'
     temporary = output.with_suffix('.zip.tmp')

@@ -4,33 +4,39 @@
 
 공공 웹사이트의 광고 의심 요소를 검사하는 **Electron 기반 Windows 앱**입니다. 노드를 연결해 검사 구성을 바꾸고, 실제 검사 화면·방문 경로·HTTP 응답·판정 근거를 확인합니다. 필수 4종 결과는 `result.json`, 전체 내역은 고정 17칼럼 CSV와 보고서로 저장합니다.
 
-**[Windows v0.5.0 다운로드](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.5.0)** → ZIP 전체 압축 해제 → `Chickadee.exe` 실행. Python·Node.js·Docker 설치는 필요하지 않습니다. 외부 URL은 기본 허용이며 Chromium과 검사 프로그램을 함께 제공합니다. [Windows 빠른 실행](docs/quickstart-windows.md) · [데스크톱 앱](docs/desktop.md) · [디자인 기준](DESIGN.md)
+**[Windows v0.6.0 다운로드](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.6.0)** → ZIP 전체 압축 해제 → `Chickadee.exe` 실행. Python·Node.js·Docker 설치는 필요하지 않습니다. 외부 URL은 기본 허용이며 Chromium과 검사 프로그램을 함께 제공합니다. [Windows 빠른 실행](docs/quickstart-windows.md) · [데스크톱 앱](docs/desktop.md) · [디자인 기준](DESIGN.md)
 
 ## 다운로드하고 바로 실행하기 — Windows 앱
 
 **배포 패키지에는 앱과 검사 프로그램·Chromium이 모두 들어 있습니다.** Windows x64 PC에서 압축을 풀고 실행하면 URL 입력·실제 검사·결과 조회·JSON/CSV 저장을 바로 사용할 수 있습니다. Python, Node.js, Docker, 개발 도구 설치나 빌드 명령은 필요하지 않습니다.
 
-1. **[Chickadee Studio 0.5.0 Windows ZIP 다운로드](https://github.com/orqan137/chickadee_Bot/releases/download/v0.5.0/Chickadee-Studio-0.5.0-win-x64.zip)**를 누릅니다. 배포 페이지에서 받는 경우 Assets의 `Chickadee-Studio-0.5.0-win-x64.zip`을 선택합니다.
+1. **[Chickadee Studio 0.6.0 Windows ZIP 다운로드](https://github.com/orqan137/chickadee_Bot/releases/download/v0.6.0/Chickadee-Studio-0.6.0-win-x64.zip)**를 누릅니다. 배포 페이지에서 받는 경우 Assets의 `Chickadee-Studio-0.6.0-win-x64.zip`을 선택합니다.
 2. 다운로드한 ZIP을 원하는 폴더에 **전체 압축 해제**합니다.
-3. `Chickadee-0.5.0` 폴더 안의 **`Chickadee.exe`를 더블클릭**합니다.
+3. `Chickadee-0.6.0` 폴더 안의 **`Chickadee.exe`를 더블클릭**합니다.
 4. 검사할 URL을 입력하고 **검사 실행**을 누릅니다. 먼저 동작을 확인하려면 **데모 검사**를 누릅니다.
 
 결과는 앱에서 바로 확인하고, **결과 폴더** 버튼으로 저장된 파일을 엽니다. 기본 저장 위치는 `문서/Chickadee/results` 아래 실행별 폴더입니다. 사용자가 선택한 사이트를 검사하려면 인터넷 연결이 필요하며, 로컬 데모는 오프라인으로 실행할 수 있습니다.
 
-`Chickadee.exe`와 `resources` 등 동봉 파일은 같은 배포 폴더에 유지합니다. 이동하거나 팀원에게 전달할 때도 폴더 전체를 사용하세요. 현재 배포는 Windows x64 프리릴리스이며, 배포 인증서 서명은 포함하지 않았습니다.
+`Chickadee.exe`와 `resources` 등 동봉 파일은 같은 배포 폴더에 유지합니다. 이동하거나 팀원에게 전달할 때도 폴더 전체를 사용하세요. 현재 배포는 Windows x64 프리릴리스이며, 배포 인증서 서명은 포함하지 않았습니다. 개발 PC에서 0.6.0 재빌드본이 Windows Device Guard에 차단됐으며, 후속 디자인을 반영한 최종 배포본은 실행 검증이 미완료입니다. 직전 빌드에서 확인한 기능과 남은 한계는 [검증 기록](docs/validation.md)을 참고하세요.
 
 행정안전부·한국지능정보사회진흥원의 **2026 공공 웹사이트 불법광고 탐지 도구 개발 공모전**을 목표로 개발하고 있습니다. 현재 필수 4종의 규칙 기반 탐지·화면·파일 출력을 구현했으며, 최종 제출본 수준의 탐지 성능 검증은 남아 있습니다.
 
 ## 데스크톱 작업 흐름
 
 - **검사 구성:** 대상 → 브라우저 → 콘텐츠 수집 → 필수 탐지/광고 분류 → 결과 출력. 포트 연결·해제와 하위 링크 설정이 실제 실행에 적용됩니다.
+- **검사 제어:** 현재 페이지를 마친 뒤 일시정지, 남은 주소부터 재개, 중단 후 일부 결과 저장을 지원합니다. 선택한 페이지 하나만 재검사할 수 있습니다.
+- **검토 작업:** 미검토·검토 확인·제외, 2,000자 메모와 최대 500건 일괄 처리. 재불러오기 시 유지하며 필수 원문 결과는 변경하지 않습니다.
+- **빠른 조작:** 검사 실행과 보조 작업을 분리한 펼침 메뉴, `Ctrl K` 빠른 명령, 키보드 메뉴 이동, 검사 설정·저장 폴더 기억.
 - **실시간 화면:** 실제 Chromium 화면, 현재 URL, 단계와 HTTP 응답을 표시합니다. 대상 HTML을 Electron 표시 창에 삽입하지 않습니다.
 - **탐지 내역:** 필수 탐지·광고 의심 필터, 원문 검색, 근거 패널, CSV 저장을 제공합니다.
 - **탐색 경로:** 방문·대기 목록, 발견 출처, 응답 코드·추출 수치·시간을 확인합니다.
 - **검사 기록:** 실행마다 별도 폴더, 전체 이벤트 로그, 마지막 검사 화면과 최근 30개 실행을 보관합니다.
 - **디자인:** 로컬 Pretendard, 선명한 블루·짙은 네이비·최소 라운드와 README 기반 새 로고를 적용했습니다.
+- **에이전트 확장:** 실행 ID·JSON Schema·이벤트 순번을 가진 로컬 도구 9개를 제공합니다. 현재 AI 제공자는 연결하지 않았습니다. [연동 규격](docs/agent-extension.md)을 참고하세요.
 
 ![검사 구성 화면](docs/assets/studio-workflow.png)
+
+화면 이미지는 저장된 합성 데모 결과를 로컬 UI 렌더러로 표시한 디자인 미리보기입니다. 최종 Windows 파일의 실행 검증 상태는 [검증 기록](docs/validation.md)에 구분했습니다.
 
 ## 구현한 탐지 기능
 
@@ -80,7 +86,7 @@ npm run build
 npm start
 ```
 
-루트의 `scripts/build-desktop.ps1`로 검사 프로그램과 Electron Windows 앱을 함께 빌드합니다. 생성 위치는 `artifacts/electron-0.5.0/win-unpacked/Chickadee.exe`입니다. `resources/engine`을 포함한 폴더 전체를 배포합니다. [개발·배포·검증 절차](docs/desktop.md)를 확인하세요.
+루트의 `scripts/build-desktop.ps1`로 검사 프로그램과 Electron Windows 앱을 함께 빌드합니다. 생성 위치는 `artifacts/electron-0.6.0/win-unpacked/Chickadee.exe`입니다. `resources/engine`을 포함한 폴더 전체를 배포합니다. [개발·배포·검증 절차](docs/desktop.md)를 확인하세요.
 
 ## Python CLI·Tkinter 호환 화면
 
