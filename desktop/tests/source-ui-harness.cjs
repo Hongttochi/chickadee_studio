@@ -25,7 +25,7 @@ exports.launch = async ({ env }) => {
     showOpenDialog: async () => ({ canceled: true }),
   };
   const backend = new Backend(
-    path.join(root, ".venv/Scripts/python.exe"),
+    path.join(root, process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python"),
     ["-m", "chickadee.bridge", "--data-dir", data],
     { cwd: root, env: { ...env, PYTHONIOENCODING: "utf-8" } },
     (event) => {

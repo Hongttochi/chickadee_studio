@@ -43,8 +43,11 @@ async function waitForHistory(page, count) {
     page.setDefaultTimeout(15000);
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    const guide = page.getByRole("dialog", { name: "사용 가이드" });
+    await guide.waitFor();
+    await guide.getByRole("button", { name: "사용 가이드 닫기", exact: true }).click();
     await page
-      .locator(".target-bar button.primary:not(:disabled)")
+      .locator(".header-run-controls button.primary:not(:disabled)")
       .waitFor({ timeout: 30000 });
     assert.equal(
       await page
@@ -84,6 +87,7 @@ async function waitForHistory(page, count) {
       .locator(".scan-status strong")
       .filter({ hasText: "검사 완료" })
       .waitFor({ timeout: 90000 });
+    await page.getByRole("button", { name: "미리보기·진행 기록", exact: true }).click();
     await page.locator(".preview-image img").waitFor();
     const firstPreview = await page
       .locator(".preview-image img")
@@ -118,17 +122,18 @@ async function waitForHistory(page, count) {
     await page.getByRole("button", { name: /^탐지 내역/ }).click();
     assert.equal(await page.locator("tbody tr").count(), 14);
     await page.locator("tbody tr").first().click();
+    await page.locator(".review-note-details > summary").click();
     await page
       .getByRole("textbox", { name: "검토 메모" })
       .fill("문자 변형과 원문 확인 · 통합 검사");
     await page.getByRole("button", { name: "검토 확인", exact: true }).click();
     await page
-      .getByRole("status")
-      .filter({ hasText: "1건 검토 저장" })
+      .getByRole("dialog", { name: "검토 저장 완료" })
+      .filter({ hasText: "1건의 검토 내용을 저장했습니다." })
       .waitFor();
-    await page
-      .getByRole("combobox", { name: "검토 상태 필터" })
-      .selectOption("unreviewed");
+    await page.getByRole("dialog", { name: "검토 저장 완료" }).getByRole("button", { name: "확인", exact: true }).click();
+    await page.getByRole("button", { name: "검토 상태 필터:", exact: false }).click();
+    await page.getByRole("menuitemradio", { name: "미검토", exact: true }).click();
     assert.equal(await page.locator("tbody tr").count(), 13);
     await page.getByRole("checkbox", { name: "표시 항목 전체 선택" }).check();
     await page
@@ -136,13 +141,13 @@ async function waitForHistory(page, count) {
       .getByRole("button", { name: "검토 제외", exact: true })
       .click();
     await page
-      .getByRole("status")
-      .filter({ hasText: "13건 검토 저장" })
+      .getByRole("dialog", { name: "검토 저장 완료" })
+      .filter({ hasText: "13건의 검토 내용을 저장했습니다." })
       .waitFor();
+    await page.getByRole("dialog", { name: "검토 저장 완료" }).getByRole("button", { name: "확인", exact: true }).click();
     assert.equal(await page.locator("tbody tr").count(), 0);
-    await page
-      .getByRole("combobox", { name: "검토 상태 필터" })
-      .selectOption("all");
+    await page.getByRole("button", { name: "검토 상태 필터:", exact: false }).click();
+    await page.getByRole("menuitemradio", { name: "검토 전체", exact: true }).click();
     await page.getByRole("button", { name: "검사 기록", exact: true }).click();
     await page.locator("tbody tr").first().click();
     await page.locator("tbody tr .review-confirmed").first().waitFor();
@@ -216,11 +221,7 @@ async function waitForHistory(page, count) {
     await page.waitForFunction(
       () => document.querySelectorAll(".react-flow__edge").length === 6,
     );
-    await page.getByRole("button", { name: "구성 저장", exact: true }).click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "구성 저장 완료" })
-      .waitFor();
+    assert.equal(await page.getByRole("button", { name: "구성 저장", exact: true }).count(), 0);
     assert.equal(errors.length, 0, errors.join("\n"));
     // Owned loopback fixture: verify the real single-page action and recheck.
     server = http.createServer((_request, response) => {
@@ -231,6 +232,7 @@ async function waitForHistory(page, count) {
     });
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     const fixtureUrl = `http://127.0.0.1:${server.address().port}/first`;
+    await page.locator('.react-flow__node[data-id="target"]').click();
     await page.getByRole("textbox", { name: "검사 대상 URL" }).fill(fixtureUrl);
     await page.getByRole("button", { name: "검사 옵션", exact: true }).click();
     await page
@@ -366,11 +368,17 @@ async function waitForHistory(page, count) {
     try {
       const page = await restarted.firstWindow();
       await page
-        .locator(".target-bar button.primary:not(:disabled)")
+        .locator(".header-run-controls button.primary:not(:disabled)")
         .waitFor({ timeout: 30000 });
+      // The source harness uses a new HTTP origin on restart.
+      const startupGuide = page.getByRole("dialog", { name: "사용 가이드" });
+      if (await startupGuide.isVisible()) {
+        await startupGuide.getByRole("button", { name: "사용 가이드 닫기" }).click();
+      }
       const prefs = JSON.parse(
         await fs.readFile(path.join(data, "preferences.json"), "utf8"),
       );
+      await page.locator('.react-flow__node[data-id="target"]').click();
       assert.equal(
         await page.getByRole("textbox", { name: "검사 대상 URL" }).inputValue(),
         prefs.url,

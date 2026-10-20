@@ -1,13 +1,13 @@
 {
   "name": "chickadee-desktop",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Chickadee visual website inspection workspace",
   "author": "Chickadee contributors",
   "private": true,
   "main": "electron/main.cjs",
   "scripts": {
     "build": "vite build",
-    "start": "electron .",
+    "start": "node electron/launch.cjs",
     "package": "npm run build && electron-builder --win --x64 --dir --publish never",
     "test": "node --test tests/*.test.cjs",
     "smoke": "node tests/smoke.cjs",
@@ -29,18 +29,19 @@
     "appId": "org.chickadee.inspector",
     "productName": "Chickadee",
     "directories": {
-      "output": "../artifacts/electron-0.6.2"
+      "output": "../artifacts/electron-0.6.3"
     },
     "files": [
       "dist/**/*",
       "electron/**/*",
       "package.json",
       "assets/app.ico",
+      "assets/app-mark.png",
       "licenses/**/*"
     ],
     "extraResources": [
       {
-        "from": "../artifacts/engine-0.6.2/ChickadeeEngine",
+        "from": "../artifacts/engine-0.6.3/ChickadeeEngine",
         "to": "engine"
       }
     ],
@@ -48,6 +49,9 @@
       "target": "dir",
       "signAndEditExecutable": true,
       "icon": "assets/app.ico"
+    },
+    "mac": {
+      "icon": "assets/app-mark.png"
     },
     "asar": true
   }

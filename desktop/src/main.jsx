@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useCallback,
@@ -34,6 +35,12 @@ import {
   Copy,
   CornerDownRight,
   Cpu,
+  Dice5,
+  TrendingUp,
+  Landmark,
+  ShoppingCart,
+  ShieldAlert,
+  EyeOff,
   Download,
   FileCheck2,
   Fingerprint,
@@ -82,8 +89,52 @@ import "./style.css";
 import "./theme.css";
 import brandMark from "../assets/app-mark.png";
 import InspectionInsights from "./InspectionInsights.jsx";
+import targetMap from "../assets/map.png";
+import browserImage from "../assets/browser.png";
+import collectionImage from "../assets/collection.png";
+import searchImage from "../assets/search.png";
+import hierarchyImage from "../assets/hierarchy.png";
+import csvImage from "../assets/csv.png";
+import diceImage from "../assets/dice.png";
+import profitsImage from "../assets/profits.png";
+import creditCardImage from "../assets/3d-credit-card.png";
+import shoppingCartImage from "../assets/shopping-cart.png";
+import demoImage from "../assets/poison.png";
+import settingsImage from "../assets/settings.png";
+import checkImage from "../assets/check.png";
+import deleteImage from "../assets/delete.png";
+import saveImage from "../assets/save.png";
+import refreshImage from "../assets/refresh.png";
+import noFileImage from "../assets/no_file.png";
+import noLocationImage from "../assets/no_location.png";
+import waitDetectionImage from "../assets/wait_detection.png";
+import noRecordImage from "../assets/no_record.png";
+import Tutorial, { rememberTutorial, shouldShowTutorial } from "./Tutorial.jsx";
+
+const nodeImages = {
+  target: targetMap,
+  browser: browserImage,
+  collector: collectionImage,
+  techniques: searchImage,
+  candidates: hierarchyImage,
+  report: csvImage,
+};
 
 const api = window.chickadee;
+const NODE_LAYOUT_KEY = "chickadee.node-layout.v1";
+function restoreNodeLayout(nodes) {
+  let saved;
+  try {
+    saved = JSON.parse(localStorage.getItem(NODE_LAYOUT_KEY));
+  } catch {}
+  const defaults = defaultWorkflow().nodes;
+  return nodes.map(node => {
+    const position = saved?.[node.id];
+    const valid = position && [position.x, position.y].every(value =>
+      Number.isFinite(value) && Math.abs(value) < 10000);
+    return { ...node, position: valid ? position : defaults.find(item => item.id === node.id).position };
+  });
+}
 const Icons = {
   Activity,
   ArrowDownLeft,
@@ -100,6 +151,12 @@ const Icons = {
   Copy,
   CornerDownRight,
   Cpu,
+  Dice5,
+  TrendingUp,
+  Landmark,
+  ShoppingCart,
+  ShieldAlert,
+  EyeOff,
   Download,
   FileCheck2,
   Fingerprint,
@@ -146,6 +203,32 @@ const LABELS = {
   INVESTMENT: "투자 모집 의심",
   COMMERCIAL: "구매·추천 유도",
 };
+const TYPE_ICONS = {
+  GAMBLING: "Dice5",
+  INVESTMENT: "TrendingUp",
+  LOAN: "Landmark",
+  COMMERCIAL: "ShoppingCart",
+  ADULT: "ShieldAlert",
+  HOMOGLYPH: "Fingerprint",
+  JAMO: "TextSearch",
+  TRANSPARENT: "EyeOff",
+  OFFSCREEN: "PanelsTopLeft",
+};
+const TYPE_IMAGES = {
+  GAMBLING: diceImage,
+  INVESTMENT: profitsImage,
+  LOAN: creditCardImage,
+  COMMERCIAL: shoppingCartImage,
+};
+function TypeBadgeContent({ type }) {
+  return <>
+    {TYPE_IMAGES[type]
+      ? <img className="type-badge-image" src={TYPE_IMAGES[type]} alt="" width={16} height={16} draggable={false} />
+      : <Icon name={TYPE_ICONS[type] || "CircleAlert"} size={13} />}
+    <span>{LABELS[type] || type}</span>
+  </>;
+}
+
 const STATUS = {
   idle: "",
   running: "검사 진행 중",
@@ -199,6 +282,7 @@ function formatElapsed(seconds) {
 }
 function Button({
   icon,
+  image,
   children,
   className = "",
   variant = "secondary",
@@ -206,76 +290,36 @@ function Button({
 }) {
   return (
     <button className={`button button-${variant} ${className}`} {...props}>
-      {icon && <Icon name={icon} size={16} />}
+      {image ? <img className="button-image" src={image} alt="" width={20} height={20} draggable={false} /> : icon && <Icon name={icon} size={16} />}
       <span>{children}</span>
     </button>
   );
 }
 function FlowNode({ id, data, selected }) {
-  const def = DEFINITIONS[id],
-    position = {
-      left: Position.Left,
-      right: Position.Right,
-      top: Position.Top,
-      bottom: Position.Bottom,
-    };
+  const def = DEFINITIONS[id];
+  const positions = { left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom };
+  const status = { active: "실행 중", paused: "일시정지", done: "실행됨", error: "오류", disabled: "연결 안 됨" }[data.state] || "대기";
+  const statusIcon = { active: "LoaderCircle", paused: "Pause", done: "Check", error: "X", disabled: "Unplug" }[data.state];
+  const caption = id === "target" ? shortUrl(data.url) : data.state && data.caption ? data.caption : def.subtitle;
   return (
-    <div
-      className={`flow-node tone-${def.tone} ${data.state || ""} ${selected ? "selected" : ""}`}
-    >
-      {def.input && (
-        <Handle
-          id="in"
-          type="target"
-          position={position[def.input]}
-          isConnectable={data.editable}
-        />
-      )}
-      <div className="node-top">
-        <span className="node-icon">
-          <Icon name={def.icon} size={20} />
-        </span>
-
-        <span
-          className={`node-state ${data.state}`}
-          title={
-            data.state === "active"
-              ? "실행 중"
-              : data.state === "paused"
-                ? "일시정지"
-                : data.state === "done"
-                  ? "실행됨"
-                  : "대기"
-          }
-        />
+    <div className={`flow-node tone-${def.tone} ${data.state || ""} ${selected ? "selected" : ""}`}>
+      <div className="node-tile">
+        {def.input && <Handle id="in" type="target" position={positions[def.input]} isConnectable={data.editable} />}
+        <img src={nodeImages[id]} alt="" width={44} height={44} className={`node-symbol node-symbol-${id}`} draggable={false} />
+        {statusIcon && (
+          <span className="node-run-state" title={status} aria-label={status}>
+            <Icon name={statusIcon} size={15} className={data.state === "active" ? "spin" : ""} />
+          </span>
+        )}
+        {def.output && <Handle id="out" type="source" position={positions[def.output]} isConnectable={data.editable} />}
       </div>
       <strong>{def.title}</strong>
-      {id === "target" && <p title={data.url}>{shortUrl(data.url)}</p>}
-      <div className="node-bottom">
-        <span>{data.state ? data.caption : ""}</span>
-        <Icon
-          name={
-            data.state === "done"
-              ? "Check"
-              : data.state === "active"
-                ? "LoaderCircle"
-                : "ArrowUpRight"
-          }
-          size={13}
-          className={data.state === "active" ? "spin" : ""}
-        />
-      </div>
-      {def.output && (
-        <Handle
-          id="out"
-          type="source"
-          position={position[def.output]}
-          isConnectable={data.editable}
-        />
-      )}
+      <p className="node-caption" title={caption}>{caption}</p>
+      {["active", "paused", "error", "disabled"].includes(data.state) && <span className="node-state-text">{status}</span>}
     </div>
   );
 }
+
 const nodeTypes = { stage: FlowNode };
 const REVIEW_LABELS = {
   unreviewed: "미검토",
@@ -283,12 +327,36 @@ const REVIEW_LABELS = {
   dismissed: "제외",
 };
 
-function ActionMenu({ label, items, className = "" }) {
+function AnimatedTabs({ value, children }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const tabs = ref.current;
+    const measure = () => {
+      const active = tabs.querySelector("button.active");
+      if (!active) {
+        tabs.style.setProperty("--tab-width", "0px");
+        return;
+      }
+      tabs.style.setProperty("--tab-left", `${active.offsetLeft}px`);
+      tabs.style.setProperty("--tab-top", `${active.offsetTop + active.offsetHeight - 2}px`);
+      tabs.style.setProperty("--tab-width", `${active.offsetWidth}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(tabs);
+    for (const button of tabs.querySelectorAll("button")) observer.observe(button);
+    return () => observer.disconnect();
+  }, [value]);
+  return <div className="segmented animated-tabs" ref={ref}>{children}<span className="tab-indicator" aria-hidden="true" /></div>;
+}
+
+function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = "ChevronDown", triggerText, disabled = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return;
-    ref.current.querySelector('[role="menuitem"]:not(:disabled)')?.focus();
+    (ref.current.querySelector('[role="menuitemradio"][aria-checked="true"]') ||
+      ref.current.querySelector('.action-menu-panel button:not(:disabled)'))?.focus();
     const dismiss = (event) => {
       if (!ref.current?.contains(event.target)) setOpen(false);
     };
@@ -299,17 +367,21 @@ function ActionMenu({ label, items, className = "" }) {
     <div className={`action-menu ${className}`} ref={ref}>
       <button
         className="menu-trigger"
+        disabled={disabled}
         aria-label={label}
         title={label}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <Icon name="ChevronDown" size={16} />
+        {triggerText && <span>{triggerText}</span>}
+        {triggerImage ? <img className="button-image" src={triggerImage} alt="" width={20} height={20} draggable={false} /> : <Icon name={triggerIcon} size={16} />}
       </button>
-      {open && (
         <div
           className="action-menu-panel"
+          data-open={open}
+          aria-hidden={!open}
+          inert={!open}
           role="menu"
           aria-label={label}
           onKeyDown={(event) => {
@@ -338,22 +410,27 @@ function ActionMenu({ label, items, className = "" }) {
         >
           {items.map((item) => (
             <button
-              role="menuitem"
+              role={typeof item.selected === "boolean" ? "menuitemradio" : "menuitem"}
+              aria-checked={typeof item.selected === "boolean" ? item.selected : undefined}
               key={item.label}
               disabled={item.disabled}
               className={item.danger ? "danger-text" : ""}
               onClick={() => {
                 setOpen(false);
+                ref.current.querySelector(".menu-trigger").focus();
                 item.action();
               }}
             >
-              <Icon name={item.icon} size={16} />
+              {typeof item.selected === "boolean"
+                ? <span className="menu-selection-mark" aria-hidden="true">{item.selected && <Icon name="Check" size={16} />}</span>
+                : item.image
+                ? <img className={`menu-item-image ${item.imageClassName || ""}`} src={item.image} alt="" width={20} height={20} draggable={false} />
+                : <Icon name={item.icon} size={16} />}
               <span>{item.label}</span>
               {item.shortcut && <kbd>{item.shortcut}</kbd>}
             </button>
           ))}
         </div>
-      )}
     </div>
   );
 }
@@ -459,12 +536,21 @@ function App() {
   const [selectedNode, setSelectedNode] = useState(null),
     [selectedRecord, setSelectedRecord] = useState(null),
     [selectedEvent, setSelectedEvent] = useState(null);
+  const [monitorOpen, setMonitorOpen] = useState(false);
+  const [scanNotice, setScanNotice] = useState(false);
+  const startRequest = useRef(false);
+  const lastSelectedRecord = useRef(null);
+  useEffect(() => {
+    if (selectedRecord) lastSelectedRecord.current = selectedRecord;
+  }, [selectedRecord]);
+  const detailRecord = selectedRecord || lastSelectedRecord.current;
   const [pending, setPending] = useState([]),
     [pageFilter, setPageFilter] = useState("visited");
   const [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
     [eventFilter, setEventFilter] = useState("all"),
     [notice, setNotice] = useState(null);
+  const [reviewNotice, setReviewNotice] = useState(null);
   const [settings, setSettings] = useState(false),
     [profile, setProfile] = useState("default"),
     [maxPages, setMaxPages] = useState(100),
@@ -485,11 +571,55 @@ function App() {
   const [capabilities, setCapabilities] = useState(null);
   const [visualPreview, setVisualPreview] = useState(false);
   const [runTarget, setRunTarget] = useState("");
+  const [tutorial, setTutorial] = useState(shouldShowTutorial);
+  useEffect(() => {
+    if (!booted || flow.nodes.some(node => node.dragging)) return;
+    try {
+      localStorage.setItem(NODE_LAYOUT_KEY, JSON.stringify(Object.fromEntries(
+        flow.nodes.map(node => [node.id, node.position]),
+      )));
+    } catch {
+      // Keep the canvas usable if browser storage is unavailable.
+    }
+  }, [booted, flow.nodes]);
+  const [canvasApi, setCanvasApi] = useState(null);
+  useEffect(() => {
+    const canvas = document.querySelector(".flow-area");
+    if (!canvasApi || !canvas || view !== "workflow") return;
+    let frame;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        canvasApi.fitView({ padding: 0.2, maxZoom: 0.75, minZoom: 0.2, duration: 0 });
+      });
+    });
+    observer.observe(canvas);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [canvasApi, view]);
+  const focusTargetAfterGuide = useRef(false);
+  useEffect(() => {
+    if (!tutorial && focusTargetAfterGuide.current) {
+      focusTargetAfterGuide.current = false;
+      document.getElementById("target-url")?.focus();
+    }
+  }, [tutorial]);
+  const closeTutorial = () => {
+    rememberTutorial();
+    setTutorial(false);
+  };
   const timelineRef = useRef(null),
     autoScroll = useRef(true);
   const running = ["running", "pausing", "paused", "stopping"].includes(status);
-  const tell = (message, type = "info") =>
+  const tell = (message, type = "info") => {
+    if (message === "이미 검사 중입니다.") {
+      setScanNotice(true);
+      return;
+    }
     setNotice({ message, type, key: Date.now() });
+  };
   const action = async (fn) => {
     try {
       return await fn();
@@ -536,7 +666,15 @@ function App() {
     setPending(value.report.pending_urls || []);
     if (value.report.workflow?.version === 1) {
       try {
-        setFlow(normalizeWorkflow(value.report.workflow));
+        const restored = normalizeWorkflow(value.report.workflow);
+        setFlow(current => ({
+          ...restored,
+          nodes: restored.nodes.map(node => ({
+            ...current.nodes.find(item => item.id === node.id),
+            ...node,
+            position: current.nodes.find(item => item.id === node.id)?.position || node.position,
+          })),
+        }));
       } catch {}
     }
     if (value.events)
@@ -598,8 +736,13 @@ function App() {
           .catch(() => {});
         if (state.workflow) {
           try {
-            setFlow(normalizeWorkflow(state.workflow));
-          } catch {}
+            const restored = normalizeWorkflow(state.workflow);
+            setFlow({ ...restored, nodes: restoreNodeLayout(restored.nodes) });
+          } catch {
+            setFlow(current => ({ ...current, nodes: restoreNodeLayout(current.nodes) }));
+          }
+        } else {
+          setFlow(current => ({ ...current, nodes: restoreNodeLayout(current.nodes) }));
         }
         setBooted(true);
       })
@@ -791,15 +934,10 @@ function App() {
         style: {
           stroke:
             edge.target === active
-              ? "#53f0bc"
+              ? "#2563a6"
               : visited.has(edge.source)
-                ? {
-                    blue: "#438dff",
-                    teal: "#00d99a",
-                    purple: "#a780ff",
-                    amber: "#57a5cf",
-                  }[DEFINITIONS[edge.source].tone]
-                : "#61738e",
+                ? "#41765b"
+                : "#62666b",
           strokeWidth: edge.target === active ? 2.8 : 1.8,
         },
       })),
@@ -834,6 +972,10 @@ function App() {
     [running],
   );
   const start = async (demo = false, overrides = {}) => {
+    if (running || startRequest.current) {
+      tell("이미 검사 중입니다.");
+      return;
+    }
     if (error) {
       tell(error, "error");
       return;
@@ -882,6 +1024,7 @@ function App() {
       : flow;
     if (!demo) setUrl(entry);
     if (overrides.singlePage) setFlow(nextFlow);
+    startRequest.current = true;
     setStatus("running");
     setRunTarget(demo ? "" : entry);
     setRecords([]);
@@ -917,6 +1060,8 @@ function App() {
     } catch (error) {
       setStatus("failed");
       tell(error.message, "error");
+    } finally {
+      startRequest.current = false;
     }
   };
   const load = async () => {
@@ -927,11 +1072,6 @@ function App() {
       setSelectedRecord(null);
     }
   };
-  const saveFlow = () =>
-    action(async () => {
-      await api.saveWorkflow(flow);
-      tell("구성 저장 완료", "success");
-    });
   const loadFlow = () =>
     action(async () => {
       const value = await api.loadWorkflow();
@@ -969,7 +1109,7 @@ function App() {
         });
         setReviewData(value);
         setSelectedIds(new Set());
-        tell(`${ids.length}건 검토 저장`, "success");
+        setReviewNotice(`${ids.length}건의 검토 내용을 저장했습니다.`);
       } finally {
         setReviewSaving(false);
       }
@@ -1031,6 +1171,12 @@ function App() {
       label: "검사 설정",
       icon: "SlidersHorizontal",
       action: () => setSettings(true),
+    },
+    {
+      label: "사용 가이드",
+      keywords: "tutorial help 도움말 튜토리얼",
+      icon: "MousePointer2",
+      action: () => setTutorial(true),
     },
   ];
   const filteredRecords = records.filter(
@@ -1101,13 +1247,17 @@ function App() {
               <Icon name={icon} />
               <span>{label}</span>
               {id === "results" && records.length > 0 && (
-                <b>{records.length}</b>
+                <b className="detection-count">{records.length}</b>
               )}
               {id === "activity" && running && <span className="live-dot" />}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
+          <button className="nav-item" onClick={() => setTutorial(true)}>
+            <Icon name="MousePointer2" />
+            <span>사용 가이드</span>
+          </button>
           <button className="nav-item" disabled={running} onClick={load}>
             <Icon name="FolderOpen" />
             <span>결과 불러오기</span>
@@ -1120,23 +1270,6 @@ function App() {
       </aside>
       <main className="main">
         <header className="topbar">
-          <div className="topbar-right">
-            <button
-              className="command-launcher"
-              onClick={() => setPalette(true)}
-              aria-label="빠른 명령"
-            >
-              <Icon name="Search" size={14} />
-              <span>빠른 명령</span>
-              <kbd>Ctrl K</kbd>
-            </button>
-            {visualPreview && (
-              <span className="local-label">디자인 미리보기 · 저장된 데모</span>
-            )}
-          </div>
-        </header>
-        <section className="heading">
-          <div>
             <h1>
               {view === "inspection" ? "검사 분석" : view === "history"
                 ? "검사 기록"
@@ -1148,52 +1281,8 @@ function App() {
                       ? "진행 기록"
                       : "검사 구성"}
             </h1>
-          </div>
-          <div className="heading-actions">
-            <Button
-              icon="FolderOpen"
-              variant="ghost"
-              onClick={() => action(() => api.openFolder())}
-            >
-              결과 폴더
-            </Button>
-          </div>
-        </section>
-        <section className="target-bar">
-          <span className="target-icon">
-            <Icon name="Globe2" size={20} />
-          </span>
-          <div className="target-field">
-            <label htmlFor="target-url">
-              {outcome ? "다음 검사 대상" : "검사 대상"}{" "}
-            </label>
-            <input
-              id="target-url"
-              aria-label="검사 대상 URL"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              disabled={running}
-              placeholder="https://example.go.kr"
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !running) start();
-              }}
-            />
-          </div>
-          <button
-            className="profile-selector"
-            onClick={() => setSettings(true)}
-          >
-            <span>
-              {profile === "test"
-                ? "모의 게시판"
-                : profile === "public"
-                  ? "공공 사이트"
-                  : "기본 탐색"}
-            </span>
-            <Icon name="ChevronDown" size={14} />
-          </button>
-          <span className="separator" />
-          <div className="run-actions">
+          <div className="header-run-controls" aria-label="검사 실행 제어">
+          <div className="run-actions" key={running ? status : "ready"}>
             {running ? (
               <>
                 <Button
@@ -1239,18 +1328,21 @@ function App() {
                     {
                       label: "데모 검사",
                       icon: "FlaskConical",
+                      image: demoImage,
                       disabled: !booted,
                       action: () => start(true),
                     },
                     {
                       label: "이 페이지만 검사",
                       icon: "ScanLine",
+                      image: searchImage,
                       disabled: !booted,
                       action: () => start(false, { singlePage: true }),
                     },
                     {
                       label: "검사 설정",
                       icon: "SlidersHorizontal",
+                      image: settingsImage,
                       action: () => setSettings(true),
                     },
                   ]}
@@ -1258,7 +1350,29 @@ function App() {
               </>
             )}
           </div>
-        </section>
+          </div>
+          <div className="topbar-right">
+            <Button
+              icon="FolderOpen"
+              variant="ghost"
+              onClick={() => action(() => api.openFolder())}
+            >
+              결과 폴더
+            </Button>
+            <button
+              className="command-launcher"
+              onClick={() => setPalette(true)}
+              aria-label="빠른 명령"
+            >
+              <Icon name="Search" size={14} />
+              <span>빠른 명령</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+            {visualPreview && (
+              <span className="local-label">디자인 미리보기 · 저장된 데모</span>
+            )}
+          </div>
+        </header>
         <section
           className="summary-strip"
           hidden={!running && !outcome && status !== "failed"}
@@ -1347,27 +1461,12 @@ function App() {
             </button>
           </div>
         </section>
-        <div className="content-area">
+        <div className="content-area" data-view={view} key={view}>
           {view === "inspection" && <InspectionInsights />}
           {view === "workflow" && (
-            <div className="studio">
+            <div className={`studio ${selectedNode || monitorOpen ? "panel-open" : "panel-closed"}`}>
               <section className="canvas-shell">
                 <div className="canvas-toolbar">
-                  <button
-                    className="follow-toggle"
-                    aria-pressed={flow.follow_links}
-                    disabled={running}
-                    title="하위 링크 탐색"
-                    onClick={() =>
-                      setFlow((value) => ({
-                        ...value,
-                        follow_links: !value.follow_links,
-                      }))
-                    }
-                  >
-                    <Icon name="GitBranch" size={14} />
-                    <span>하위 링크</span>
-                  </button>
                   <div>
                     <button
                       title="기본 구성"
@@ -1392,13 +1491,10 @@ function App() {
                     >
                       <Icon name="Download" size={15} />
                     </button>
-                    <Button icon="Save" onClick={saveFlow}>
-                      구성 저장
-                    </Button>
                   </div>
                 </div>
                 <div className="flow-area">
-                  <ReactFlow
+                  {booted && <ReactFlow
                     nodes={flowNodes}
                     edges={flowEdges}
                     nodeTypes={nodeTypes}
@@ -1412,29 +1508,23 @@ function App() {
                     edgesReconnectable={false}
                     onNodeClick={(_event, node) => setSelectedNode(node.id)}
                     onPaneClick={() => setSelectedNode(null)}
+                    onInit={setCanvasApi}
                     fitView
-                    fitViewOptions={{ padding: 0.12 }}
-                    minZoom={0.35}
+                    fitViewOptions={{ padding: 0.2, maxZoom: 0.75, minZoom: 0.2 }}
+                    minZoom={0.2}
                     maxZoom={1.5}
                     proOptions={{ hideAttribution: true }}
                   >
-                    <Background color="#34425c" gap={24} size={1} />
+                    <Background color="#383838" gap={20} size={1} />
                     <Controls showInteractive={false} />
                     <MiniMap
-                      nodeColor={(node) =>
-                        ({
-                          blue: "#3182f6",
-                          teal: "#00d38b",
-                          purple: "#a57aff",
-                          amber: "#57a5cf",
-                        })[DEFINITIONS[node.id].tone]
-                      }
-                      maskColor="rgba(16,20,28,.8)"
+                      nodeColor="#60646b"
+                      maskColor="rgba(23,23,23,.65)"
                       style={{ width: 120, height: 74 }}
                       pannable
                       zoomable
                     />
-                  </ReactFlow>
+                  </ReactFlow>}
                   {error && (
                     <div className="flow-warning">
                       <Icon name="Unplug" size={15} />
@@ -1443,7 +1533,19 @@ function App() {
                   )}
                 </div>
               </section>
-              <aside className="monitor-panel">
+              <aside
+                className="monitor-panel"
+                id="workflow-side-panel"
+                aria-hidden={!selectedNode && !monitorOpen}
+                inert={!selectedNode && !monitorOpen}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setSelectedNode(null);
+                    setMonitorOpen(false);
+                    document.querySelector(".workspace-rail button")?.focus();
+                  }
+                }}
+              >
                 {selectedNode ? (
                   <NodeSettings
                     id={selectedNode}
@@ -1460,6 +1562,9 @@ function App() {
                       <span>
                         <strong>미리보기</strong>
                       </span>
+                      <button aria-label="미리보기·진행 기록 닫기" onClick={() => setMonitorOpen(false)}>
+                        <Icon name="X" size={15} />
+                      </button>
                     </div>
                     <div className="browser-preview">
                       <div className="browser-chrome">
@@ -1483,6 +1588,7 @@ function App() {
                         </span>
                         <button
                           title="화면 확대"
+                          aria-label="미리보기 화면 확대"
                           disabled={!preview}
                           onClick={() => setZoomPreview(true)}
                         >
@@ -1492,6 +1598,7 @@ function App() {
                       {preview ? (
                         <button
                           className="preview-image"
+                          aria-label="검사 화면 크게 보기"
                           onClick={() => setZoomPreview(true)}
                         >
                           <img
@@ -1501,15 +1608,26 @@ function App() {
                         </button>
                       ) : (
                         <div className="preview-placeholder">
-                          <Icon name="PanelsTopLeft" size={34} />
+                          <Icon name="PanelsTopLeft" size={28} />
                           <strong>
-                            {livePreview ? "검사 화면 없음" : "미리보기 꺼짐"}
+                            {livePreview
+                              ? running ? "화면을 기다리는 중" : "검사 시작 전"
+                              : "미리보기 꺼짐"}
                           </strong>
+                          <span>
+                            {livePreview
+                              ? running ? "캡처가 도착하면 표시됩니다." : "실행하면 방문한 페이지가 표시됩니다."
+                              : "검사 설정에서 미리보기를 켤 수 있습니다."}
+                          </span>
                         </div>
                       )}
                       <div className="preview-caption">
+                        <span className="preview-status">
+                          <i data-active={Boolean(preview && running && livePreview)} />
+                          {!livePreview ? "꺼짐" : preview ? "최근 캡처" : running ? "캡처 대기" : "대기 중"}
+                        </span>
                         <span>
-                          {preview?.timestamp ? time(preview.timestamp) : "—"}
+                          {preview?.timestamp ? time(preview.timestamp) : ""}
                         </span>
                       </div>
                     </div>
@@ -1564,22 +1682,51 @@ function App() {
                         ))}
                       {events.length === 0 && (
                         <div className="timeline-empty">
-                          <span className="timeline-empty-line" />
-                          <p>진행 단계가 여기에 기록됩니다.</p>
-                          <small>이동, 수집, 분석, 저장까지</small>
+                          <div className="timeline-waiting">
+                            <span className="timeline-waiting-dot" />
+                            <strong>아직 기록이 없습니다</strong>
+                          </div>
+                          <p>검사를 실행하면 아래 과정이 기록됩니다.</p>
+                          <ol className="timeline-outline" aria-label="검사 과정 안내">
+                            {[
+                              ["Globe2", "페이지 이동", "방문한 주소와 응답 상태"],
+                              ["ScanLine", "콘텐츠 수집", "페이지 본문과 하위 링크"],
+                              ["Search", "탐지 · 분류", "발견한 항목과 판단 근거"],
+                              ["FileCheck2", "결과 저장", "검사 요약과 출력 파일"],
+                            ].map(([icon, title, description]) => (
+                              <li key={title}>
+                                <span className="timeline-outline-icon"><Icon name={icon} size={15} /></span>
+                                <div><strong>{title}</strong><span>{description}</span></div>
+                              </li>
+                            ))}
+                          </ol>
                         </div>
                       )}
                     </div>
                   </>
                 )}
               </aside>
+              <div className="workspace-rail">
+                <button
+                  aria-label="미리보기·진행 기록"
+                  title="미리보기·진행 기록"
+                  aria-expanded={Boolean(monitorOpen || selectedNode)}
+                  aria-controls="workflow-side-panel"
+                  onClick={() => {
+                    setMonitorOpen(!(selectedNode || monitorOpen));
+                    setSelectedNode(null);
+                  }}
+                >
+                  <Icon name="ChevronRight" size={17} />
+                </button>
+              </div>
             </div>
           )}
           {view === "results" && (
-            <div className="results-layout">
+            <div className={`results-layout ${selectedRecord ? "detail-open" : "detail-closed"}`}>
               <section className="table-section">
                 <div className="list-toolbar">
-                  <div className="segmented">
+                  <AnimatedTabs value={filter}>
                     {[
                       ["all", "전체"],
                       ["required", "필수 탐지"],
@@ -1587,13 +1734,14 @@ function App() {
                     ].map(([id, label]) => (
                       <button
                         className={filter === id ? "active" : ""}
+                        aria-pressed={filter === id}
                         key={id}
                         onClick={() => setFilter(id)}
                       >
                         {label}
                       </button>
                     ))}
-                  </div>
+                  </AnimatedTabs>
                   <div className="search">
                     <Icon name="Search" size={15} />
                     <input
@@ -1603,19 +1751,16 @@ function App() {
                       onChange={(event) => setSearch(event.target.value)}
                     />
                   </div>
-                  <select
-                    className="review-select"
-                    aria-label="검토 상태 필터"
-                    value={reviewFilter}
-                    onChange={(event) => setReviewFilter(event.target.value)}
-                  >
-                    <option value="all">검토 전체</option>
-                    {Object.entries(REVIEW_LABELS).map(([id, label]) => (
-                      <option value={id} key={id}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
+                  <ActionMenu
+                    className="review-filter-menu"
+                    label={`검토 상태 필터: ${reviewFilter === "all" ? "검토 전체" : REVIEW_LABELS[reviewFilter]}`}
+                    triggerText={reviewFilter === "all" ? "검토 전체" : REVIEW_LABELS[reviewFilter]}
+                    items={[["all", "검토 전체"], ...Object.entries(REVIEW_LABELS)].map(([id, label]) => ({
+                      label,
+                      selected: reviewFilter === id,
+                      action: () => setReviewFilter(id),
+                    }))}
+                  />
                   <Button
                     icon="Download"
                     disabled={!outcome || running}
@@ -1739,12 +1884,13 @@ function App() {
                           <td>
                             <button
                               className={`type-badge type-filter ${record.technique ? "purple" : "amber"}`}
+                              data-type={record.technique || record.category}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setFilter(record.technique || "candidates");
                               }}
                             >
-                              {LABELS[record.technique || record.category]}
+                              <TypeBadgeContent type={record.technique || record.category} />
                             </button>
                           </td>
                           <td className="evidence-cell">
@@ -1772,6 +1918,7 @@ function App() {
                   {filteredRecords.length === 0 && (
                     <Empty
                       icon="ScanSearch"
+                      image={running ? searchImage : noFileImage}
                       title={running ? "분석 진행" : "탐지 내역 없음"}
                       text="검사를 시작하거나 저장된 result.json을 불러오세요."
                     />
@@ -1781,49 +1928,58 @@ function App() {
                   {filteredRecords.length}개 항목{" "}
                 </div>
               </section>
-              <RecordDetail
-                key={selectedRecord?.id || "empty"}
-                record={selectedRecord}
+              <div className="record-drawer" aria-hidden={!selectedRecord} inert={!selectedRecord}>
+              {detailRecord && <RecordDetail
+                key={detailRecord.id}
+                record={detailRecord}
                 outcome={outcome}
                 review={
-                  selectedRecord ? reviewData.items[selectedRecord.id] : null
+                  reviewData.items[detailRecord.id]
                 }
                 onReview={(status, note) =>
-                  updateReview([selectedRecord.id], status, note)
+                  updateReview([detailRecord.id], status, note)
                 }
                 reviewDisabled={running || !outcome || reviewSaving}
                 onRecheck={() =>
-                  start(false, { url: selectedRecord.url, singlePage: true })
+                  start(false, { url: detailRecord.url, singlePage: true })
                 }
                 recheckDisabled={
                   running || !booted || outcome?.report.desktop_options?.demo
                 }
-                onCopy={(text) => action(() => api.copy(text))}
-              />
+                onCopy={(text) => action(async () => {
+                  await api.copy(text);
+                  tell("클립보드에 복사했습니다.", "success");
+                })}
+                onClose={() => setSelectedRecord(null)}
+              />}
+              </div>
             </div>
           )}
           {view === "pages" && (
             <section className="table-section">
               <div className="list-toolbar">
-                <div className="segmented">
+                <AnimatedTabs value={pageFilter}>
                   <button
                     className={pageFilter === "visited" ? "active" : ""}
+                    aria-pressed={pageFilter === "visited"}
                     onClick={() => setPageFilter("visited")}
                   >
-                    방문 {pages.length}
+                    방문 <span className="path-tab-count">{pages.length}</span>
                   </button>
                   <button
                     className={pageFilter === "pending" ? "active" : ""}
+                    aria-pressed={pageFilter === "pending"}
                     onClick={() => setPageFilter("pending")}
                   >
-                    대기 {queue}
+                    대기 <span className="path-tab-count">{queue}</span>
                   </button>
-                </div>
-                <span className="subtle">발견 {discovered}</span>
+                </AnimatedTabs>
+                <span className="path-discovered">발견한 링크 <strong>{discovered}</strong></span>
                 <div className="search">
                   <Icon name="Search" size={15} />
                   <input
                     placeholder="경로 검색"
+                    aria-label="경로 검색"
                     value={pageSearch}
                     onChange={(event) => setPageSearch(event.target.value)}
                   />
@@ -1892,6 +2048,7 @@ function App() {
                 {!(pageFilter === "pending" ? pending : pages).length && (
                   <Empty
                     icon="Network"
+                    image={noLocationImage}
                     title={
                       pageFilter === "pending"
                         ? "대기 주소 없음"
@@ -1906,7 +2063,7 @@ function App() {
           {view === "activity" && (
             <section className="activity-section">
               <div className="list-toolbar">
-                <div className="segmented">
+                <AnimatedTabs value={eventFilter}>
                   {[
                     ["all", "전체"],
                     ["phase", "진행 단계"],
@@ -1916,15 +2073,17 @@ function App() {
                     <button
                       key={id}
                       className={eventFilter === id ? "active" : ""}
+                      aria-pressed={eventFilter === id}
                       onClick={() => setEventFilter(id)}
                     >
                       {label}
                     </button>
                   ))}
+                </AnimatedTabs>
+                <div className="activity-log-meta">
+                  <span>최근 기록 <strong>{events.length}</strong></span>
+                  <span className="activity-log-storage">전체 기록 저장</span>
                 </div>
-                <span className="subtle">
-                  최근 {events.length}개 · 전체 기록 저장
-                </span>
               </div>
               <div className="full-timeline">
                 {filteredEvents.map((event) => (
@@ -1937,6 +2096,7 @@ function App() {
                 {!filteredEvents.length && (
                   <Empty
                     icon="Activity"
+                    image={waitDetectionImage}
                     title="검사 과정을 기다리고 있습니다"
                     text="실제 수행한 작업만 시간순으로 기록합니다."
                   />
@@ -1978,8 +2138,8 @@ function App() {
                       >
                         <td>{shortUrl(item.url)}</td>
                         <td>
-                          <span className="type-badge">
-                            {STATUS[item.status]}
+                          <span className="history-status-badge" data-status={item.status}>
+                            {STATUS[item.status] || item.status || "상태 없음"}
                           </span>
                         </td>
                         <td>{item.pages}</td>
@@ -1996,6 +2156,7 @@ function App() {
                 {!history.length && (
                   <Empty
                     icon="History"
+                    image={noRecordImage}
                     title="첫 검사를 시작해 보세요"
                     text="검사마다 별도 폴더에 결과와 진행 기록을 보관합니다."
                   />
@@ -2005,6 +2166,8 @@ function App() {
           )}
         </div>
       </main>
+      {scanNotice && <ScanNotice onClose={() => setScanNotice(false)} />}
+      {reviewNotice && <ReviewSavedNotice message={reviewNotice} onClose={() => setReviewNotice(null)} />}
       {notice && (
         <div className={`toast ${notice.type}`} role="status">
           <Icon
@@ -2025,34 +2188,60 @@ function App() {
       {palette && (
         <CommandPalette commands={commands} onClose={() => setPalette(false)} />
       )}
+      {tutorial && (
+        <Tutorial
+          onClose={closeTutorial}
+          canDemo={booted && !running}
+          onDemo={() => {
+            closeTutorial();
+            start(true);
+          }}
+          onInspect={() => {
+            focusTargetAfterGuide.current = true;
+            closeTutorial();
+            setView("workflow");
+            setSelectedNode("target");
+          }}
+        />
+      )}
       {settings && (
         <div className="modal-backdrop" onClick={() => setSettings(false)}>
           <section
             className="modal settings-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-title"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="modal-heading">
               <div>
-                <h2>검사 설정</h2>
+                <h2 id="settings-title">검사 설정</h2>
               </div>
-              <button onClick={() => setSettings(false)}>
+              <button aria-label="검사 설정 닫기" onClick={() => setSettings(false)}>
                 <Icon name="X" />
               </button>
             </div>
-            <label>
-              사이트 탐색 설정
-              <select
-                value={profile}
+            <div className="settings-field">
+              <span>사이트 탐색 설정</span>
+              <ActionMenu
+                className="profile-menu"
+                label="사이트 탐색 설정"
                 disabled={running}
-                onChange={(event) => setProfile(event.target.value)}
-              >
-                <option value="default">기본 탐색 · 같은 사이트 전체</option>
-                <option value="test">
-                  사용자 모의 게시판 · .post-detail 본문
-                </option>
-                <option value="public">공공 사이트 기본 설정</option>
-              </select>
-            </label>
+                triggerText={{
+                  default: "기본 탐색 · 같은 사이트 전체",
+                  test: "사용자 모의 게시판 · .post-detail 본문",
+                  public: "공공 사이트 기본 설정",
+                }[profile]}
+                items={[
+                  ["default", "기본 탐색 · 같은 사이트 전체"],
+                  ["test", "사용자 모의 게시판 · .post-detail 본문"],
+                  ["public", "공공 사이트 기본 설정"],
+                ].map(([id, label]) => ({
+                  label, selected: profile === id, disabled: running,
+                  action: () => setProfile(id),
+                }))}
+              />
+            </div>
             <div className="form-row">
               <label>
                 최대 페이지
@@ -2080,7 +2269,7 @@ function App() {
             <label className="toggle-label">
               <div>
                 <strong>실시간 브라우저 화면</strong>
-                <small>실제 Chromium 화면을 검사 중 표시합니다.</small>
+                <small>검사 중인 페이지를 미리보기로 표시합니다.</small>
               </div>
               <input
                 type="checkbox"
@@ -2104,12 +2293,7 @@ function App() {
                 </Button>
               </div>
             </label>
-            <div className="modal-footer">
-              <span>각 검사는 별도 폴더에 저장됩니다.</span>
-              <Button className="primary" onClick={() => setSettings(false)}>
-                완료
-              </Button>
-            </div>
+            <p className="settings-folder-hint">각 검사는 별도 폴더에 저장됩니다.</p>
             <details className="automation-info">
               <summary>에이전트 확장 규격</summary>
               <p>
@@ -2123,6 +2307,11 @@ function App() {
                 분석 대상 데이터로 취급합니다.
               </small>
             </details>
+            <div className="modal-footer">
+              <Button className="primary" onClick={() => setSettings(false)}>
+                완료
+              </Button>
+            </div>
           </section>
         </div>
       )}
@@ -2180,11 +2369,67 @@ function App() {
     </div>
   );
 }
-function Empty({ icon, title, text }) {
+function ReviewSavedNotice({ message, onClose }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const previous = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      if (previous?.isConnected) previous.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={dialogRef}
+      className="review-saved-dialog"
+      aria-labelledby="review-saved-title"
+      aria-describedby="review-saved-description"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <button className="review-saved-close" aria-label="닫기" onClick={onClose}><Icon name="X" size={18} /></button>
+      <img className="review-saved-icon" src={checkImage} alt="" width={32} height={32} />
+      <h2 id="review-saved-title">검토 저장 완료</h2>
+      <p id="review-saved-description">{message}</p>
+      <button className="review-saved-confirm" autoFocus onClick={onClose}>확인</button>
+    </dialog>
+  );
+}
+
+function ScanNotice({ onClose }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const previous = document.activeElement;
+    const dialog = dialogRef.current;
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      if (previous?.isConnected) previous.focus();
+    };
+  }, []);
+  return (
+    <dialog
+      ref={dialogRef}
+      className="scan-notice-dialog"
+      aria-labelledby="scan-notice-title"
+      aria-describedby="scan-notice-description"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <h2 id="scan-notice-title">이미 검사 중입니다</h2>
+      <p id="scan-notice-description">현재 검사가 끝난 뒤 다시 실행해 주세요.<br />새 검사를 시작하려면 먼저 진행 중인 검사를 중단하세요.</p>
+      <div><button autoFocus onClick={onClose}>확인</button></div>
+    </dialog>
+  );
+}
+
+function Empty({ icon, image, title, text }) {
   return (
     <div className="empty-state">
-      <span>
-        <Icon name={icon} size={28} />
+      <span aria-hidden="true">
+        {image ? <img src={image} alt="" width={32} height={32} /> : <Icon name={icon} size={24} />}
       </span>
       <strong>{title}</strong>
     </div>
@@ -2196,23 +2441,26 @@ function NodeSettings({ id, flow, setFlow, url, setUrl, running, onClose }) {
     <>
       <div className="panel-heading">
         <strong>단계 설정</strong>
-        <button onClick={onClose}>
+        <button onClick={onClose} aria-label="단계 설정 닫기">
           <Icon name="X" size={16} />
         </button>
       </div>
       <div className={`node-config tone-${def.tone}`}>
         <span className="config-icon">
-          <Icon name={def.icon} size={27} />
+          <img src={nodeImages[id]} alt="" width={28} height={28} draggable={false} />
         </span>
         <small>{def.subtitle}</small>
         <h2>{def.title}</h2>
         <p>{def.detail}</p>
         {id === "target" && (
           <label>
-            시작 URL
+            검사 대상 URL
             <input
+              id="target-url"
+              type="url"
+              placeholder="https://example.go.kr"
               value={url}
-              disabled={running}
+              readOnly={running}
               onChange={(event) => setUrl(event.target.value)}
             />
           </label>
@@ -2356,13 +2604,32 @@ function eventLabel(event) {
 }
 function EventRow({ event, onClick, compact = false }) {
   const label = eventLabel(event);
+  const eventImages = {
+    url_discovered: hierarchyImage,
+    http_response: browserImage,
+    request_blocked: deleteImage,
+    finding: searchImage,
+    candidate: searchImage,
+    page_complete: checkImage,
+    done: saveImage,
+    started: searchImage,
+    error: deleteImage,
+    warning: demoImage,
+  };
+  const eventImage = event.kind === "phase"
+    ? nodeImages[event.stage] || browserImage
+    : eventImages[event.kind] || refreshImage;
+  const imageScale = eventImage === browserImage ? 1.2
+    : eventImage === checkImage ? 1.5
+    : eventImage === deleteImage ? 1.8
+    : eventImage === searchImage ? .92 : 1;
   return (
     <button
       className={`event-row ${compact ? "compact" : ""}`}
       onClick={onClick}
     >
-      <span className={`event-icon ${label.tone}`}>
-        <Icon name={label.icon} size={compact ? 13 : 17} />
+      <span className="event-icon event-asset">
+        <img src={eventImage} alt="" width={compact ? 20 : 26} height={compact ? 20 : 26} style={{ transform: `scale(${imageScale})` }} draggable={false} />
       </span>
       <div>
         <strong>{label.title}</strong>
@@ -2381,6 +2648,7 @@ function RecordDetail({
   reviewDisabled,
   onRecheck,
   recheckDisabled,
+  onClose,
 }) {
   const [note, setNote] = useState(review?.note || "");
   useEffect(() => setNote(review?.note || ""), [record?.id, review?.note]);
@@ -2419,13 +2687,17 @@ function RecordDetail({
     <aside className="record-panel">
       <div className="panel-heading">
         <strong>탐지 근거</strong>
-        <span className="mono">{record.id}</span>
+        <span>
+          <span className="mono">{record.id}</span>
+          <button aria-label="탐지 근거 닫기" onClick={onClose}><Icon name="X" size={16} /></button>
+        </span>
       </div>
       <div className="record-body">
-        <span className={`type-badge ${record.technique ? "purple" : "amber"}`}>
-          {LABELS[record.technique || record.category]}
+        <div className="record-overview">
+        <span className={`type-badge ${record.technique ? "purple" : "amber"}`} data-type={record.technique || record.category}>
+          <TypeBadgeContent type={record.technique || record.category} />
         </span>
-        <h2>{record.technique ? "위장·은닉 의심 항목" : "광고 의심"}</h2>
+
         <div className="review-control">
           <span
             className={`review-label review-${review?.status || "unreviewed"}`}
@@ -2456,15 +2728,13 @@ function RecordDetail({
             ]}
           />
         </div>
-        <label>탐지 원문</label>
-        <blockquote>{record.evidence_text}</blockquote>
-        <label>탐지 키워드</label>
-        <div className="keyword-list">
-          {keywords.map((term) => (
-            <span key={term}>{term}</span>
-          ))}
         </div>
-        <label>탐지 사유</label>
+        <label>발견한 문구</label>
+        <blockquote>{record.evidence_text}</blockquote>
+        {keywords.length > 0 && (
+          <p className="record-keywords"><span>탐지된 표현:</span> {keywords.join(", ")}</p>
+        )}
+        <label>탐지 이유</label>
         <ul>
           {(reasons.length
             ? [...new Set(reasons)]
@@ -2476,6 +2746,8 @@ function RecordDetail({
           ))}
         </ul>
         <div className="review-editor">
+          <details className="review-note-details" open={note ? true : undefined}>
+          <summary>검토 메모</summary>
           <label htmlFor="review-note">
             검토 메모 <small>{note.length}/2000</small>
           </label>
@@ -2488,9 +2760,11 @@ function RecordDetail({
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
+          </details>
           <div className="review-actions">
             <Button
               icon="CheckCheck"
+              image={checkImage}
               disabled={reviewDisabled}
               onClick={() => onReview("confirmed", note)}
             >
@@ -2498,6 +2772,7 @@ function RecordDetail({
             </Button>
             <Button
               icon="X"
+              image={deleteImage}
               variant="ghost"
               disabled={reviewDisabled}
               onClick={() => onReview("dismissed", note)}
@@ -2505,30 +2780,40 @@ function RecordDetail({
               제외
             </Button>
             <ActionMenu
-              label="검토 작업"
+              label="검토 작업 더보기"
+              className="review-more-menu"
+              triggerIcon="MoreHorizontal"
               items={[
                 {
                   label: "메모 저장",
                   icon: "Save",
+                  image: saveImage,
+                  imageClassName: "menu-image-save",
                   disabled: reviewDisabled,
                   action: () => onReview(review?.status || "unreviewed", note),
                 },
                 {
                   label: "미검토로 변경",
                   icon: "RotateCcw",
+                  image: refreshImage,
                   disabled: reviewDisabled,
                   action: () => onReview("unreviewed", note),
                 },
               ]}
             />
           </div>
-          {review?.updated_at && (
-            <small>
-              {review.actor === "agent" ? "에이전트" : "사용자"} ·{" "}
-              {new Date(review.updated_at).toLocaleString("ko-KR")}
-            </small>
-          )}
         </div>
+        {review?.updated_at && (
+          <details className="review-metadata">
+            <summary>최근 검토 정보</summary>
+            <dl>
+              <div><dt>검토자</dt><dd>{review.actor === "agent" ? "에이전트" : "사용자"}</dd></div>
+              <div><dt>저장 시간</dt><dd><time dateTime={review.updated_at}>{new Date(review.updated_at).toLocaleString("ko-KR")}</time></dd></div>
+            </dl>
+          </details>
+        )}
+        <details className="record-technical">
+        <summary>페이지 · 기술 정보</summary>
         <label>
           페이지 URL{" "}
           <button onClick={() => onCopy(record.url)} title="URL 복사">
@@ -2546,6 +2831,7 @@ function RecordDetail({
         <details>
           <summary>원시 데이터</summary>
           <pre>{JSON.stringify({ record, detail }, null, 2)}</pre>
+        </details>
         </details>
       </div>
     </aside>

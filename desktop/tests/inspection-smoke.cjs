@@ -23,7 +23,8 @@ const http = require("node:http");
     page.setDefaultTimeout(15000);
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.locator(".target-bar button.primary:not(:disabled)").waitFor();
+    await page.getByRole("dialog", { name: "사용 가이드" }).getByRole("button", { name: "사용 가이드 닫기", exact: true }).click();
+    await page.locator(".header-run-controls button.primary:not(:disabled)").waitFor();
     await page.getByRole("textbox", { name: "검사 대상 URL" }).fill(`http://127.0.0.1:${server.address().port}/`);
     await page.getByRole("button", { name: "검사 분석", exact: true }).click();
     async function wait(count) {
@@ -34,12 +35,12 @@ const http = require("node:http");
       await page.waitForFunction(() => document.querySelectorAll('.inspection-graph .react-flow__node').length >= 4);
       return page.evaluate(() => window.chickadee.state());
     }
-    await page.locator(".target-bar button.primary").click();
+    await page.locator(".header-run-controls button.primary").click();
     await wait(1);
     const firstGraph = await page.locator('.inspection-graph .react-flow__node').count();
     assert.ok(firstGraph >= 4);
     revision = 1;
-    await page.locator(".target-bar button.primary").click();
+    await page.locator(".header-run-controls button.primary").click();
     let current = await wait(2);
     await page.getByRole('tab', { name: '변경 비교', exact: true }).click();
     await page.locator('.inspection-changes article').first().waitFor();

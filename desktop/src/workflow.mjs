@@ -6,7 +6,7 @@ export const DEFINITIONS = {
     tone: "blue",
     detail: "시작 URL과 검사 범위를 지정합니다.",
     input: null,
-    output: "bottom",
+    output: "right",
   },
   browser: {
     title: "브라우저",
@@ -14,7 +14,7 @@ export const DEFINITIONS = {
     icon: "PanelsTopLeft",
     tone: "blue",
     detail: "페이지 이동 · 렌더링 · 응답 확인",
-    input: "top",
+    input: "left",
     output: "right",
   },
   collector: {
@@ -74,12 +74,12 @@ export const defaultWorkflow = () => ({
   version: 1,
   follow_links: true,
   nodes: [
-    { id: "target", position: { x: 0, y: 12 } },
-    { id: "browser", position: { x: 0, y: 208 } },
-    { id: "collector", position: { x: 260, y: 208 } },
-    { id: "techniques", position: { x: 520, y: 72 } },
-    { id: "candidates", position: { x: 520, y: 342 } },
-    { id: "report", position: { x: 800, y: 208 } },
+    { id: "target", position: { x: 0, y: 160 } },
+    { id: "browser", position: { x: 220, y: 160 } },
+    { id: "collector", position: { x: 440, y: 160 } },
+    { id: "techniques", position: { x: 660, y: 0 } },
+    { id: "candidates", position: { x: 660, y: 320 } },
+    { id: "report", position: { x: 900, y: 160 } },
   ],
   edges: PAIRS.map(([a, b]) => edgeFor(a, b)),
 });
