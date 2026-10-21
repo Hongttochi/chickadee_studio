@@ -119,11 +119,11 @@ jobs:
           path: release-assets
       - name: Verify downloaded release files
         run: python scripts/release.py verify --directory release-assets
-      - name: Publish Windows prerelease
+      - name: Publish Windows release
         run: |
           gh release create "v$APP_VERSION" \
             "release-assets/Chickadee-Studio-$APP_VERSION-win-x64.zip" \
             "release-assets/Chickadee-Studio-$APP_VERSION-win-x64.zip.sha256" \
             --repo "$GH_REPO" --target "$GITHUB_SHA" \
-            --title "Chickadee Studio $APP_VERSION — Windows" \
-            --notes-file "docs/releases/$APP_VERSION.md" --prerelease
+            --title "$APP_VERSION" \
+            --notes-file "docs/releases/$APP_VERSION.md" --latest
