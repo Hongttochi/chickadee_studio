@@ -91,6 +91,29 @@ function handler(name, callback) {
   });
 }
 async function initialize() {
+  let restarting = false;
+  handler("restart", async () => {
+    if (restarting) return;
+    const state = await backend.request("state");
+    const agent = await backend.request("agent-status");
+    if (state.running || agent.running) throw new Error("진행 중인 검사·AI 검토를 중단한 뒤 재실행하세요.");
+    if (restarting) return;
+    restarting = true;
+    try {
+      await preferenceWrites;
+      app.relaunch();
+      app.quit();
+    } catch (error) {
+      restarting = false;
+      throw error;
+    }
+  });
+  handler("open-external", async (value) => {
+    if (typeof value !== "string" || value.length > 8192) throw new Error("잘못된 주소입니다.");
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("웹 주소만 열 수 있습니다.");
+    await shell.openExternal(url.href);
+  });
   notifications = new Notifications({ directory: app.getPath("userData"), safeStorage,
     supported: () => Notification.isSupported(), focused: () => Boolean(window?.isFocused()),
     notify: createNotifier(Notification, () => window),

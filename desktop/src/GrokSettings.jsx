@@ -23,12 +23,10 @@ export default function GrokSettings({ config, onConfigured }) {
   }
   return <section className="grok-settings" aria-label="Groq 설정">
     <div className="grok-settings-heading">
-      <img src={grokLogo} alt="Groq" />
-    </div>
-    <p className="grok-intro">선택한 탐지 근거를 AI로 추가 검토합니다. 분석을 실행할 때만 Groq에 요청합니다.</p>
-    <div className="grok-connection-heading"><div><strong>API 연결</strong><p>현재 앱에서 사용할 키를 설정합니다.</p></div>
+      <span className="grok-provider-logo"><img src={grokLogo} alt="Groq" /></span>
       <button type="button" className="grok-add-key" onClick={() => setEditing(!editing)} aria-expanded={editing} aria-controls="grok-key-editor" disabled={busy}><Plus size={13} aria-hidden="true" />{editing ? "닫기" : "API 키 등록"}</button>
     </div>
+    <p className="grok-intro">선택한 탐지 근거를 AI로 추가 검토합니다. 분석을 실행할 때만 Groq에 요청합니다.</p>
     <div className="grok-connection-card"><div><strong>{config.sessionKey || keyAdded ? "현재 세션 키" : "Groq API 키"}</strong><span>{config.sessionKey || keyAdded ? "등록됨" : "미등록"}</span></div>
       <p>{config.sessionKey || keyAdded ? "등록한 키는 앱을 종료하면 삭제됩니다. 서버 연결은 분석 실행 시 확인합니다." : "AI 검토를 사용하려면 본인의 Groq API 키를 등록하세요."}</p>
     </div>

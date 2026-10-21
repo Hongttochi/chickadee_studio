@@ -1,6 +1,7 @@
 import UpdateSettings from "./UpdateSettings.jsx";
 import React, {
   useState,
+  useId,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -13,7 +14,7 @@ import ImageOCR from "./ImageOCR.jsx";
 import LocalAIAnalysis from "./LocalAIAnalysis.jsx";
 import RuntimeSettings from "./RuntimeSettings.jsx";
 import ShortcutSettings from "./ShortcutSettings.jsx";
-import { defaults as defaultShortcuts, validateShortcuts, fromEvent } from "./shortcuts.mjs";
+import { defaults as defaultShortcuts, validateShortcuts, fromEvent, keyLabel } from "./shortcuts.mjs";
 import SettingsNav from "./SettingsNav.jsx";
 import ScheduleSettings from "./ScheduleSettings.jsx";
 import NotificationSettings from "./NotificationSettings.jsx";
@@ -27,8 +28,6 @@ import {
   Handle,
   Position,
   applyNodeChanges,
-  applyEdgeChanges,
-  addEdge,
 } from "@xyflow/react";
 import {
   Activity,
@@ -96,8 +95,6 @@ import {
   DEFINITIONS,
   defaultWorkflow,
   normalizeWorkflow,
-  validConnection,
-  workflowError,
   branchEnabled,
 } from "./workflow.mjs";
 import "./style.css";
@@ -107,6 +104,8 @@ import InspectionInsights from "./InspectionInsights.jsx";
 import targetMap from "../assets/map.png";
 import browserImage from "../assets/browser.png";
 import collectionImage from "../assets/collection.png";
+import duplicateRemoveImage from "../assets/duplicate_remove.png";
+import paddleOCRImage from "../assets/paddle_ocr.png";
 import searchImage from "../assets/search.png";
 import hierarchyImage from "../assets/hierarchy.png";
 import csvImage from "../assets/csv.png";
@@ -129,13 +128,15 @@ const nodeImages = {
   target: targetMap,
   browser: browserImage,
   collector: collectionImage,
+  ocr: paddleOCRImage,
+  dedup: duplicateRemoveImage,
   techniques: searchImage,
   candidates: hierarchyImage,
   report: csvImage,
 };
 
 const api = window.chickadee;
-const NODE_LAYOUT_KEY = "chickadee.node-layout.v1";
+const NODE_LAYOUT_KEY = "chickadee.node-layout.v3";
 function restoreNodeLayout(nodes) {
   let saved;
   try {
@@ -318,20 +319,20 @@ function Button({
 function FlowNode({ id, data, selected }) {
   const def = DEFINITIONS[id];
   const positions = { left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom };
-  const status = { active: "실행 중", paused: "일시정지", done: "실행됨", error: "오류", disabled: "연결 안 됨" }[data.state] || "대기";
+  const status = { active: "실행 중", paused: "일시정지", done: "실행됨", error: "오류", disabled: "사용 안 함" }[data.state] || "대기";
   const statusIcon = { active: "LoaderCircle", paused: "Pause", done: "Check", error: "X", disabled: "Unplug" }[data.state];
   const caption = id === "target" ? shortUrl(data.url) : data.state && data.caption ? data.caption : def.subtitle;
   return (
     <div className={`flow-node tone-${def.tone} ${data.state || ""} ${selected ? "selected" : ""}`}>
       <div className="node-tile">
-        {def.input && <Handle id="in" type="target" position={positions[def.input]} isConnectable={data.editable} />}
+        {def.input && <Handle id="in" type="target" position={positions[def.input]} isConnectable={false} />}
         <img src={nodeImages[id]} alt="" width={44} height={44} className={`node-symbol node-symbol-${id}`} draggable={false} />
         {statusIcon && (
           <span className="node-run-state" title={status} aria-label={status}>
             <Icon name={statusIcon} size={15} className={data.state === "active" ? "spin" : ""} />
           </span>
         )}
-        {def.output && <Handle id="out" type="source" position={positions[def.output]} isConnectable={data.editable} />}
+        {def.output && <Handle id="out" type="source" position={positions[def.output]} isConnectable={false} />}
       </div>
       <strong>{def.title}</strong>
       <p className="node-caption" title={caption}>{caption}</p>
@@ -549,6 +550,7 @@ function App() {
     [records, setRecords] = useState([]),
     [pages, setPages] = useState([]),
     [history, setHistory] = useState([]);
+  const [liveScreenshots, setLiveScreenshots] = useState({});
   const [preview, setPreview] = useState(null),
     [currentUrl, setCurrentUrl] = useState(""),
     [queue, setQueue] = useState(0),
@@ -690,7 +692,7 @@ function App() {
         value.report.pages_scanned.map((url) => ({ url, status: "scanned" })),
     );
     setPending(value.report.pending_urls || []);
-    if (value.report.workflow?.version === 1) {
+    if ([1, 2].includes(value.report.workflow?.version)) {
       try {
         const restored = normalizeWorkflow(value.report.workflow);
         setFlow(current => ({
@@ -776,6 +778,10 @@ function App() {
       })
       .catch((error) => tell(error.message, "error"));
     return api.onEvent((event) => {
+      if (event.kind === "evidence_screenshot") {
+        if (event.screenshot && event.screenshot_id) setLiveScreenshots(previous => ({ ...previous, [event.screenshot_id]: event.screenshot }));
+        return;
+      }
       if (event.kind === "preview") {
         if (/^data:image\/jpeg;base64,[a-zA-Z0-9+/=]+$/.test(event.data_url))
           setPreview(event);
@@ -792,7 +798,7 @@ function App() {
       )
         setCurrentUrl(event.url);
       if (event.kind === "started") {
-        setRecords([]); setPages([]); setPending([]); setEvents([{ ...event, key: crypto.randomUUID() }]); setPreview(null); setOutcome(null);
+        setRecords([]); setPages([]); setPending([]); setEvents([{ ...event, key: crypto.randomUUID() }]); setPreview(null); setOutcome(null); setLiveScreenshots({});
         setReviewData({ revision: 0, items: {} }); setSelectedIds(new Set()); setSelectedRecord(null);
         setDiscovered(0); setQueue(0); setElapsed(0); setSearch(""); setFilter("all"); setReviewFilter("all");
         setRunTarget(event.url);
@@ -819,11 +825,11 @@ function App() {
       }
       if (event.kind === "finding")
         setRecords((items) => [
-          ...items,
+          ...items.filter(item => item.id !== event.finding.id),
           { ...event.finding, _detail: event.detail },
         ]);
       if (event.kind === "candidate")
-        setRecords((items) => [...items, event.candidate]);
+        setRecords((items) => [...items.filter(item => item.id !== event.candidate.id), event.candidate]);
       if (event.kind === "done") {
         applyOutcome(event);
       }
@@ -887,13 +893,12 @@ function App() {
       timelineRef.current.scrollTop = timelineRef.current.scrollHeight;
   }, [events]);
   const findings = records.filter((r) => r.technique),
-    candidates = records.filter((r) => r.category),
-    error = workflowError(flow);
+    candidates = records.filter((r) => r.category);
   const flowNodes = useMemo(
     () =>
       flow.nodes.map((node) => {
         const enabled =
-          !["techniques", "candidates"].includes(node.id) ||
+          !["techniques", "candidates", "ocr", "dedup"].includes(node.id) ||
           branchEnabled(flow, node.id);
         const state = !enabled
           ? "disabled"
@@ -911,7 +916,7 @@ function App() {
             ? `${pages.length}페이지 방문`
             : node.id === "collector"
               ? `${discovered}개 URL 발견`
-              : node.id === "techniques"
+              : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? "PaddleOCR · 이미지 문자 인식" : node.id === "techniques"
                 ? `${findings.length}건 발견`
                 : node.id === "candidates"
                   ? `${candidates.length}건 광고 의심`
@@ -920,7 +925,7 @@ function App() {
                     : outcome
                       ? "JSON · CSV 저장 완료"
                       : "실행 종료 후 저장";
-        if (!enabled) caption = "분석 경로 연결 안 됨";
+        if (!enabled) caption = node.id === "ocr" && flow.ocr_enabled === false ? "사용 안 함" : "분석 경로 연결 안 됨";
         return {
           ...node,
           type: "stage",
@@ -931,7 +936,6 @@ function App() {
             url:
               outcome?.result.meta.entry_url ||
               (running ? runTarget || url : url),
-            editable: !running,
           },
         };
       }),
@@ -955,6 +959,10 @@ function App() {
       flow.edges.map((edge) => ({
         ...edge,
         type: "default",
+        selectable: false,
+        deletable: false,
+        focusable: false,
+        reconnectable: false,
         animated:
           status === "running" &&
           (edge.target === active || edge.source === active),
@@ -978,33 +986,9 @@ function App() {
       })),
     [],
   );
-  const onEdgesChange = useCallback(
-    (changes) => {
-      if (!running)
-        setFlow((value) => ({
-          ...value,
-          edges: applyEdgeChanges(changes, value.edges),
-        }));
-    },
-    [running],
-  );
-  const onConnect = useCallback(
-    (connection) => {
-      if (!running && validConnection(connection))
-        setFlow((value) => ({
-          ...value,
-          edges: addEdge({ ...connection, type: "default" }, value.edges),
-        }));
-    },
-    [running],
-  );
   const start = async (demo = false, overrides = {}) => {
     if (running || startRequest.current) {
       tell("이미 검사 중입니다.");
-      return;
-    }
-    if (error) {
-      tell(error, "error");
       return;
     }
     if (
@@ -1300,12 +1284,9 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-bottom sidebar-tools">
-          <button className="sidebar-tool" aria-label="설정" title="설정" onClick={openSettings}>
-            <Icon name="Settings" />
-          </button>
-          <button className="sidebar-tool" aria-label="결과 불러오기" title="결과 불러오기" disabled={running} onClick={load}>
-            <Icon name="FolderOpen" />
-          </button>
+          <SidebarTool label="설정" icon="Settings" shortcut={shortcuts.settings} onClick={openSettings} />
+          <SidebarTool label="앱 재실행" icon="RotateCcw" hint={running ? "검사 완료 후 재실행할 수 있습니다" : "Chickadee를 다시 실행합니다"} disabled={running || !booted} onClick={() => action(() => api.restart())} />
+          <SidebarTool label="결과 불러오기" icon="FolderOpen" shortcut={shortcuts.load} disabled={running} onClick={load} />
         </div>
         </>}
       </aside>
@@ -1599,6 +1580,11 @@ function App() {
               <section className="canvas-shell">
                 <div className="canvas-toolbar">
                   <div>
+                    <button title="노드 정렬" aria-label="노드 정렬" disabled={running} onClick={() => {
+                      const positions = defaultWorkflow().nodes;
+                      setFlow(value => ({ ...value, nodes: value.nodes.map(node => ({ ...node, position: positions.find(item => item.id === node.id).position })) }));
+                      requestAnimationFrame(() => requestAnimationFrame(() => canvasApi?.fitView({ padding: 0.2, maxZoom: 0.75, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200 })));
+                    }}><Icon name="Workflow" size={15} /></button>
                     <button
                       title="기본 구성"
                       disabled={running}
@@ -1630,13 +1616,11 @@ function App() {
                     edges={flowEdges}
                     nodeTypes={nodeTypes}
                     onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    isValidConnection={validConnection}
-                    deleteKeyCode={["Backspace", "Delete"]}
+                    deleteKeyCode={null}
                     nodesDraggable={!running}
-                    nodesConnectable={!running}
+                    nodesConnectable={false}
                     edgesReconnectable={false}
+                    edgesFocusable={false}
                     onNodeClick={(_event, node) => setSelectedNode(node.id)}
                     onPaneClick={() => setSelectedNode(null)}
                     onInit={setCanvasApi}
@@ -1656,12 +1640,7 @@ function App() {
                       zoomable
                     />
                   </ReactFlow>}
-                  {error && (
-                    <div className="flow-warning">
-                      <Icon name="Unplug" size={15} />
-                      {error}
-                    </div>
-                  )}
+
                 </div>
               </section>
               <aside
@@ -1911,6 +1890,7 @@ function App() {
                     <strong>{selectedIds.size}개 선택</strong>
                     <Button
                       icon="CheckCheck"
+              image={checkImage}
                       variant="ghost"
                       disabled={reviewSaving || running}
                       onClick={() =>
@@ -2047,11 +2027,12 @@ function App() {
                       ))}
                     </tbody>
                   </table>
+                  {outcome?.report.ocr_summary?.status === "partial" && <div className="ocr-coverage-notice" role="status"><Icon name="CircleAlert" size={17} /><div><strong>이미지 검사에 미확인 항목이 있습니다</strong><span>처리 실패 {outcome.report.ocr_summary.failed} · 판독 불가 {outcome.report.ocr_summary.unreadable || 0} · 생략 {outcome.report.ocr_summary.skipped || 0} — 탐지 내역이 없어도 정상으로 판단하지 마세요.</span></div></div>}
                   {filteredRecords.length === 0 && (
                     <Empty
                       icon="ScanSearch"
-                      image={running ? searchImage : noFileImage}
-                      compactImage={running}
+                      image={running ? undefined : noFileImage}
+                      loading={running}
                       title={running ? "분석 진행" : "탐지 내역 없음"}
                       text="검사를 시작하거나 저장된 result.json을 불러오세요."
                     />
@@ -2065,6 +2046,7 @@ function App() {
               {detailRecord && <RecordDetail
                 key={detailRecord.id}
                 record={detailRecord}
+                liveScreenshots={liveScreenshots}
                 outcome={outcome}
                 review={
                   reviewData.items[detailRecord.id]
@@ -2305,7 +2287,7 @@ function App() {
       {scanNotice && <ScanNotice onClose={() => setScanNotice(false)} />}
       {reviewNotice && <ReviewSavedNotice message={reviewNotice} onClose={() => setReviewNotice(null)} />}
       {notice && (
-        <div className={`toast ${notice.type}`} role="status">
+        <div className={`toast ${notice.type}`} role={notice.type === "error" ? "alert" : "status"}>
           <Icon
             name={
               notice.type === "error"
@@ -2316,7 +2298,7 @@ function App() {
             }
           />
           <span>{notice.message}</span>
-          <button onClick={() => setNotice(null)}>
+          <button aria-label="알림 닫기" onClick={() => setNotice(null)}>
             <Icon name="X" size={15} />
           </button>
         </div>
@@ -2450,11 +2432,24 @@ function ScanNotice({ onClose }) {
   );
 }
 
-function Empty({ icon, image, title, text, compactImage = false }) {
+function SidebarTool({ label, icon, shortcut, hint, disabled, onClick }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return <div className="sidebar-tool-wrap" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={event => { if (event.key === "Escape") { setOpen(false); event.stopPropagation(); } }}>
+    <button className="sidebar-tool" aria-label={label} aria-describedby={open ? id : undefined} disabled={disabled} onClick={onClick}><Icon name={icon} /></button>
+    {open && <div className="sidebar-tool-tip" id={id} role="tooltip">
+      <span>{label}</span>
+      {shortcut && <kbd>{keyLabel(shortcut, /Mac/i.test(navigator.platform))}</kbd>}
+      {hint && <small>{hint}</small>}
+    </div>}
+  </div>;
+}
+
+function Empty({ icon, image, title, text, loading = false }) {
   return (
-    <div className={`empty-state${compactImage ? " empty-state-compact" : ""}`}>
+    <div className={`empty-state${loading ? " empty-state-loading" : ""}`} role={loading ? "status" : undefined}>
       <span aria-hidden="true">
-        {image ? <img src={image} alt="" width={32} height={32} /> : <Icon name={icon} size={24} />}
+        {loading ? <Icon name="LoaderCircle" size={26} className="analysis-spinner" /> : image ? <img src={image} alt="" width={32} height={32} /> : <Icon name={icon} size={24} />}
       </span>
       <strong>{title}</strong>
     </div>
@@ -2509,16 +2504,7 @@ function NodeSettings({ id, flow, setFlow, url, setUrl, running, onClose }) {
             />
           </label>
         )}
-        {["techniques", "candidates"].includes(id) && (
-          <div className="connection-state">
-            <span
-              className={branchEnabled(flow, id) ? "ready-dot" : "muted-dot"}
-            />
-            {branchEnabled(flow, id)
-              ? "분석과 결과 저장이 연결되어 있습니다."
-              : "실행하려면 수집 → 분석 → 결과를 연결하세요."}
-          </div>
-        )}
+        {id === "ocr" && <label className="toggle-label"><div><strong>이미지 OCR 사용</strong><small>이미지 속 글자도 필수 탐지와 광고 분류에 사용합니다.</small></div><input type="checkbox" checked={flow.ocr_enabled !== false} disabled={running} onChange={event => setFlow(value => ({ ...value, ocr_enabled: event.target.checked }))} /></label>}
         <dl>
           <dt>입력</dt>
           <dd>
@@ -2528,7 +2514,7 @@ function NodeSettings({ id, flow, setFlow, url, setUrl, running, onClose }) {
                 ? "대상 URL"
                 : id === "collector"
                   ? "렌더링된 페이지"
-                  : id === "report"
+                  : id === "ocr" ? "페이지에서 수집한 이미지" : id === "report"
                     ? "분석 결과"
                     : "본문·CSS·요소 위치"}
           </dd>
@@ -2548,8 +2534,7 @@ function NodeSettings({ id, flow, setFlow, url, setUrl, running, onClose }) {
         <div className="config-note">
           <Icon name="Info" size={16} />
           <span>
-            노드 연결은 실제 실행 단계에 적용됩니다. 연결을 변경하려면 검사를
-            종료하세요.
+            검사는 표시된 순서대로 진행됩니다. OCR 사용 여부는 이미지 OCR 단계에서 설정할 수 있습니다.
           </span>
         </div>
       </div>
@@ -2665,6 +2650,7 @@ function EventRow({ event, onClick, compact = false }) {
   );
 }
 function RecordDetail({
+  liveScreenshots = {},
   record,
   outcome,
   onCopy,
@@ -2770,9 +2756,11 @@ function RecordDetail({
             <li key={index}>{reason}</li>
           ))}
         </ul>
-        <ImageOCR image={outcome?.report.ocr_images?.find((image) => image.id === detail.image_id)} />
+        {(detail.evidence_sources?.length > 1) && <p className="evidence-capture-note">본문·이미지의 동일 문구를 합쳤습니다. 근거 {detail.evidence_sources.length}곳을 보존했습니다.</p>}
+        {[...new Set([detail.image_id, ...(detail.evidence_sources || []).map(source => source.image_id)].filter(Boolean))].map(id => <ImageOCR key={id} image={outcome?.report.ocr_images?.find(image => image.id === id)} />)}
         <LocalAIAnalysis analysis={detail.local_ai} />
-        <EvidenceScreenshot screenshot={outcome?.report.screenshots?.[detail.screenshot_id]}
+        <EvidenceScreenshot screenshot={outcome ? outcome.report.screenshots?.[detail.screenshot_id] : liveScreenshots[detail.screenshot_id]}
+
           hidden={record.technique === "TRANSPARENT" || record.technique === "OFFSCREEN"} />
         <div className="review-editor">
           <details className="review-note-details" open={note ? true : undefined}>

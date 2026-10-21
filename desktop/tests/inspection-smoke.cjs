@@ -27,6 +27,12 @@ const http = require("node:http");
     page.on("pageerror", (error) => errors.push(error.message));
     await page.getByRole("dialog", { name: "사용 가이드" }).getByRole("button", { name: "사용 가이드 닫기", exact: true }).click();
     await page.locator(".header-run-controls button.primary:not(:disabled)").waitFor();
+    const fixedEdgeCount = await page.locator('.react-flow__edge').count();
+    assert.equal(fixedEdgeCount, 10);
+    await page.locator('[data-testid="rf__edge-techniques-dedup"]').dispatchEvent('click');
+    await page.keyboard.press('Delete');
+    assert.equal(await page.locator('.react-flow__edge').count(), fixedEdgeCount);
+    assert.equal(await page.locator('.react-flow__handle.connectable').count(), 0);
     await page.locator('.react-flow__node[data-id="target"]').click();
     await page.getByRole("textbox", { name: "검사 대상 URL" }).fill(`http://127.0.0.1:${server.address().port}/`);
     await page.getByRole("button", { name: "검사 분석", exact: true }).click();
@@ -58,7 +64,21 @@ const http = require("node:http");
       await page.waitForFunction(() => document.querySelectorAll('.inspection-graph .react-flow__node').length >= 4);
       return state;
     }
+    await page.evaluate(() => {
+      const unsubscribe = window.chickadee.onEvent(event => {
+        if (event.kind === 'finding' || event.kind === 'candidate') {
+          unsubscribe(); window.chickadee.pause().catch(() => {});
+        }
+      });
+    });
     await page.locator(".header-run-controls button.primary").click();
+    await page.waitForFunction(async () => (await window.chickadee.state()).status === 'paused');
+    await page.getByRole('button', { name: /^탐지 내역/ }).click();
+    await page.locator('tbody tr').first().click();
+    await page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true }).waitFor();
+    assert.equal((await page.evaluate(() => window.chickadee.state())).running, true);
+    await page.evaluate(() => window.chickadee.resume());
+    await page.getByRole('button', { name: '검사 분석', exact: true }).click();
     await wait(1);
     const firstGraph = await page.locator('.inspection-graph .react-flow__node').count();
     assert.ok(firstGraph >= 4);
@@ -74,7 +94,18 @@ const http = require("node:http");
     await page.getByRole('button', { name: '확대', exact: true }).waitFor();
     await page.screenshot({ path: path.join(root, 'artifacts/evidence-panel-0.8.0.png') });
     await page.getByRole('button', { name: '확대', exact: true }).click();
-    assert.equal(await page.locator('.evidence-capture-image.expanded').count(), 1);
+    await page.getByRole('dialog', { name: '스크린샷 확대' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog', { name: '스크린샷 확대' }).waitFor({ state: 'detached' });
+    assert.equal(await page.getByRole('button', { name: '확대', exact: true }).evaluate(el => el === document.activeElement), true);
+    await page.locator('.capture-metadata summary').click();
+    const captureLink = page.locator('.capture-metadata a');
+    assert.match(await captureLink.getAttribute('href'), /^https?:/);
+    if (!packaged) {
+      await page.evaluate(() => { window.__openedURL = null; window.chickadee.openExternal = async url => { window.__openedURL = url; }; });
+      await captureLink.click();
+      assert.equal(await page.evaluate(() => window.__openedURL), await captureLink.getAttribute('href'));
+    }
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
     revision = 1;
     await page.locator(".header-run-controls button.primary").click();

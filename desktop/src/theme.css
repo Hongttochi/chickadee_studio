@@ -1214,9 +1214,13 @@
 }
 .summary-numbers > button:hover,
 .summary-numbers > button.active {
-  color: #246bfe;
+  color: #56616d;
   background: transparent;
 }
+.summary-numbers > button { position: relative; }
+.summary-numbers > button::after { content: ""; position: absolute; left: 13px; right: 13px; bottom: 0; height: 2px; background: #7b8794; transform: scaleX(0); transition: transform 180ms ease; }
+.summary-numbers > button.active::after { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .summary-numbers > button::after { transition: none; } }
 .summary-numbers > button .amber-text {
   color: #4b8cae;
 }
@@ -2041,7 +2045,7 @@
 }
 .settings-modal .grok-advanced-toggle, .settings-modal .modal-heading > button,
 .settings-modal .folder-input .folder-change-icon { color: #bcbcc5; }
-.settings-modal .grok-settings-heading img { filter: none; }
+.settings-modal .grok-settings-heading img { filter: invert(1); }
 .settings-modal .modal-footer { background: #19191b; border-color: #303033; }
 .settings-modal .modal-footer .primary { background: #e4e4e7; color: #202023; }
 .settings-modal .modal-heading > button:hover,
@@ -2251,4 +2255,36 @@
 
 .settings-modal .update-actions button:disabled { opacity:.4; cursor:not-allowed; }
 
-.empty-state.empty-state-compact > span:has(img), .empty-state.empty-state-compact > span img { width:64px; height:64px; }
+.empty-state.empty-state-loading { gap:8px; }
+.empty-state-loading .analysis-spinner { width:26px; height:26px; animation:analysis-spinner-turn 1s linear infinite; }
+@keyframes analysis-spinner-turn { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .empty-state-loading .analysis-spinner { animation:none; } }
+
+.toast.error { gap:10px; max-width:min(420px, calc(100vw - 32px)); padding:12px 14px; border:1px solid #484044; border-radius:9px; background:#242326; color:#e0dadd; box-shadow:0 8px 28px #0003; font-size:12px; line-height:1.6; }
+.toast.error > svg { flex-shrink:0; width:18px; height:18px; color:#d79088; }
+.toast.error > span { min-width:0; overflow-wrap:anywhere; }
+.toast.error > button { flex-shrink:0; color:#aaa3a7; }
+
+.sidebar-tool-wrap { position:relative; display:inline-flex; }
+.sidebar-tool-tip { position:absolute; z-index:300; bottom:calc(100% + 10px); left:0; display:flex; flex-wrap:wrap; align-items:center; gap:6px 9px; width:max-content; max-width:230px; padding:9px 12px; border:1px solid #dedfe2; border-radius:9px; background:#f4f4f5; color:#242629; box-shadow:0 4px 16px #0003; font-size:12px; line-height:1.5; animation:sidebar-tip-enter 120ms ease-out; }
+.sidebar-tool-tip::after { content:""; position:absolute; bottom:-5px; left:10px; width:8px; height:8px; transform:rotate(45deg); background:#f4f4f5; border-right:1px solid #dedfe2; border-bottom:1px solid #dedfe2; }
+.sidebar-tool-tip kbd { padding:0 5px; border:1px solid #c5c6c9; border-radius:4px; background:#e7e7e9; color:#42464c; font:inherit; font-size:11px; }
+.sidebar-tool-tip small { flex-basis:100%; font-size:11px; color:#646a72; }
+@keyframes sidebar-tip-enter { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce) { .sidebar-tool-tip { animation:none; } }
+
+.studio .canvas-shell .canvas-toolbar { min-height:40px; height:40px; background:#232426; border-bottom:1px solid #ffffff0b; }
+.studio .canvas-shell .canvas-toolbar > div > button { color:#aeb3ba; background:transparent; border:0; border-radius:5px; }
+.studio .canvas-shell .canvas-toolbar > div > button:hover:not(:disabled) { color:#f0f1f3; background:#ffffff0c; }
+
+.ocr-coverage-notice { display:flex; align-items:flex-start; gap:10px; margin:12px 16px; padding:12px 14px; border:1px solid #b68b4538; border-radius:8px; background:#b68b450b; color:#b98f50; }
+.ocr-coverage-notice > svg { flex-shrink:0; margin-top:2px; }
+.ocr-coverage-notice > div { display:grid; gap:4px; }
+.ocr-coverage-notice strong { font-size:12px; font-weight:500; }
+.ocr-coverage-notice span { color:#8993a1; font-size:11px; line-height:1.6; }
+.node-tile > img.node-symbol-ocr { border-radius:9px; }
+.node-config .config-icon-ocr img { border-radius:6px; }
+.canvas-shell .react-flow__handle { cursor:default; }
+.canvas-shell .react-flow__edge { pointer-events:none; }
+.node-tile > img.node-symbol-dedup { width:64px; height:64px; }
+.node-config .config-icon-dedup img { width:42px; height:42px; max-width:none; flex-shrink:0; }

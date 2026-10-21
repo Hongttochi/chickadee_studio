@@ -14,6 +14,7 @@ async function invoke(channel, ...args) {
 contextBridge.exposeInMainWorld(
   "chickadee",
   Object.freeze({
+    restart: () => invoke("desktop:restart"),
     updateState: () => invoke("desktop:update-state"),
     checkUpdates: () => invoke("desktop:update-check"),
     downloadUpdate: () => invoke("desktop:update-download"),
@@ -49,6 +50,7 @@ contextBridge.exposeInMainWorld(
     saveWorkflow: (value) => invoke("desktop:save-workflow", value),
     exportWorkflow: (value) => invoke("desktop:export-workflow", value),
     loadWorkflow: () => invoke("desktop:load-workflow"),
+    openExternal: (url) => invoke("desktop:open-external", url),
     copy: (text) => invoke("desktop:copy", text),
     onEvent: (callback) => {
       const listener = (_event, value) => callback(value);

@@ -182,45 +182,16 @@ async function waitForHistory(page, count) {
       (await page.locator(".full-timeline").innerText()).includes("DOM"),
     );
     await page.getByRole("button", { name: "검사 구성", exact: true }).click();
-    const edge = page.locator('[data-testid="rf__edge-techniques-report"]');
+    const edge = page.locator('[data-testid="rf__edge-techniques-dedup"]');
     await edge.dispatchEvent("click");
     await page.keyboard.press("Delete");
-    await page.waitForFunction(
-      () => document.querySelectorAll(".react-flow__edge").length === 5,
-    );
-    assert.equal(
-      await page
-        .locator('.react-flow__node[data-id="techniques"] .flow-node.disabled')
-        .count(),
-      1,
-    );
-    const source = await page
-      .locator(
-        '.react-flow__node[data-id="techniques"] .react-flow__handle-right',
-      )
-      .boundingBox();
-    const target = await page
-      .locator('.react-flow__node[data-id="report"] .react-flow__handle-left')
-      .boundingBox();
-    await page.mouse.move(
-      source.x + source.width / 2,
-      source.y + source.height / 2,
-    );
-    await page.mouse.down();
-    await page.waitForTimeout(100);
-    await page.mouse.move(
-      target.x + target.width / 2,
-      target.y + target.height / 2,
-      { steps: 20 },
-    );
-    await page.waitForTimeout(150);
-    await page.screenshot({
-      path: path.join(artifacts, "electron-connecting.png"),
-    });
-    await page.mouse.up();
-    await page.waitForFunction(
-      () => document.querySelectorAll(".react-flow__edge").length === 6,
-    );
+    assert.equal(await page.locator(".react-flow__edge").count(), 10);
+    assert.equal(await page.locator(".react-flow__handle.connectable").count(), 0);
+    await page.locator('.react-flow__node[data-id="ocr"]').click();
+    const ocrSwitch = page.getByRole('checkbox', { name: /이미지 OCR 사용/ });
+    await ocrSwitch.uncheck();
+    assert.equal(await page.locator('.react-flow__node[data-id="ocr"] .flow-node.disabled').count(), 1);
+    await ocrSwitch.check();
     assert.equal(await page.getByRole("button", { name: "구성 저장", exact: true }).count(), 0);
     assert.equal(errors.length, 0, errors.join("\n"));
     // Owned loopback fixture: verify the real single-page action and recheck.
@@ -337,7 +308,7 @@ async function waitForHistory(page, count) {
         resultImportResetsFilters: true,
         savedNetworkEvents: true,
         csv: true,
-        disconnectReconnect: true,
+        fixedPipeline: true,
         pauseResume: true,
         reviewReload: true,
         bulkReview: true,
