@@ -1285,7 +1285,7 @@ function App() {
         </nav>
         <div className="sidebar-bottom sidebar-tools">
           <SidebarTool label="설정" icon="Settings" shortcut={shortcuts.settings} onClick={openSettings} />
-          <SidebarTool label="앱 재실행" icon="RotateCcw" hint={running ? "검사 완료 후 재실행할 수 있습니다" : "Chickadee를 다시 실행합니다"} disabled={running || !booted} onClick={() => action(() => api.restart())} />
+          <SidebarTool label="앱 재실행" icon="RotateCcw" disabled={running || !booted} onClick={() => action(() => api.restart())} />
           <SidebarTool label="결과 불러오기" icon="FolderOpen" shortcut={shortcuts.load} disabled={running} onClick={load} />
         </div>
         </>}

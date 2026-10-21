@@ -2288,3 +2288,20 @@
 .canvas-shell .react-flow__edge { pointer-events:none; }
 .node-tile > img.node-symbol-dedup { width:64px; height:64px; }
 .node-config .config-icon-dedup img { width:42px; height:42px; max-width:none; flex-shrink:0; }
+/* Compensate for the transparent margins in hierarchy.png. */
+.node-tile > img.node-symbol-candidates { width:80px; height:80px; max-width:none; flex-shrink:0; }
+.node-config .config-icon-candidates img { width:52px; height:52px; max-width:none; flex-shrink:0; }
+
+/* Topic navigation keeps the detailed guide usable without a long tab row. */
+.tutorial-steps ol { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0; }
+.tutorial-steps li:not(.tab-indicator) { min-width:0; }
+.tutorial-steps button { width:100%; padding-inline:6px; white-space:nowrap; }
+.tutorial-content { min-height:0; overflow-y:auto; }
+.tutorial-dialog { max-height:calc(100dvh - 32px); }
+.tutorial-dialog[open] { display:flex; flex-direction:column; overflow:hidden; }
+.tutorial-dialog > :not(.tutorial-content) { flex-shrink:0; }
+.tutorial-dialog > .tutorial-content { flex:1 1 auto; }
+.tutorial-screen { position:sticky; top:0; }
+.tutorial-instructions dd { overflow-wrap:anywhere; }
+@media (max-width:760px) { .tutorial-screen { position:static; } }
+@media (max-width:480px) { .tutorial-steps { padding-inline:12px; } .tutorial-steps ol { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
