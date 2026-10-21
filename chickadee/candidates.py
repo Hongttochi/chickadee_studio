@@ -5,7 +5,8 @@ from functools import lru_cache
 from .detection import DEFAULT_RULES, analyze, skeleton, is_editorial_context, text_ranges, merge_analyses
 
 CATEGORY_LABELS = {"GAMBLING": "도박 홍보 의심", "ADULT": "성인 콘텐츠 홍보 의심",
-                   "LOAN": "대출 모집 의심", "INVESTMENT": "투자 모집 의심", "COMMERCIAL": "구매·추천 유도"}
+                   "LOAN": "대출 모집 의심", "INVESTMENT": "투자 모집 의심", "COMMERCIAL": "구매·추천 유도",
+                   "AI_CONTEXT": "AI 광고 문맥"}
 
 
 @lru_cache(maxsize=512)

@@ -1,8 +1,9 @@
 {
   "name": "chickadee-desktop",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Chickadee visual website inspection workspace",
   "author": "Chickadee contributors",
+  "license": "Apache-2.0",
   "private": true,
   "main": "electron/main.cjs",
   "scripts": {
@@ -29,7 +30,7 @@
     "appId": "org.chickadee.inspector",
     "productName": "Chickadee",
     "directories": {
-      "output": "../artifacts/electron-0.10.0"
+      "output": "../artifacts/electron-0.10.1"
     },
     "files": [
       "dist/**/*",
@@ -42,13 +43,15 @@
     ],
     "extraResources": [
       {
-        "from": "../artifacts/engine-0.10.0/ChickadeeEngine",
+        "from": "../artifacts/engine-0.10.1/ChickadeeEngine",
         "to": "engine"
       }
     ],
     "win": {
       "target": "dir",
       "signAndEditExecutable": true,
+      "signExts": [".dll", ".pyd", ".node"],
+      "signtoolOptions": { "signingHashAlgorithms": ["sha256"], "rfc3161TimeStampServer": "http://timestamp.digicert.com" },
       "icon": "assets/app.ico"
     },
     "mac": {

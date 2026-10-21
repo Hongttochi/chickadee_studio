@@ -1,10 +1,10 @@
-# 탐색 그래프·Grok 근거 조사
+# 탐색 그래프·Groq 근거 조사
 
 2026-10-21 개발 소스에 구현한 기능이다. 0.6.3까지의 기존 배포 ZIP에 소스 변경이 소급 적용되는 것은 아니다. 새 패키지를 만들 때 `scripts/build-desktop.ps1`의 엔진·렌더러를 함께 빌드한다.
 
 ## 화면
 
-왼쪽 **검사 분석**에서 세 기능을 사용한다. 기존 디자인 파일은 수정하지 않았다. 구현은 `desktop/src/InspectionInsights.jsx`, 데이터 변환은 `inspection-model.mjs`, 영역에 한정된 배치는 `inspection.css`로 분리했다. 다른 화면 디자인에 옮길 때 컴포넌트와 preload API를 유지하면 된다.
+왼쪽 **검사 분석**에서 세 기능을 사용한다. 기존 디자인의 영역 배치와 색상을 유지한다. 구현은 `desktop/src/InspectionInsights.jsx`, 데이터 변환은 `inspection-model.mjs`, 영역에 한정된 배치는 `inspection.css`로 분리했다. 다른 화면 디자인에 옮길 때 컴포넌트와 preload API를 유지하면 된다.
 
 - **탐색 그래프**: 발견한 페이지, 실제 DOM 수집 상태, 스크롤·읽기 버튼 뒤의 상태, iframe 수집을 관측된 연결로 표시한다. 노드를 누르면 수집 근거를 확인한다. 검사 구성의 단계 연결 그래프와는 별개다. 새 화면을 연 상태에서 검사하면 실시간으로 갱신한다.
 - **AI 검토**: 키와 모델·사용량 한도를 적용하고 **전체 검토 시작**을 누른다. 전체 수집 영역을 순서대로 검토하며 한도 도달·중단 시 미검토 수를 표시한다. 완료된 의견은 Markdown 리포트로 저장할 수 있다. 자동 호출은 없다. API 키는 앱 세션의 메모리에만 보관하며 기록·설정 파일·저장소에 쓰지 않는다. 이미 설정한 세션에서는 키를 다시 입력하지 않고 한도를 낮출 수 있다.
@@ -23,11 +23,11 @@ Unicode 공식 confusables 데이터의 **18.0.0, 1,351개 제한 매핑**을 �
 
 데이터 출처·원본 SHA-256·필터는 `chickadee/data/confusables-ascii.json`, 라이선스는 같은 폴더 `LICENSE-UNICODE.txt`에 있다. 실행 중 Unicode 서버에 접속하지 않는다.
 
-## Grok 실행과 비용
+## Groq 실행과 비용
 
-제공자는 **Grok 하나**이고 요청 주소는 `https://api.x.ai/v1/chat/completions`로 고정한다. 다른 제공자·유료 검색 API·Grok 내장 검색·코드 실행 도구는 호출하지 않는다. 기본 모델은 xAI 공식 목록의 `grok-4.7`다. 기존 대화·도구 호출 형식을 유지하기 위해 호환 Chat Completions API를 사용한다. xAI는 신규 연동에 Responses API를 권장한다. [API 규격](https://docs.x.ai/developers/rest-api-reference/inference/chat-completions) · [모델 목록](https://docs.x.ai/developers/models)
+제공자는 **Groq 하나**이고 요청 주소는 `https://api.groq.com/openai/v1/chat/completions`로 고정한다. 다른 제공자·유료 검색 API·Groq 내장 검색·코드 실행 도구는 호출하지 않는다. 기본 모델은 Groq에서 제공하는 `openai/gpt-oss-20b`다. 요청은 Groq에만 보내며 다른 제공자의 키·결제는 사용하지 않는다. [Groq API 규격](https://console.groq.com/docs/api-reference) · [Groq 모델](https://console.groq.com/docs/model/openai/gpt-oss-20b)
 
-1. 모델이 등록된 `evidence_read`, `style_read`, `text_analyze` 중 필요한 조회를 선택한다.
+1. 모델이 등록된 `evidence_read`, `style_read`, `text_analyze`, `local_ai_read` 중 필요한 조회를 선택한다.
 2. 앱이 선택한 근거 ID와 도구 인자를 검증하고 **이미 수집된 근거만** 조회한다. 임의 URL·파일·명령 실행, 다른 실행의 근거 접근, 기존 탐지·사람 검토 수정은 허용하지 않는다.
 3. 별도 모델 호출에서 JSON 의견을 받는다. JSON Schema와 실제 조회한 근거 ID를 검증한다. 짧거나 잘린 문구·본문을 읽지 않은 의견은 보류로 처리한다.
 
@@ -35,13 +35,13 @@ Unicode 공식 confusables 데이터의 **18.0.0, 1,351개 제한 매핑**을 �
 
 추가 탐색은 별도 임시 Chromium 컨텍스트에서 기본 스크롤·DOM/CSS 수집만 수행한다. 사이트별 추가 리소스 허용이나 사용자 프로필의 클릭 동작을 상속하지 않는다. 모델에는 페이지당 최대 2개 영역·영역당 600자와 수집 상태를 보내며 스크린샷은 전송하지 않는다. 다른 게시물의 광고를 원래 게시물의 근거로 섞지 않도록 지시하고 원래 근거 ID와 실제 추가 근거 ID를 검증한다. 같은 사이트라고 같은 게시물임이 보장되는 것은 아니며, 모델 의견은 사람이 확인해야 한다.
 
-한 번의 기본 분석은 모델 요청 **2회**, 근거 조회 최대 **4개**다. 추가 탐색 시 계획·재판정 **2회**를 더해 최대 **4회**이며 기본 누적 한도를 올리지 않는다. 출력 요청당 최대 **512토큰**, 전체 **30초**, 단일 HTTP 대기 최대 **10초**, 추가 페이지 수집은 페이지당 최대 **10초**(남은 시간 안)다. 추가 방문은 분석당 최대 2개·검사당 누적 최대 6개다. 취소는 요청 전후에 확인하므로 이미 전송된 요청의 비용을 취소하지는 못한다. 실패·429·형식 오류 때 자동 재시도나 제공자 전환은 없다. 추가 확인이 끝나지 않으면 근거 부족 상태와 기록을 보존한다.
+한 번의 기본 분석은 모델 요청 **2회**, 근거 조회 최대 **4개**다. 추가 탐색 시 계획·재판정 **2회**를 더해 최대 **4회**이며 기본 누적 한도를 올리지 않는다. 출력 요청당 최대 **1,024토큰**, 전체 **30초**, 단일 HTTP 대기 최대 **10초**, 추가 페이지 수집은 페이지당 최대 **10초**(남은 시간 안)다. 추가 방문은 분석당 최대 2개·검사당 누적 최대 6개다. 취소는 요청 전후에 확인하므로 이미 전송된 요청의 비용을 취소하지는 못한다. 실패·429·형식 오류 때 자동 재시도나 제공자 전환은 없다. 추가 확인이 끝나지 않으면 근거 부족 상태와 기록을 보존한다.
 
 기본 누적 한도는 **검사 실행당 6회 / 24,000토큰**이다. 토큰은 요청 전에 UTF-8 크기로 보수적으로 예약하고, 정상 응답의 제공자 사용량으로 정산한다. 응답 실패·사용량 누락은 예약을 유지한다. 호출 여유가 2회 미만이면 새 분석을 시작하지 않는다. 사용량과 설정 한도는 `agent.json`에 요청 전에 저장하며 같은 기록을 다시 열어도 이어진다. 이미 저장한 실행 한도는 낮출 수 있지만 높이지 않는다. 새 검사는 별도 한도를 사용한다.
 
-이는 앱 내 호출·토큰 제어이며 계정 전체의 달러 한도는 아니다. 모델별 가격, 다른 앱에서 쓰는 같은 키와 새 검사들의 합산 비용까지 제한하려면 [xAI 콘솔](https://console.x.ai/)도 설정한다.
+이는 앱 내 호출·토큰 제어이며 계정 전체의 달러 한도는 아니다. 모델별 가격, 다른 앱에서 쓰는 같은 키와 새 검사들의 합산 비용까지 제한하려면 [Groq 콘솔](https://console.groq.com/settings/limits)도 설정한다.
 
-Grok에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전송한다. 본문 조회는 최대 1,600자다. URL·이메일·전화번호·키 모양 문자열을 마스킹하며 쿠키·인증 헤더·HTML 원본·전체 화면 이미지를 보내지 않는다. 자유 서술 개인정보까지 모두 제거하는 기능은 아니다. 페이지의 지시문은 데이터로 취급하며 도구 권한도 별도로 제한한다. [Grok 데이터 정책](https://console.grok.com/docs/your-data)을 참고한다.
+Groq에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전송한다. 본문 조회는 최대 1,600자다. URL·이메일·전화번호·키 모양 문자열을 마스킹하며 쿠키·인증 헤더·HTML 원본·전체 화면 이미지를 보내지 않는다. 자유 서술 개인정보까지 모두 제거하는 기능은 아니다. 페이지의 지시문은 데이터로 취급하며 도구 권한도 별도로 제한한다. [Groq 데이터 정책](https://console.groq.com/docs/your-data)을 참고한다.
 
 ## 저장과 로컬 API
 
@@ -51,7 +51,7 @@ Grok에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전�
 
 필수 탐지·광고 후보가 처음 나온 DOM 상태의 viewport를 JPEG로 촬영한다. 상태당 1장을 공유하며, 최대 24장·장당 200KB·총 3MB를 저장한다. 요소를 강제로 표시하거나 화면을 옮기지 않는다. 투명·화면 밖 요소의 문구가 이미지에 보이지 않을 수 있으므로 원문·계산된 CSS와 함께 검토한다. DOM 수집과 이미지 촬영은 순차 작업이라 그 사이 동적 페이지가 바뀔 수 있다. 촬영 시각·상태 ID·URL·해시가 함께 기록되며 해시는 파일 무결성 확인용이다.
 
-근거 패널의 **탐지 당시 화면**에서 확대하고 기록을 다시 열어 확인한다. 결과 폴더 `evidence/<SHA-256>.jpg`에 원본 JPEG도 저장한다. 추가 탐색 화면은 `agent-<SHA-256>.jpg`다. 화면이 없는 이전 기록·촬영 실패·저장 한도에서는 원문·CSS 근거를 표시한다. 이미지 파일은 로컬 저장만 하며 Grok로 전송하지 않는다. 촬영은 [Playwright screenshot API](https://playwright.dev/python/docs/screenshots)를 사용한다.
+근거 패널의 **탐지 당시 화면**에서 확대하고 기록을 다시 열어 확인한다. 결과 폴더 `evidence/<SHA-256>.jpg`에 원본 JPEG도 저장한다. 추가 탐색 화면은 `agent-<SHA-256>.jpg`다. 화면이 없는 이전 기록·촬영 실패·저장 한도에서는 원문·CSS 근거를 표시한다. 이미지 파일은 로컬 저장만 하며 Groq로 전송하지 않는다. 촬영은 [Playwright screenshot API](https://playwright.dev/python/docs/screenshots)를 사용한다.
 
 ![실제 로컬 합성 게시판 검사 후 근거 패널](images/evidence-panel-0.8.0.png)
 
@@ -60,12 +60,12 @@ Grok에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전�
 | 명령 | 인자 | 반환·효과 |
 | --- | --- | --- |
 | `inspection` | `run_id` | 그래프·영역·에이전트 상태 |
-| `agent-configure` | `api_key` 선택, `model`, `token_limit`, `call_limit` | 세션 설정. 키 생략 시 기존 세션 키 또는 `XAI_API_KEY` |
+| `agent-configure` | 최초 `api_key` 필수, `model`, `token_limit`, `call_limit` | 사용자가 입력한 세션 키만 사용. 이후 한도 변경 시 기존 세션 키 유지. 앱 종료 시 삭제 |
 | `agent-run` | `run_id`, `evidence_id` | 백그라운드 근거 조사 시작 |
 | `agent-status` | 없음 | 설정 여부·실행 상태·누적 사용량·의견 |
 | `agent-stop` | 없음 | 에이전트 취소 요청 |
 
-`inspection.read`, `agent.status`는 기존 로컬 tool-call 계약에도 등록했다. 비용 발생 명령과 인증 설정은 근거 조사 모델에 노출하지 않는다. `agent_connected`는 세션 설정 여부이며 `agent_available=true`, `providers=["grok"]`로 구현 가용성을 표시한다.
+`inspection.read`, `agent.status`는 기존 로컬 tool-call 계약에도 등록했다. 비용 발생 명령과 인증 설정은 근거 조사 모델에 노출하지 않는다. `agent_connected`는 세션 설정 여부이며 `agent_available=true`, `providers=["groq"]`로 구현 가용성을 표시한다.
 
 ## 검증과 재실행
 
@@ -83,8 +83,8 @@ node tests/inspection-smoke.cjs
 유료 실서버 검증은 자동 테스트에 포함하지 않는다. 필요할 때만 다음 명령을 직접 실행한다. 합성 문구만 사용하고 출력 파일에 사용량을 보존해 재실행 시 기존 한도를 이어 적용한다.
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/verify_grok_agent.py --output artifacts/grok-live-check.json
-# 또는 --env-file <사용자가 지정한 dotenv 경로>. XAI_API_KEY만 읽고 실행·복사하지 않는다.
+.\.venv\Scripts\python.exe scripts/verify_groq_agent.py --output artifacts/groq-live-check.json
+# 또는 --env-file <사용자가 지정한 dotenv 경로>. GROQ_API_KEY만 읽고 실행·복사하지 않는다.
 ```
 
-기존 0.7.0·0.8.0의 실서버 검증은 **Groq**에서 수행한 과거 결과다. `examples/groq-agent-smoke-2026-10-21.json`과 `examples/groq-exploration-smoke-2026-10-21.json`은 변경하지 않는다. Grok 실서버 호출 결과로 해석하지 않는다. 이번 xAI 전환은 로컬 모의 응답과 UI 통합 테스트로 확인하며 실제 유료 호출은 별도 실행해야 한다.
+기존 0.7.0·0.8.0의 실서버 검증은 **Groq**에서 수행한 과거 결과다. `examples/groq-agent-smoke-2026-10-21.json`과 `examples/groq-exploration-smoke-2026-10-21.json`은 변경하지 않는다. 0.10.1에서는 실제 Groq 모델 목록을 확인하고 현재 기본 모델의 근거 조회·JSON 판정을 다시 검증했다.

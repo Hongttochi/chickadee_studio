@@ -104,7 +104,7 @@ class FollowupTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(pixels).hexdigest(), image['sha256'])
             self.assertEqual((path.parent / image['relative_path']).read_bytes(), pixels)
             stub = FollowupStub()
-            with patch('chickadee.agent.grok_request', side_effect=stub):
+            with patch('chickadee.agent.groq_request', side_effect=stub):
                 bridge.command('agent-configure', {'api_key': 'test_key_not_real'})
                 bridge.command('agent-run', {'run_id': bridge.run_id, 'evidence_id': source['id']})
                 bridge.agent_worker.join(25)
@@ -123,7 +123,7 @@ class FollowupTests(unittest.TestCase):
             bridge.command('load', {'path': str(path)})
             insight = bridge.command('inspection', {'run_id': bridge.run_id})
             self.assertTrue(any(n['id'].startswith('agent_') for n in insight['graph']['nodes']))
-            self.assertTrue(any(e['label'] == 'Grok 추가 확인' for e in insight['graph']['edges']))
+            self.assertTrue(any(e['label'] == 'Groq 추가 확인' for e in insight['graph']['edges']))
             self.assertEqual(insight['agent']['ledger']['calls'], 4)
             self.assertNotIn('test_key_not_real', path.with_name('agent.json').read_text(encoding='utf-8'))
             ScanOutcome.load(path)

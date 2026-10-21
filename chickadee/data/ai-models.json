@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "kind": "text",
+      "path": "text.json",
+      "bytes": 367527,
+      "sha256": "3dcae1649a4a8a47f6a935abe9eb76fcd52ae47631bf1dd1a062c07a214dde31"
+    },
+    {
+      "kind": "visual",
+      "path": "visual.json",
+      "bytes": 172617,
+      "sha256": "9812cabad88f3b86e6820fa5e6b913c370fc28ae83b05183a13c15f6bec66c74"
+    }
+  ]
+}

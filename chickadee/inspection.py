@@ -133,6 +133,8 @@ def validate_inspection(report):
     """Legacy reports are accepted; malformed new feature data is rejected."""
     validate_screenshots(report.get('screenshots', {}))
     validate_ocr_images(report.get('ocr_images', []))
+    for row in [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]:
+        validate_local_ai(row.get('local_ai'))
     packets = report.get('evidence_packets', [])
     if not isinstance(packets, list) or len(packets) > InspectionTrace.MAX_PACKETS:
         raise ValueError('수집 영역 목록 형식 오류')
@@ -146,6 +148,7 @@ def validate_inspection(report):
         if not isinstance(packet.get('link_targets', []), list) or not all(isinstance(url, str) for url in packet.get('link_targets', [])):
             raise ValueError('영역 링크 형식 오류')
         seen.add(packet['id'])
+        validate_local_ai(packet.get('local_ai'))
     graph = report.get('exploration', {'nodes': [], 'edges': []})
     if not isinstance(graph, dict) or any(not isinstance(graph.get(k), list) for k in ('nodes', 'edges')):
         raise ValueError('탐색 그래프 형식 오류')
@@ -164,11 +167,31 @@ def validate_inspection(report):
             raise ValueError('탐색 연결 형식 오류')
 
 
+def validate_local_ai(value):
+    if value is None: return
+    if not isinstance(value, dict) or set(value) - {'text', 'visual'}: raise ValueError('AI 분석 형식 오류')
+    for signal in value.values():
+        if not isinstance(signal, dict) or signal.get('status') not in ('completed', 'unavailable'):
+            raise ValueError('AI 분석 상태 오류')
+        score = signal.get('score')
+        if score is not None and (type(score) not in (int, float) or not math.isfinite(score) or not 0 <= score <= 1):
+            raise ValueError('AI 모델 점수 오류')
+        if signal.get('status') == 'completed':
+            if signal.get('label') not in ('ad_context', 'phishing_pattern', 'review', 'no_features'):
+                raise ValueError('AI 분류 오류')
+            if not all(isinstance(signal.get(k), str) and len(signal[k]) < 200 for k in ('model', 'version', 'score_kind')):
+                raise ValueError('AI 모델 정보 오류')
+        features = signal.get('matched_features', [])
+        if not isinstance(features, list) or len(features) > 6 or any(not isinstance(s, str) or len(s) > 4 for s in features):
+            raise ValueError('AI 일치 특징 오류')
+
+
 def validate_screenshots(screenshots):
     if not isinstance(screenshots, dict) or len(screenshots) > 24:
         raise ValueError('근거 화면 목록 형식 오류')
     size = 0
     for value in screenshots.values():
+        if isinstance(value, dict): validate_local_ai(value.get('local_ai'))
         if not isinstance(value, dict) or not isinstance(value.get('data_url'), str) or not value['data_url'].startswith('data:image/jpeg;base64,'):
             raise ValueError('근거 화면은 내장 JPEG만 허용합니다.')
         try:

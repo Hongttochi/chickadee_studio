@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: chickadee-release
@@ -35,10 +36,13 @@ jobs:
     if: needs.version.outputs.release_needed == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
+    outputs:
+      signed: ${{ steps.signature.outputs.signed }}
     env:
       PLAYWRIGHT_BROWSERS_PATH: '0'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       APP_VERSION: ${{ needs.version.outputs.app_version }}
+      SIGNPATH_READY: ${{ vars.SIGNPATH_ENABLED == 'true' && vars.SIGNPATH_ORGANIZATION_ID != '' && vars.SIGNPATH_PROJECT_SLUG != '' && vars.SIGNPATH_SIGNING_POLICY_SLUG != '' && 'true' || 'false' }}
     defaults:
       run:
         shell: pwsh
@@ -68,12 +72,47 @@ jobs:
       - name: Prepare verified official OCR models
         run: .\.venv\Scripts\python.exe scripts/prepare_ocr_models.py
       - name: Python regression tests
-        run: .\.venv\Scripts\python.exe -m unittest discover -s tests -v
+        run: ./scripts/test-python.ps1
       - name: Desktop unit tests
         working-directory: desktop
         run: npm test
       - name: Build Windows app and bundled engine
         run: ./scripts/build-desktop.ps1 -SkipInstall
+      - name: Upload build for enrolled free code signing
+        if: env.SIGNPATH_READY == 'true'
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-signpath-input
+          path: artifacts/electron-${{ env.APP_VERSION }}/win-unpacked/
+          compression-level: 0
+          if-no-files-found: error
+      - name: Request enrolled SignPath signing and wait for approval
+        if: env.SIGNPATH_READY == 'true'
+        uses: SignPath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 900
+          output-artifact-directory: artifacts/signed-app
+      - name: Accept signed binaries without changing application or design
+        if: env.SIGNPATH_READY == 'true'
+        run: |
+          .\.venv\Scripts\python.exe scripts/accept_signed_app.py --original "artifacts/electron-$env:APP_VERSION/win-unpacked" --signed artifacts/signed-app
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify Windows code signatures before execution
+        id: signature
+        run: |
+          $taskRequire = $env:SIGNPATH_READY -eq 'true'
+          ./scripts/verify-windows-signatures.ps1 -AppDirectory "artifacts/electron-$env:APP_VERSION/win-unpacked" -AllNative:$taskRequire -RequireTrusted:$taskRequire
+          $taskReport = Get-Content "artifacts/electron-$env:APP_VERSION/win-unpacked/windows-signatures.json" -Raw | ConvertFrom-Json
+          $taskSigned = $taskReport.trusted -and $taskReport.all_native_checked
+          "signed=$($taskSigned.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          if (-not $taskSigned) { "Unsigned validation artifact only. Public release is held until free code signing is enrolled and verified." >> $env:GITHUB_STEP_SUMMARY }
       - name: Test packaged Windows app
         working-directory: desktop
         run: |
@@ -83,6 +122,8 @@ jobs:
           node tests/inspection-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/ocr-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/runtime-smoke.cjs
       - name: Package ZIP and SHA256
         run: .\.venv\Scripts\python.exe scripts/package-desktop.py
       - name: Verify release files
@@ -100,11 +141,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-test-diagnostics
-          path: artifacts/*.png
+          path: |
+            artifacts/*.png
+            artifacts/*.log
+            artifacts/python-tests/
           if-no-files-found: ignore
 
   publish-release:
     needs: [version, windows-build]
+    if: needs.windows-build.outputs.signed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

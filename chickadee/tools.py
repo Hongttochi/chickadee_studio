@@ -12,10 +12,15 @@ REVIEW = {**RUN, 'ids': {'type': 'array', 'items': {'type': 'string'}, 'minItems
           'status': {'enum': ['unreviewed', 'confirmed', 'dismissed']},
           'note': {'type': 'string', 'maxLength': 2000}, 'expected_revision': {'type': 'integer', 'minimum': 0}}
 CATALOG = [
+    {'name': 'runtime.info', 'method': 'runtime-info', 'effect': 'read',
+     'description': '현재 실행 환경과 사용 가능한 분석 기능을 조회합니다.', 'input_schema': schema()},
+    {'name': 'runtime.configure', 'method': 'runtime-configure', 'effect': 'local_write',
+     'description': '다음 검사에 사용할 자동·표준·절약 모드를 저장합니다.',
+     'input_schema': schema({'mode': {'enum': ['auto', 'standard', 'economy']}}, ['mode'])},
     {'name': 'inspection.read', 'method': 'inspection', 'effect': 'read',
      'description': '현재 실행의 탐색 그래프·수집 영역·AI 검토를 조회합니다.', 'input_schema': schema(RUN, ['run_id'])},
     {'name': 'agent.status', 'method': 'agent-status', 'effect': 'read',
-     'description': 'Grok 설정 여부·누적 사용량·검토 제안을 조회합니다.', 'input_schema': schema()},
+     'description': 'Groq 설정 여부·누적 사용량·검토 제안을 조회합니다.', 'input_schema': schema()},
     {'name': 'scan.start', 'method': 'start', 'effect': 'network_read',
      'description': '지정한 사이트와 한도에서 읽기 전용 검사를 시작합니다.',
      'input_schema': schema({'url': {'type': 'string', 'minLength': 1, 'maxLength': 4096},

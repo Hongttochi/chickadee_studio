@@ -6,6 +6,8 @@ import shutil
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
+if __import__('os').name == 'nt' and not str(ROOT).startswith('\\\\?\\'):
+    ROOT = Path('\\\\?\\' + str(ROOT))
 DESKTOP = ROOT / 'desktop'
 VERSION = json.loads((DESKTOP / 'package.json').read_text(encoding='utf-8'))['version']
 APP = ROOT / 'artifacts' / f'electron-{VERSION}' / 'win-unpacked'
@@ -39,11 +41,13 @@ def main():
         raise RuntimeError('Build scripts/build-desktop.ps1 first.')
     count = frontend_licenses()
     shutil.copytree(DESKTOP / 'licenses', APP / 'licenses', dirs_exist_ok=True)
-    for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md', 'agent-extension.md', 'inspection-agent.md']:
+    for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md', 'agent-extension.md', 'inspection-agent.md', 'windows-signing.md']:
         target = APP / 'docs' / name
         target.parent.mkdir(exist_ok=True)
         shutil.copy2(ROOT / 'docs' / name, target)
     shutil.copy2(ROOT / 'DESIGN.md', APP / 'DESIGN.md')
+    for name in ('LICENSE', 'NOTICE'):
+        shutil.copy2(ROOT / name, APP / name)
     (APP / 'README_FIRST.txt').write_text(
         f'Chickadee Studio {VERSION} / Windows x64\n\n'
         'ZIP 전체를 압축 해제한 다음 Chickadee.exe를 실행하세요.\n'
@@ -54,6 +58,12 @@ def main():
         '검사 구성의 포트를 연결하면 실제 실행 단계가 변경됩니다.\n'
         '사용 안내: docs/quickstart-windows.md, docs/desktop.md\n'
         '이미지 속 한국어 문구도 자동 검사합니다. OCR 모델은 동봉되어 별도 설치가 필요하지 않습니다.\n'
+        '학습한 문자·화면 AI 분석은 무료 로컬 처리입니다. 근거 패널과 검사 분석 → AI 검토에서 확인하세요.\n'
+        '설정 → 일반 → 실행 환경에서 자동·표준·절약 모드와 CPU·메모리를 확인합니다. 절약 모드는 이미지 OCR을 생략합니다.\n'
+        'OCR 기능 확인 버튼은 인터넷 접속 없이 동봉된 한국어 모델을 시험합니다. GPU는 필수가 아닙니다.\n'
+        'Groq 추가 검토는 AI 설정에서 키를 등록한 뒤 실행합니다. 기본 누적 한도: 검사당 6회 / 24,000토큰.\n'
+        'API 키는 현재 앱 세션에서만 사용하며, 환경 변수나 다른 프로젝트의 키를 자동 사용하지 않습니다.\n'
+        '코드 서명 상태: windows-signatures.json. 무료 서명 신청·배포 상태: docs/windows-signing.md\n'
         'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
     output = ROOT / 'artifacts' / f'Chickadee-Studio-{VERSION}-win-x64.zip'
     temporary = output.with_suffix('.zip.tmp')

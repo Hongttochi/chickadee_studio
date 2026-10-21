@@ -21,6 +21,7 @@ from . import __version__
 from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, analyze_candidate, CATEGORY_LABELS
 from .image_ocr import OCRSession, fetch_image, inline_image
+from .local_ai import enrich_report, visual_analysis, prepare_models
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write
 from .profiles import SiteProfile
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots
@@ -114,9 +115,15 @@ class ScanConfig:
     follow_links: bool = True
     detect_techniques: bool = True
     detect_candidates: bool = True
+    ocr_enabled: bool = True
+    ocr_max_images: int = 50
+    runtime_mode: str = 'standard'
 
     def __post_init__(self):
         normalize_url(self.entry_url)
+        if type(self.ocr_enabled) is not bool or type(self.ocr_max_images) is not int or not 1 <= self.ocr_max_images <= 50:
+            raise ValueError('OCR 실행·이미지 한도 설정 오류')
+        if self.runtime_mode not in ('standard', 'economy'): raise ValueError('실행 환경 모드 오류')
         if not self.allow_network and not is_loopback(self.entry_url):
             raise ValueError("로컬 전용 모드입니다. 외부 사이트를 검사하려면 --local-only 옵션 없이 실행하세요.")
         if not 1 <= self.max_pages <= 10000:
@@ -239,6 +246,9 @@ class _State:
     image_assets: dict = field(default_factory=dict)
     ocr_previews_bytes: int = 0
     ocr_disabled: bool = False
+    ocr_enabled: bool = True
+    ocr_max_images: int = 50
+    ocr_skipped: int = 0
     image_origins: set = field(default_factory=set)
     image_allow_network: bool = False
 
@@ -248,7 +258,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     emit = emit or (lambda event: None)
     started = datetime.now().astimezone()
     clock = time.monotonic()
-    state = _State()
+    state = _State(ocr_enabled=config.ocr_enabled, ocr_max_images=config.ocr_max_images)
     rules = Rules.load(config.rules_path)
     profile = SiteProfile.load(config.profile_path)
     status = "completed"
@@ -294,7 +304,8 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
               "exploration": state.trace.export(), "evidence_packets": list(state.trace.packets.values()),
               "screenshots": state.screenshots,
               "ocr_images": state.ocr_images,
-              "ocr_summary": {"engine": "PaddleOCR", "images": len(state.ocr_images),
+              "ocr_summary": {"engine": "PaddleOCR", "enabled": config.ocr_enabled, "skipped": state.ocr_skipped,
+                              "max_images": config.ocr_max_images, "runtime_mode": config.runtime_mode, "images": len(state.ocr_images),
                               "completed": sum(i['status'] == 'completed' for i in state.ocr_images),
                               "failed": sum(i['status'] != 'completed' for i in state.ocr_images)},
               "page_diagnostics": state.page_diagnostics,
@@ -314,7 +325,10 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
                          "retries": config.retries, "interval_sec": config.interval_sec},
               "enabled_stages": {"follow_links": config.follow_links, "techniques": config.detect_techniques,
                                  "candidates": config.detect_candidates, "live_preview": config.capture_previews}}
+    emit({'kind': 'phase', 'stage': 'classifier', 'action': 'local_ai', 'message': '학습한 로컬 AI로 문자 문맥과 화면 특징을 분석합니다.'})
+    await asyncio.to_thread(enrich_report, report, candidates=config.detect_candidates)
     report["candidate_count"] = len(report["ad_candidates"])
+    emit({'kind': 'local_ai', **report['local_ai']})
     report['paused_sec'] = round(control.paused_seconds if control else 0, 3)
     report['active_elapsed_sec'] = round(time.monotonic() - clock - report['paused_sec'], 3)
     report["csv_schema_version"] = "1.0"
@@ -339,6 +353,12 @@ def _final_candidates(state):
 
 async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile: SiteProfile, control=None):
     from playwright.async_api import async_playwright
+
+    emit({'kind': 'phase', 'stage': 'classifier', 'action': 'model_load', 'message': '로컬 AI 모델을 준비합니다.'})
+    try:
+        await asyncio.to_thread(prepare_models)
+    except Exception:
+        emit({'kind': 'warning', 'message': '로컬 AI 모델 준비 실패: 원문·규칙 검사는 계속합니다.'})
 
     script = Path(__file__).with_name("extract.js").read_text(encoding="utf-8")
     # Cancelling Playwright's __aenter__ can orphan its transport task. Finish
@@ -629,6 +649,8 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
                   "message": "DOM·본문·계산된 CSS·링크를 수집합니다."})
             links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules,
                                               profile.content_selector, config.detect_techniques, config.detect_candidates))
+            if config.detect_candidates and page.url not in state.pages:
+                await _evidence_screenshot(page, state, emit)
             if config.capture_previews:
                 try:
                     pixels = await page.screenshot(type='jpeg', quality=45, timeout=1500)
@@ -732,6 +754,7 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
                    "location": location, "evidence_text": hit["text"], "technique": hit["technique"]}
         state.findings.append(finding)
         state.evidence_details[finding["id"]] = {"analysis": hit["analysis"],
+            "url": page_url, "location": location,
             "style_reasons": hit.get("reasons", []), "computed_style": hit.get("computed_style", {}),
             "frame_flags": inherited, "action_sequence": list(state.actions),
             "scope_location": scope, "observed_at": datetime.now().astimezone().isoformat(),
@@ -813,10 +836,15 @@ async def _fetch_image_bounded(url, state):
 
 
 async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
+    if not state.ocr_enabled:
+        for image in images:
+            key = page_url, prefix + image['location'], hashlib.sha256(image['source_url'].encode()).hexdigest()
+            if key not in state.ocr_seen: state.ocr_seen.add(key); state.ocr_skipped += 1
+        return
     for image in images:
-        if len(state.ocr_images) >= 50 or state.ocr_disabled:
+        if len(state.ocr_images) >= state.ocr_max_images or state.ocr_disabled:
             if not state.ocr_disabled:
-                state.errors.append({'url': page_url, 'message': 'OCR 이미지 50개 처리 한도 도달'})
+                state.errors.append({'url': page_url, 'message': f'OCR 이미지 {state.ocr_max_images}개 처리 한도 도달'})
             break
         location = prefix + image['location']
         source = image['source_url']
@@ -892,6 +920,13 @@ async def _evidence_screenshot(page, state, emit):
             'observed_at': datetime.now().astimezone().isoformat(), 'capture': 'original_viewport',
         }
         state.screenshot_bytes += len(pixels)
+        try:
+            analysis = await asyncio.to_thread(visual_analysis, pixels)
+            state.screenshots[key]['local_ai'] = {'visual': analysis}
+            emit({'kind': 'local_ai_visual', 'url': page.url, 'screenshot_id': key, 'analysis': analysis})
+        except Exception:
+            # A model failure never discards the original screenshot or findings.
+            state.screenshots[key]['local_ai'] = {'visual': {'status': 'unavailable', 'message': '화면 모델 분석 실패'}}
         emit({'kind': 'evidence_screenshot', 'screenshot_id': key, 'sha256': state.screenshots[key]['sha256']})
         return key
     except Exception:

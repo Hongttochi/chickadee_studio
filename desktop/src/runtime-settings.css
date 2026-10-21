@@ -1,0 +1,14 @@
+.settings-modal .runtime-settings { border-top:0; border-bottom:1px solid #303033; padding:0 0 20px; margin:0 0 22px; font-size:12px; }
+.settings-modal .runtime-settings > summary { display:flex; justify-content:flex-start; gap:12px; cursor:pointer; color:#e4e4e7; font-weight:500; text-align:left; }
+.settings-modal .runtime-settings > summary span { margin-left:auto; color:#aaaab3; font-weight:400; }
+.runtime-settings dl { display:grid; grid-template-columns:110px 1fr; gap:10px 16px; margin:18px 0; }
+.runtime-settings dt { color:#aaaab3; }
+.runtime-settings dd { margin:0; color:#e4e4e7; font-variant-numeric:tabular-nums; }
+.runtime-mode { display:flex; gap:6px; }
+.runtime-mode button { min-width:74px; min-height:32px; border:1px solid #45454c; border-radius:2px; background:#252528; color:#c8c8d0; font:inherit; cursor:pointer; }
+.runtime-mode button[aria-pressed="true"] { border-color:#aaaab3; color:#fff; background:#333338; }
+.runtime-settings button:disabled { opacity:.45; cursor:default; }
+.runtime-mode-description, .runtime-info { margin:10px 0; color:#aaaab3; font-size:11px; line-height:1.6; }
+.runtime-actions { display:flex; gap:12px; }
+.runtime-actions button { min-height:32px; padding:0 10px; border:1px solid #45454c; border-radius:2px; background:#252528; color:#e4e4e7; font:inherit; cursor:pointer; }
+.runtime-settings button:focus-visible, .runtime-settings summary:focus-visible { outline:2px solid #527db1; outline-offset:3px; }

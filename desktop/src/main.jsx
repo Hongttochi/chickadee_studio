@@ -10,6 +10,8 @@ import React, {
 import { createRoot } from "react-dom/client";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
 import ImageOCR from "./ImageOCR.jsx";
+import LocalAIAnalysis from "./LocalAIAnalysis.jsx";
+import RuntimeSettings from "./RuntimeSettings.jsx";
 import ShortcutSettings from "./ShortcutSettings.jsx";
 import { defaults as defaultShortcuts, validateShortcuts, fromEvent } from "./shortcuts.mjs";
 import SettingsNav from "./SettingsNav.jsx";
@@ -218,12 +220,14 @@ const LABELS = {
   LOAN: "대출 모집 의심",
   INVESTMENT: "투자 모집 의심",
   COMMERCIAL: "구매·추천 유도",
+  AI_CONTEXT: "AI 광고 문맥",
 };
 const TYPE_ICONS = {
   GAMBLING: "Dice5",
   INVESTMENT: "TrendingUp",
   LOAN: "Landmark",
   COMMERCIAL: "ShoppingCart",
+  AI_CONTEXT: "Sparkles",
   ADULT: "ShieldAlert",
   HOMOGLYPH: "Fingerprint",
   JAMO: "TextSearch",
@@ -567,7 +571,7 @@ function App() {
     [eventFilter, setEventFilter] = useState("all"),
     [notice, setNotice] = useState(null);
   const [reviewNotice, setReviewNotice] = useState(null);
-  const [agentConfig, setAgentConfig] = useState({ model: "grok-4.7", token_limit: 24000, call_limit: 6 });
+  const [agentConfig, setAgentConfig] = useState({ model: "openai/gpt-oss-20b", token_limit: 24000, call_limit: 6 });
   const [inspectionTab, setInspectionTab] = useState("graph");
   const [shortcuts, setShortcuts] = useState(defaultShortcuts);
   const [settingsTab, setSettingsTab] = useState("general");
@@ -1483,6 +1487,7 @@ function App() {
                 <div><h2>{{ general: "일반", ai: "AI 연결", notifications: "알림", schedules: "예약 검사", shortcuts: "단축키", updates: "업데이트" }[settingsTab]}</h2><p>{{ general: "검사 방식과 결과 저장 위치를 관리합니다.", ai: "근거 검토에 사용할 AI 제공자와 사용 한도를 설정합니다.", notifications: "검사 완료 알림과 채널별 리포트를 설정합니다.", schedules: "정해진 시간에 저장된 구성으로 검사를 실행합니다.", shortcuts: "자주 쓰는 명령의 키보드 단축키를 설정합니다.", updates: "최신 릴리스를 확인하고 새 버전을 다운로드합니다." }[settingsTab]}</p></div>
               </div>
             {settingsTab === "general" && <>
+            <RuntimeSettings disabled={running} />
             <div className="settings-field">
               <span>사이트 탐색 설정</span>
               <ActionMenu
@@ -2766,6 +2771,7 @@ function RecordDetail({
           ))}
         </ul>
         <ImageOCR image={outcome?.report.ocr_images?.find((image) => image.id === detail.image_id)} />
+        <LocalAIAnalysis analysis={detail.local_ai} />
         <EvidenceScreenshot screenshot={outcome?.report.screenshots?.[detail.screenshot_id]}
           hidden={record.technique === "TRANSPARENT" || record.technique === "OFFSCREEN"} />
         <div className="review-editor">

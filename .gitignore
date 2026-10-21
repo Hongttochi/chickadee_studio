@@ -15,6 +15,10 @@ desktop/dist/
 .env
 .env.*
 !.env.example
+*.pfx
+*.p12
+*.pem
+*.key
 
 # Generated findings and collected content
 result.json
@@ -30,3 +34,6 @@ screenshots/
 
 # Private application forms and submission packages
 submission-private/
+
+# Local-only OCR training workspace, datasets, weights and upload bundles
+/training-local/

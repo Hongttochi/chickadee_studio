@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Search, X, SlidersHorizontal, Sparkles, Bell, CalendarClock, BookOpen, Keyboard, Download } from 'lucide-react';
 const sections = [
   { label: '기본 설정', items: [
-    { id: 'general', label: '일반', Icon: SlidersHorizontal, keywords: '검사 탐색 프로필 최대 페이지 제한시간 결과 저장 폴더 위치 미리보기 브라우저 속도 천천히 빠르게 간격 대기', detail: '검사 방식 · 저장 위치' },
+    { id: 'general', label: '일반', Icon: SlidersHorizontal, keywords: '검사 탐색 프로필 최대 페이지 제한시간 결과 저장 폴더 위치 미리보기 브라우저 속도 천천히 빠르게 간격 대기 환경 CPU 메모리 사양 OCR 자동 표준 절약', detail: '검사 방식 · 실행 환경 · 저장 위치' },
     { id: 'notifications', label: '알림', Icon: Bell, keywords: 'slack 슬랙 discord 디스코드 웹훅 webhook 리포트 데스크톱 소리 집중 모드', detail: '데스크톱 · Slack · Discord' },
     { id: 'updates', label: '업데이트', Icon: Download, keywords: '버전 릴리스 release 다운로드 설치 update', detail: '버전 확인 · 다운로드' },
   ] },
   { label: '인터페이스', items: [{ id: 'shortcuts', label: '단축키', Icon: Keyboard, keywords: '키보드 shortcut 빠른 명령 ctrl command 키 조합', detail: '키 지정 · 검색 · 기본값 복원' }] },
-  { label: 'AI 기능', items: [{ id: 'ai', label: 'AI 연결', Icon: Sparkles, keywords: 'grok 그록 xai api 키 모델 토큰 한도 에이전트 검토', detail: 'Grok · API 키 · 사용 한도' }] },
+  { label: 'AI 기능', items: [{ id: 'ai', label: 'AI 연결', Icon: Sparkles, keywords: 'groq 그록 그로크 api 키 모델 토큰 한도 에이전트 검토', detail: 'Groq · API 키 · 사용 한도' }] },
   { label: '자동화', items: [{ id: 'schedules', label: '예약 검사', Icon: CalendarClock, keywords: '배치 스케줄 일정 시간 매일 요일 반복 예약 자동 실행', detail: '실행 시간 · 반복 일정' }] },
 ];
 export default function SettingsNav({ selected, onSelect, onBack, onGuide }) {

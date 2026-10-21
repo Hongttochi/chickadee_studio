@@ -86,6 +86,15 @@ def verify(value, directory):
                 with archive.open(name) as stream:
                     if file_digest(stream, 'sha256').hexdigest() != model['sha256']:
                         raise ValueError('ZIP OCR model SHA256 mismatch: ' + model['path'])
+        if tuple(map(int, value.split('.'))) >= (0, 10, 1):
+            manifest = json.loads((ROOT / 'chickadee/data/ai-models.json').read_text(encoding='utf-8'))
+            for model in manifest['files']:
+                name = prefix + 'resources/engine/_internal/chickadee/data/ai-models/' + model['path']
+                if name not in files or archive.getinfo(name).file_size != model['bytes']:
+                    raise ValueError('ZIP is missing local AI model: ' + model['path'])
+                with archive.open(name) as stream:
+                    if file_digest(stream, 'sha256').hexdigest() != model['sha256']:
+                        raise ValueError('ZIP local AI model SHA256 mismatch: ' + model['path'])
         bad = archive.testzip()
         if bad:
             raise ValueError(f"ZIP CRC check failed: {bad}")

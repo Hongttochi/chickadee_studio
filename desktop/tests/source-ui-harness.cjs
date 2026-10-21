@@ -28,8 +28,8 @@ exports.launch = async ({ env }) => {
     showOpenDialog: async () => ({ canceled: true }),
   };
   const backend = new Backend(
-    path.join(root, process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python"),
-    ["-m", "chickadee.bridge", "--data-dir", data],
+    env.CHICKADEE_TEST_ENGINE || path.join(root, process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python"),
+    [...(env.CHICKADEE_TEST_ENGINE ? [] : ["-m", "chickadee.bridge"]), "--data-dir", data],
     { cwd: root, env: { ...env, PYTHONIOENCODING: "utf-8" } },
     (event) => {
       if (!closing && page)
@@ -82,7 +82,8 @@ exports.launch = async ({ env }) => {
     if (method === "notificationState") return notifications.state();
     if (method === "saveNotifications") return notifications.save(value);
     if (method === "testNotification") return notifications.testDesktop();
-    const extensions = { inspection: "inspection", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop" };
+    const extensions = { inspection: "inspection", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop",
+      environment: "runtime-info", configureRuntime: "runtime-configure", testRuntime: "runtime-test" };
     if (extensions[method]) return backend.request(extensions[method], value || {});
     if (method === "state")
       return {
@@ -169,7 +170,7 @@ exports.launch = async ({ env }) => {
           "resume",
           "stop",
           "capabilities",
-          "inspection", "configureAgent", "runAgent", "stopAgent", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
+          "inspection", "configureAgent", "runAgent", "stopAgent", "environment", "configureRuntime", "testRuntime", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
           "updateState", "checkUpdates", "downloadUpdate", "showUpdateFile", "openReleaseNotes",
           "preferences",
           "history",

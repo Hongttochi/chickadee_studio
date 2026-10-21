@@ -21,6 +21,8 @@ from .tools import capabilities, resolve_tool
 from .inspection import validate_inspection, validate_screenshots
 from .agent import EvidenceAgent, settings as agent_settings
 from .site_explorer import exploration_options, collect_page
+from .runtime import environment, probe_png, MODES
+from .image_ocr import OCRSession
 import os
 
 
@@ -50,6 +52,16 @@ class DesktopBridge:
         self.agent_worker = None
         self.agent_stop = Event()
         self.agent_data = {'ledger': {}, 'assessments': [], 'events': []}
+        self.runtime_path = self.data_dir / 'runtime-settings.json'
+        try:
+            self.runtime_mode = json.loads(self.runtime_path.read_text(encoding='utf-8'))['mode']
+            if self.runtime_mode not in MODES: raise ValueError('runtime mode')
+        except (OSError, ValueError, KeyError, TypeError): self.runtime_mode = 'auto'
+        self.runtime_worker = None
+        self.runtime_stop = Event()
+        self.ocr_check = {'status': 'not_run'}
+        self.run_environment = None
+        self.startup_environment = environment(self.runtime_mode)
         try:
             self.history = json.loads(self.history_path.read_text(encoding='utf-8'))[:30]
         except (OSError, ValueError, TypeError):
@@ -74,9 +86,26 @@ class DesktopBridge:
     def command(self, method, params):
         if not isinstance(params, dict):
             raise ValueError('명령 인자가 올바르지 않습니다.')
+        if method == 'runtime-info':
+            if params: raise ValueError('환경 조회에는 추가 인자를 사용하지 않습니다.')
+            return {**environment(self.runtime_mode), 'ocr_check': dict(self.ocr_check)}
+        if method == 'runtime-configure':
+            if set(params) != {'mode'} or params['mode'] not in MODES: raise ValueError('실행 환경 설정 오류')
+            if self.running: raise ValueError('현재 검사 완료 후 실행 환경을 변경하세요.')
+            atomic_write(self.runtime_path, (json.dumps({'mode': params['mode']})+'\n').encode('utf-8'))
+            self.runtime_mode = params['mode']
+            return self.command('runtime-info', {})
+        if method == 'runtime-test':
+            if params: raise ValueError('기능 확인에는 추가 인자를 사용하지 않습니다.')
+            if self.running: raise ValueError('검사 완료 후 기능 확인을 실행하세요.')
+            if self.runtime_worker and self.runtime_worker.is_alive(): return {'started': False, 'status': 'running'}
+            self.runtime_stop.clear(); self.ocr_check = {'status': 'running'}
+            self.runtime_worker = Thread(target=self._check_ocr_runtime, daemon=True)
+            self.runtime_worker.start()
+            return {'started': True}
         if method == 'capabilities':
             return {**capabilities(), 'agent_available': True, 'agent_connected': self.agent_config is not None,
-                    'providers': ['grok']}
+                    'providers': ['groq']}
         if method in ('inspection', 'agent-configure', 'agent-run', 'agent-stop', 'agent-status'):
             return self._inspection_command(method, params)
         if method == 'tool-call':
@@ -130,6 +159,8 @@ class DesktopBridge:
             self.emit({'kind': 'review_updated', 'ids': params['ids'], 'status': params['status'], 'revision': value['revision']})
             return value
         if method == 'start':
+            if self.runtime_worker and self.runtime_worker.is_alive():
+                raise ValueError('OCR 기능 확인 완료 후 검사를 시작하세요.')
             if self.running or self.agent_worker and self.agent_worker.is_alive():
                 raise ValueError('이미 검사 중입니다.')
             flags = compile_workflow(params.get('workflow'))
@@ -139,10 +170,14 @@ class DesktopBridge:
             # Frozen resources are collected beside chickadee/ under _internal.
             root = Path(__file__).resolve().parent.parent
             profile_path = root/'profiles'/('inuri-test.json' if profile == 'test' else 'public-site.json') if profile != 'default' else None
+            self.run_environment = environment(self.runtime_mode)
             config = ScanConfig(params.get('url', ''), max_pages=params.get('max_pages', 100),
                                 timeout_sec=params.get('timeout_sec', 300), settle_ms=params.get('settle_ms', 350),
                                 interval_sec=params.get('interval_sec', .5), allow_network=True,
-                                profile_path=profile_path, capture_previews=params.get('preview', True), **flags)
+                                profile_path=profile_path, capture_previews=params.get('preview', True),
+                                ocr_enabled=self.run_environment['features']['ocr_enabled'],
+                                ocr_max_images=self.run_environment['ocr_max_images'],
+                                runtime_mode=self.run_environment['effective_mode'], **flags)
             output_root = Path(params['output_root']) if params.get('output_root') else self.data_dir/'scans'
             folder = output_root/(datetime.now().strftime('%Y%m%d-%H%M%S')+'-'+uuid.uuid4().hex[:6])
             self.stop = Event()
@@ -258,9 +293,9 @@ class DesktopBridge:
                 raise ValueError('에이전트 종료 후 설정을 변경하세요.')
             self.agent_config = agent_settings({**params, 'api_key': params.get('api_key') or
                                                  (self.agent_config or {}).get('api_key', '')})
-            return {'configured': True, 'provider': 'grok', **{k: v for k, v in self.agent_config.items() if k != 'api_key'}}
+            return {'configured': True, 'provider': 'groq', **{k: v for k, v in self.agent_config.items() if k != 'api_key'}}
         if method == 'agent-status':
-            return {'provider': 'grok', 'configured': self.agent_config is not None or bool(os.environ.get('XAI_API_KEY')),
+            return {'provider': 'groq', 'configured': self.agent_config is not None,
                     'running': bool(self.agent_worker and self.agent_worker.is_alive()),
                     'ledger': self.agent_data.get('ledger', {}), 'assessments': self.agent_data.get('assessments', []),
                     'report': self.agent_data.get('report'),
@@ -291,11 +326,12 @@ class DesktopBridge:
                 source = next((n for n in graph['nodes'] if visit['source_evidence_id'] in n.get('packet_ids', [])), None)
                 target = next((n for n in visit['graph']['nodes'] if n['kind'] == 'page'), None)
                 if source and target:
-                    edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'Grok 추가 확인'})
+                    edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'Groq 추가 확인'})
                 packets.update((p['id'], {**p, 'supplemental': True, 'snapshot_id': prefix + (p.get('snapshot_id') or '')}) for p in visit['packets'] if p['id'] not in packets)
                 screenshots.update((prefix + key, image) for key, image in visit.get('screenshots', {}).items())
             return {'run_id': self.run_id, 'graph': {**graph, 'nodes': nodes, 'edges': edges}, 'packets': list(packets.values()),
-                    'screenshots': screenshots, 'ocr_images': report.get('ocr_images', []),
+                    'screenshots': screenshots, 'ocr_images': report.get('ocr_images', []), 'local_ai': report.get('local_ai'),
+                    'ocr_summary': report.get('ocr_summary'),
                     'agent': self._inspection_command('agent-status', {})}
         if self.running or self.outcome is None:
             raise ValueError('검사 완료 후 실행하세요.')
@@ -306,12 +342,13 @@ class DesktopBridge:
                 packets = self.outcome.report.get('evidence_packets', [])
                 if not packets:
                     raise ValueError('검토할 수집 영역이 없습니다.')
+                packets = sorted(packets, key=lambda p: not any(s.get('review_priority') == 'high' for s in p.get('local_ai', {}).values()))
                 config = self.agent_config or agent_settings({})
                 self.agent_stop = Event()
                 self.agent_data['report'] = {'total': len(packets), 'completed': 0, 'status': 'running', 'assessments': []}
                 self.agent_worker = Thread(target=self._run_agent_report, args=(config, packets), daemon=True)
                 self.agent_worker.start()
-                return {'started': True, 'provider': 'grok', 'scope': 'all'}
+                return {'started': True, 'provider': 'groq', 'scope': 'all'}
             packet = next((p for p in self.outcome.report.get('evidence_packets', []) if p['id'] == params.get('evidence_id')), None)
             if packet is None:
                 raise ValueError('검토할 내용을 찾지 못했습니다. 검사 기록을 다시 열어 주세요.')
@@ -319,12 +356,31 @@ class DesktopBridge:
             self.agent_stop = Event()
             self.agent_worker = Thread(target=self._run_agent, args=(config, packet), daemon=True)
             self.agent_worker.start()
-            return {'started': True, 'provider': 'grok', 'evidence_id': packet['id']}
+            return {'started': True, 'provider': 'groq', 'evidence_id': packet['id']}
         raise ValueError('지원하지 않는 검사 확장 명령입니다.')
+
+    def _check_ocr_runtime(self):
+        async def probe():
+            worker = OCRSession(); task = asyncio.create_task(worker.recognize(probe_png()))
+            try:
+                while not task.done():
+                    if self.runtime_stop.is_set(): raise asyncio.CancelledError()
+                    await asyncio.wait({task}, timeout=.1)
+                result = await task
+                if result.get('status') != 'completed': raise ValueError(result.get('message', 'OCR 구동 확인 실패'))
+                return {'status': 'completed', 'model': result['model'], 'device': 'cpu', 'network_requests': 0}
+            finally:
+                if not task.done(): task.cancel(); await asyncio.gather(task, return_exceptions=True)
+                await worker.close()
+        try:
+            with asyncio.Runner() as runner:
+                runner.get_loop(); self.ocr_check = runner.run(probe())
+        except asyncio.CancelledError: self.ocr_check = {'status': 'cancelled'}
+        except Exception as error: self.ocr_check = {'status': 'failed', 'message': str(error)[:300]}
 
     def _run_agent_report(self, config, packets):
         report = self.agent_data['report']
-        self.emit({'kind': 'agent_started', 'scope': 'all', 'provider': 'grok'})
+        self.emit({'kind': 'agent_started', 'scope': 'all', 'provider': 'groq'})
         try:
             for packet in packets:
                 if self.agent_stop.is_set():
@@ -352,7 +408,7 @@ class DesktopBridge:
             self.emit(event)
         try:
             if not batch:
-                observe({'kind': 'agent_started', 'evidence_id': packet['id'], 'provider': 'grok'})
+                observe({'kind': 'agent_started', 'evidence_id': packet['id'], 'provider': 'groq'})
             agent = EvidenceAgent(config, self.agent_data.get('ledger'), stop=self.agent_stop, emit=observe, persist=persist)
             persist(agent.ledger)
             entry = self.outcome.result['meta']['entry_url']
@@ -364,7 +420,9 @@ class DesktopBridge:
                     if event['kind'] in ('phase', 'request_blocked', 'warning'):
                         observe({'kind': 'agent_step', 'action': 'browser_' + event['kind'],
                                  **{k: v for k, v in event.items() if k in ('url', 'message', 'reason', 'target_url')}})
-                outcome = collect_page(option, entry, timeout, self.agent_stop, progress)
+                ocr = self.outcome.report.get('ocr_summary', {})
+                outcome = collect_page(option, entry, timeout, self.agent_stop, progress,
+                    ocr_enabled=ocr.get('enabled', True), ocr_max_images=ocr.get('max_images', 50))
                 packets = outcome.report.get('evidence_packets', [])[:12]
                 ids = {p['id'] for p in packets}
                 graph = outcome.report['exploration']
@@ -421,6 +479,7 @@ class DesktopBridge:
                 self.outcome = runner.run(scan(config, self.stop, observe, self.control))
             observe({'kind': 'phase', 'stage': 'report', 'action': 'save', 'message': 'JSON·CSV·탐색 보고서와 실행 기록을 저장합니다.'})
             self.outcome.report['workflow'] = workflow
+            self.outcome.report['runtime_environment'] = self.run_environment
             self.outcome.report['run_id'] = self.run_id
             self.outcome.report['desktop_options'] = {'demo': demo, 'preview': config.capture_previews}
             path = self.outcome.save(folder)
@@ -481,6 +540,9 @@ def main():
             send({'id': request.get('id') if isinstance(request, dict) else None, 'error': str(exc)})
     bridge.stop.set()
     bridge.agent_stop.set()
+    bridge.runtime_stop.set()
+    if bridge.runtime_worker:
+        bridge.runtime_worker.join(timeout=3)
     if bridge.agent_worker:
         bridge.agent_worker.join(timeout=11)
     if bridge.worker:

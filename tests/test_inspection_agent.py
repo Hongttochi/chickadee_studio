@@ -10,7 +10,7 @@ from threading import Event, Thread
 import unittest
 from unittest.mock import patch
 
-from chickadee.agent import EvidenceAgent, ENDPOINT, grok_request
+from chickadee.agent import EvidenceAgent, ENDPOINT, groq_request
 from chickadee.bridge import DesktopBridge
 from chickadee.detection import analyze, techniques
 from chickadee.inspection import InspectionTrace, validate_inspection
@@ -118,7 +118,7 @@ class InspectionTests(unittest.TestCase):
                 self.assertTrue(insight['graph']['edges'])
                 self.assertTrue(any(n['kind'] == 'state' for n in insight['graph']['nodes']))
                 path = Path(bridge.output_path); original = path.read_bytes()
-                with patch('chickadee.agent.grok_request', side_effect=grok_stub):
+                with patch('chickadee.agent.groq_request', side_effect=grok_stub):
                     bridge.command('agent-configure', {'api_key': 'test_key_not_real'})
                     bridge.command('agent-run', {'run_id': bridge.run_id, 'evidence_id': next(p['id'] for p in insight['packets'] if '카지노' in p['text'])})
                     bridge.agent_worker.join(5)
@@ -234,20 +234,36 @@ class AgentTests(unittest.TestCase):
                 return Response()
         opener = Opener()
         with patch('chickadee.agent.urllib.request.build_opener', return_value=opener):
-            grok_request({'model': 'example'}, 'test_key_not_real', 1)
+            groq_request({'model': 'example'}, 'test_key_not_real', 1)
         self.assertEqual(opener.request.full_url, ENDPOINT)
         self.assertEqual(opener.request.get_method(), 'POST')
         with patch('chickadee.agent.urllib.request.build_opener', side_effect=OSError('secret')):
-            with self.assertRaises(OSError): grok_request({}, 'test_key_not_real', 1)
+            with self.assertRaises(OSError): groq_request({}, 'test_key_not_real', 1)
 
-class XaiMigrationTests(unittest.TestCase):
-    def test_xai_endpoint_key_source_and_old_key_rejection(self):
+class GroqOnlyTests(unittest.TestCase):
+    def test_desktop_requires_user_key_and_forgets_it_on_restart(self):
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {'GROQ_API_KEY': 'gsk_ambient123456789'}):
+            bridge = DesktopBridge(folder, lambda _: None)
+            self.assertFalse(bridge.command('agent-status', {})['configured'])
+            with self.assertRaisesRegex(ValueError, 'API 키를 입력'):
+                bridge.command('agent-configure', {})
+            bridge.command('agent-configure', {'api_key': 'gsk_userinput123456789'})
+            self.assertTrue(bridge.command('agent-status', {})['configured'])
+            bridge.command('agent-configure', {'token_limit': 1000, 'call_limit': 1})
+            self.assertEqual(bridge.agent_config['api_key'], 'gsk_userinput123456789')
+            self.assertFalse(DesktopBridge(folder, lambda _: None).command('agent-status', {})['configured'])
+            for file in Path(folder).rglob('*.json'):
+                self.assertNotIn('gsk_userinput123456789', file.read_text(encoding='utf-8'))
+
+    def test_groq_endpoint_key_source_and_other_provider_rejection(self):
         from chickadee.agent import settings, DEFAULT_MODEL, redact
-        self.assertEqual(ENDPOINT, 'https://api.x.ai/v1/chat/completions')
-        self.assertEqual(DEFAULT_MODEL, 'grok-4.7')
+        self.assertEqual(ENDPOINT, 'https://api.groq.com/openai/v1/chat/completions')
+        self.assertEqual(DEFAULT_MODEL, 'openai/gpt-oss-20b')
         with patch.dict(os.environ, {'XAI_API_KEY': 'xai-testkey123456789', 'GROQ_API_KEY': 'gsk_oldkey123456789'}, clear=True):
-            self.assertEqual(settings({})['api_key'], 'xai-testkey123456789')
-        with patch.dict(os.environ, {'GROQ_API_KEY': 'gsk_oldkey123456789'}, clear=True):
+            with self.assertRaisesRegex(ValueError, 'API 키를 입력'):
+                settings({})
+            self.assertEqual(settings({'api_key': 'gsk_userkey123456789'})['api_key'], 'gsk_userkey123456789')
+        with patch.dict(os.environ, {'XAI_API_KEY': 'xai-testkey123456789'}, clear=True):
             with self.assertRaises(ValueError): settings({})
-        with self.assertRaises(ValueError): settings({'api_key': 'gsk_oldkey123456789'})
+        with self.assertRaises(ValueError): settings({'api_key': 'xai-testkey123456789'})
         self.assertNotIn('xai-testkey123456789', redact('key xai-testkey123456789'))
