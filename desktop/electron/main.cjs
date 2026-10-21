@@ -252,7 +252,7 @@ async function initialize() {
   handler("pause", () => backend.request("pause"));
   handler("resume", () => backend.request("resume"));
   handler("capabilities", () => backend.request("capabilities"));
-  for (const name of ["inspection", "agent-configure", "agent-run", "agent-stop", "runtime-info", "runtime-configure", "runtime-test"]) {
+  for (const name of ["inspection", "agent-configure", "agent-run", "agent-stop", "runtime-info", "runtime-configure", "runtime-test", "content-analyze"]) {
     handler(name, (value) => backend.request(name, value || {}));
   }
   handler("preferences", (value) => savePreferences(value));

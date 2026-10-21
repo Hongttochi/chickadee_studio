@@ -213,4 +213,4 @@ The linked documents are primarily in Korean.
 
 ## License and code signing
 
-Original project code is licensed under [Apache-2.0](LICENSE). Third-party components retain their respective licenses. **Code signing policy:** [Windows signing and free signing enrollment](docs/windows-signing.md). Version 0.10.1 remains a validation build pending signing enrollment; public releases require trusted code signatures and passing native app tests.
+Original project code is licensed under [Apache-2.0](LICENSE). Third-party components retain their respective licenses.

@@ -2,8 +2,10 @@
 import argparse
 import asyncio
 import base64
+from copy import deepcopy
 from datetime import datetime
 import json
+import hashlib
 from pathlib import Path
 import sys
 from threading import Event, Lock, Thread
@@ -23,7 +25,7 @@ from .agent import EvidenceAgent, settings as agent_settings
 from .site_explorer import exploration_options, collect_page
 from .runtime import environment, probe_png, MODES
 from .image_ocr import OCRSession
-import os
+from .content_analysis import inputs as content_inputs, analyze_content
 
 
 class DesktopBridge:
@@ -62,6 +64,9 @@ class DesktopBridge:
         self.ocr_check = {'status': 'not_run'}
         self.run_environment = None
         self.startup_environment = environment(self.runtime_mode)
+        self.content_worker = None
+        self.content_stop = Event()
+        self.content_data = None
         try:
             self.history = json.loads(self.history_path.read_text(encoding='utf-8'))[:30]
         except (OSError, ValueError, TypeError):
@@ -86,6 +91,23 @@ class DesktopBridge:
     def command(self, method, params):
         if not isinstance(params, dict):
             raise ValueError('명령 인자가 올바르지 않습니다.')
+        if method == 'content-analyze':
+            if 'analysis_id' in params:
+                if set(params) - {'analysis_id', 'cancel'} or type(params.get('cancel', False)) is not bool:
+                    raise ValueError('분석 조회 인자 오류')
+                if not self.content_data or params['analysis_id'] != self.content_data['analysis_id']:
+                    raise ValueError('현재 직접 분석 ID와 일치하지 않습니다.')
+                if params.get('cancel') and self.content_worker and self.content_worker.is_alive(): self.content_stop.set()
+                return deepcopy(self.content_data)
+            text, pixels = content_inputs(params)
+            if self.running or any(worker and worker.is_alive() for worker in (self.agent_worker, self.runtime_worker, self.content_worker)):
+                raise ValueError('진행 중인 검사·분석을 마친 후 입력하세요.')
+            runtime = environment(self.runtime_mode)
+            self.content_stop.clear()
+            self.content_data = {'analysis_id': uuid.uuid4().hex, 'status': 'running'}
+            self.content_worker = Thread(target=self._analyze_content, args=(text, pixels, runtime), daemon=True)
+            self.content_worker.start()
+            return {'analysis_id': self.content_data['analysis_id'], 'status': 'started'}
         if method == 'runtime-info':
             if params: raise ValueError('환경 조회에는 추가 인자를 사용하지 않습니다.')
             return {**environment(self.runtime_mode), 'ocr_check': dict(self.ocr_check)}
@@ -98,6 +120,7 @@ class DesktopBridge:
         if method == 'runtime-test':
             if params: raise ValueError('기능 확인에는 추가 인자를 사용하지 않습니다.')
             if self.running: raise ValueError('검사 완료 후 기능 확인을 실행하세요.')
+            if self.content_worker and self.content_worker.is_alive(): raise ValueError('직접 분석 완료 후 기능 확인을 실행하세요.')
             if self.runtime_worker and self.runtime_worker.is_alive(): return {'started': False, 'status': 'running'}
             self.runtime_stop.clear(); self.ocr_check = {'status': 'running'}
             self.runtime_worker = Thread(target=self._check_ocr_runtime, daemon=True)
@@ -159,6 +182,7 @@ class DesktopBridge:
             self.emit({'kind': 'review_updated', 'ids': params['ids'], 'status': params['status'], 'revision': value['revision']})
             return value
         if method == 'start':
+            if self.content_worker and self.content_worker.is_alive(): raise ValueError('직접 분석 완료 후 검사를 시작하세요.')
             if self.runtime_worker and self.runtime_worker.is_alive():
                 raise ValueError('OCR 기능 확인 완료 후 검사를 시작하세요.')
             if self.running or self.agent_worker and self.agent_worker.is_alive():
@@ -268,8 +292,16 @@ class DesktopBridge:
                 for visit in data.get('explorations', []):
                     if not isinstance(visit.get('source_evidence_id'), str) or not isinstance(visit.get('url'), str) or not isinstance(visit.get('blocked_requests'), list):
                         return invalid_agent
-                    validate_inspection({'evidence_packets': visit['packets'], 'exploration': visit['graph']})
+                    validate_inspection({'evidence_packets': visit['packets'], 'exploration': visit['graph'],
+                                         'ocr_images': visit.get('ocr_images', [])})
                     validate_screenshots(visit.get('screenshots', {}))
+                    for image in visit.get('ocr_images', []):
+                        if image['status'] != 'completed': continue
+                        folder = Path(self.output_path).parent.resolve()
+                        asset = (folder / image['relative_path']).resolve()
+                        if not asset.is_relative_to(folder) or not asset.is_file() or asset.stat().st_size > 2_000_000: return invalid_agent
+                        with asset.open('rb') as stream:
+                            if hashlib.file_digest(stream, 'sha256').hexdigest() != image['image_sha256']: return invalid_agent
             return data
         except FileNotFoundError:
             return default
@@ -314,6 +346,7 @@ class DesktopBridge:
             # identities. The original scan/result remains immutable.
             nodes, edges = list(graph['nodes']), list(graph['edges'])
             screenshots = dict(report.get('screenshots', {}))
+            ocr_images = list(report.get('ocr_images', []))
             packets = {p['id']: p for p in report.get('evidence_packets', [])}
             for index, visit in enumerate(self.agent_data.get('explorations', [])):
                 prefix = 'agent_' + str(index) + '_'
@@ -327,15 +360,18 @@ class DesktopBridge:
                 target = next((n for n in visit['graph']['nodes'] if n['kind'] == 'page'), None)
                 if source and target:
                     edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'Groq 추가 확인'})
-                packets.update((p['id'], {**p, 'supplemental': True, 'snapshot_id': prefix + (p.get('snapshot_id') or '')}) for p in visit['packets'] if p['id'] not in packets)
+                packets.update((p['id'], {**p, 'supplemental': True, 'snapshot_id': prefix + (p.get('snapshot_id') or ''),
+                                         'image_id': prefix+p['image_id'] if p.get('image_id') else None}) for p in visit['packets'] if p['id'] not in packets)
+                ocr_images.extend({**image, 'id': prefix+image['id']} for image in visit.get('ocr_images', []))
                 screenshots.update((prefix + key, image) for key, image in visit.get('screenshots', {}).items())
             return {'run_id': self.run_id, 'graph': {**graph, 'nodes': nodes, 'edges': edges}, 'packets': list(packets.values()),
-                    'screenshots': screenshots, 'ocr_images': report.get('ocr_images', []), 'local_ai': report.get('local_ai'),
+                    'screenshots': screenshots, 'ocr_images': ocr_images, 'local_ai': report.get('local_ai'),
                     'ocr_summary': report.get('ocr_summary'),
                     'agent': self._inspection_command('agent-status', {})}
         if self.running or self.outcome is None:
             raise ValueError('검사 완료 후 실행하세요.')
         if method == 'agent-run':
+            if self.content_worker and self.content_worker.is_alive(): raise ValueError('직접 분석 완료 후 AI 검토를 시작하세요.')
             if self.agent_worker and self.agent_worker.is_alive():
                 raise ValueError('에이전트가 실행 중입니다.')
             if params.get('scope') == 'all':
@@ -358,6 +394,21 @@ class DesktopBridge:
             self.agent_worker.start()
             return {'started': True, 'provider': 'groq', 'evidence_id': packet['id']}
         raise ValueError('지원하지 않는 검사 확장 명령입니다.')
+
+    def _analyze_content(self, text, pixels, runtime):
+        analysis_id = self.content_data['analysis_id']
+        def progress(stage):
+            self.emit({'kind': 'content_analysis', 'analysis_id': analysis_id, 'status': 'running', 'stage': stage})
+        try:
+            with asyncio.Runner() as runner:
+                runner.get_loop()
+                result = runner.run(analyze_content(text, pixels, runtime, self.content_stop, progress))
+            self.content_data = {'analysis_id': analysis_id, 'status': result['status'], 'result': result}
+        except asyncio.CancelledError:
+            self.content_data = {'analysis_id': analysis_id, 'status': 'cancelled'}
+        except Exception:
+            self.content_data = {'analysis_id': analysis_id, 'status': 'failed', 'message': '직접 분석 처리 실패. 입력 형식·모델 상태를 확인하세요.'}
+        self.emit({'kind': 'content_analysis', 'analysis_id': analysis_id, 'status': self.content_data['status']})
 
     def _check_ocr_runtime(self):
         async def probe():
@@ -424,6 +475,21 @@ class DesktopBridge:
                 outcome = collect_page(option, entry, timeout, self.agent_stop, progress,
                     ocr_enabled=ocr.get('enabled', True), ocr_max_images=ocr.get('max_images', 50))
                 packets = outcome.report.get('evidence_packets', [])[:12]
+                image_ids = {p.get('image_id') for p in packets}
+                images, image_bytes, preview_bytes, omitted = [], 0, 0, 0
+                for original in outcome.report.get('ocr_images', []):
+                    if original['id'] not in image_ids: continue
+                    image = deepcopy(original)
+                    preview = len(image.get('preview_data_url', ''))
+                    if preview_bytes + preview > 300000:
+                        image.pop('preview_data_url', None); preview = 0
+                    size = len(json.dumps(image, ensure_ascii=False).encode('utf-8'))
+                    if image_bytes + size > 900000:
+                        omitted += 1; continue
+                    if image.get('status') == 'completed':
+                        data = outcome.image_assets[image['relative_path']]
+                        atomic_write(Path(self.output_path).parent/image['relative_path'], data)
+                    images.append(image); image_bytes += size; preview_bytes += preview
                 ids = {p['id'] for p in packets}
                 graph = outcome.report['exploration']
                 graph = {**graph, 'nodes': [{**n, 'packet_ids': [p for p in n.get('packet_ids', []) if p in ids]} for n in graph['nodes'][:100]]}
@@ -431,6 +497,7 @@ class DesktopBridge:
                 graph['edges'] = [e for e in graph['edges'] if e['source'] in node_ids and e['target'] in node_ids]
                 visit = {'url': option['url'], 'source_evidence_id': packet['id'], 'status': outcome.report['status'],
                          'packets': packets, 'graph': graph, 'blocked_requests': outcome.report['blocked_requests'],
+                         'ocr_images': images, 'ocr_images_omitted': omitted, 'ocr_summary': outcome.report.get('ocr_summary'),
                          'screenshots': dict(list(outcome.report.get('screenshots', {}).items())[:2])}
                 self.agent_data.setdefault('explorations', []).append(visit)
                 self._save_agent()
@@ -541,6 +608,9 @@ def main():
     bridge.stop.set()
     bridge.agent_stop.set()
     bridge.runtime_stop.set()
+    bridge.content_stop.set()
+    if bridge.content_worker:
+        bridge.content_worker.join(timeout=3)
     if bridge.runtime_worker:
         bridge.runtime_worker.join(timeout=3)
     if bridge.agent_worker:

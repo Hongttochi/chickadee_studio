@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld(
     environment: () => invoke("desktop:runtime-info"),
     configureRuntime: (value) => invoke("desktop:runtime-configure", value),
     testRuntime: () => invoke("desktop:runtime-test"),
+    analyzeContent: (value) => invoke("desktop:content-analyze", value),
     configureAgent: (value) => invoke("desktop:agent-configure", value),
     runAgent: (value) => invoke("desktop:agent-run", value),
     stopAgent: () => invoke("desktop:agent-stop"),

@@ -40,10 +40,12 @@ def exploration_options(packet, report, entry_url):
 def collect_page(option, entry_url, timeout, stop, emit, *, ocr_enabled=True, ocr_max_images=50):
     if origin(option['url']) != origin(entry_url):
         raise ValueError('사이트 밖 추가 탐색은 허용되지 않습니다.')
-    config = ScanConfig(option['url'], max_pages=1, timeout_sec=max(.5, min(10, timeout)),
+    config = ScanConfig(option['url'], max_pages=1, timeout_sec=max(.5, min(20, timeout)),
                         ocr_enabled=ocr_enabled, ocr_max_images=ocr_max_images,
                         runtime_mode='standard' if ocr_enabled else 'economy',
-                        page_timeout_sec=max(.5, min(5, timeout)), settle_ms=100,
+                        # OCR cold start shares this page budget. A separate
+                        # five-second cap could cancel valid image evidence.
+                        page_timeout_sec=max(.5, min(20, timeout)), settle_ms=100,
                         allow_network=not is_loopback(entry_url), retries=0, interval_sec=0,
                         follow_links=False, capture_previews=False)
     return asyncio.run(scan(config, stop=stop, emit=emit))

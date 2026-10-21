@@ -12,6 +12,14 @@ REVIEW = {**RUN, 'ids': {'type': 'array', 'items': {'type': 'string'}, 'minItems
           'status': {'enum': ['unreviewed', 'confirmed', 'dismissed']},
           'note': {'type': 'string', 'maxLength': 2000}, 'expected_revision': {'type': 'integer', 'minimum': 0}}
 CATALOG = [
+    {'name': 'content.analyze', 'method': 'content-analyze', 'effect': 'local_compute',
+     'description': '문자·내장 이미지의 무료 로컬 분석을 시작하거나 analysis_id로 조회·취소합니다. URL·파일 경로·유료 호출은 사용하지 않습니다.',
+     'input_schema': {**schema({'text': {'type': 'string', 'maxLength': 4000},
+                               'image_data_url': {'type': 'string', 'minLength': 1, 'maxLength': 900000},
+                               'analysis_id': {'type': 'string', 'pattern': '^[0-9a-f]{32}$'}, 'cancel': {'type': 'boolean'}}),
+                      'oneOf': [{'required': ['analysis_id'], 'not': {'anyOf': [{'required': ['text']}, {'required': ['image_data_url']}]}},
+                                {'anyOf': [{'required': ['text']}, {'required': ['image_data_url']}],
+                                 'not': {'anyOf': [{'required': ['analysis_id']}, {'required': ['cancel']}]}}]}},
     {'name': 'runtime.info', 'method': 'runtime-info', 'effect': 'read',
      'description': '현재 실행 환경과 사용 가능한 분석 기능을 조회합니다.', 'input_schema': schema()},
     {'name': 'runtime.configure', 'method': 'runtime-configure', 'effect': 'local_write',

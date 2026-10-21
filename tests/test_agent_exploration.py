@@ -63,6 +63,9 @@ class FollowupTests(unittest.TestCase):
             def log_message(self, *_): pass
             def do_GET(self):
                 cls.local_requests.append(self.path)
+                if self.path in ('/promotion.png', '/benign.png'):
+                    pixels = (Path(__file__).parent/'fixtures/ocr'/self.path[1:]).read_bytes()
+                    self.send_response(200); self.send_header('Content-Type', 'image/png'); self.end_headers(); self.wfile.write(pixels); return
                 if self.path in ('/redirect', '/chain'):
                     self.send_response(302); self.send_header('Location', '/redirect' if self.path == '/chain' else cls.outside); self.end_headers(); return
                 if self.path == '/same':
@@ -70,6 +73,8 @@ class FollowupTests(unittest.TestCase):
                 body = {
                     '/': f'<article id="post">caѕino 가입 보너스 지급 <a href="/detail">상세</a><a href="{cls.outside}">외부</a></article>',
                     '/detail': '<article id="post">같은 게시물 상세: caѕino 가입하고 충전 보너스를 받으세요.</article><script>fetch("/write",{method:"POST"})</script>',
+                    '/image-case': '<article id="post">caѕino 가입 보너스 지급 <a href="/image-detail">상세</a><img src="/benign.png"></article>',
+                    '/image-detail': '<article id="post"><img src="/promotion.png"></article>',
                     '/js': f'<article>공공 게시판 안내</article><script>location.href={json.dumps(cls.outside)}</script>',
                     '/meta': f'<meta http-equiv="refresh" content="0;url={cls.outside}"><p>안내</p>',
                 }.get(self.path, '<p>안내</p>')
@@ -133,6 +138,51 @@ class FollowupTests(unittest.TestCase):
             bridge.command('load', {'path': str(path)})
             locked = bridge.command('agent-status', {})
             self.assertEqual(locked['ledger']['call_limit'], 1)
+
+    def test_followup_ocr_image_provenance_reload_and_collision(self):
+        with tempfile.TemporaryDirectory() as folder:
+            bridge = DesktopBridge(folder, lambda _: None)
+            bridge.command('runtime-configure', {'mode': 'standard'})
+            bridge.command('start', {'url': self.url+'image-case', 'workflow': workflow(), 'max_pages': 1,
+                                    'settle_ms': 0, 'interval_sec': 0, 'preview': False})
+            bridge.worker.join(45); self.assertFalse(bridge.running)
+            source = next(p for p in bridge.outcome.report['evidence_packets'] if '가입 보너스' in p['text'])
+            original_image = next(i for i in bridge.outcome.report['ocr_images'] if i['status'] == 'completed')
+            path = Path(bridge.output_path)
+            original = {p.name: p.read_bytes() for p in (path, path.with_name('scan-report.json'), path.with_name('result.csv'))}
+            stub = FollowupStub()
+            with patch('chickadee.agent.groq_request', side_effect=stub):
+                bridge.command('agent-configure', {'api_key': 'test_key_not_real'})
+                bridge.command('agent-run', {'run_id': bridge.run_id, 'evidence_id': source['id']})
+                bridge.agent_worker.join(40)
+            self.assertFalse(bridge.agent_worker.is_alive())
+            status = bridge.command('agent-status', {})
+            self.assertEqual(status['assessments'][0]['exploration_status'], 'completed', status)
+            visit = status['explorations'][0]
+            image = next(i for i in visit['ocr_images'] if i['status'] == 'completed')
+            self.assertIn('카지노', image['text'])
+            self.assertGreaterEqual(image['mean_confidence'], .55)
+            asset = path.parent/image['relative_path']
+            self.assertEqual(hashlib.sha256(asset.read_bytes()).hexdigest(), image['image_sha256'])
+            observations = [json.loads(m['content'])['observations'] for payload in stub.payloads
+                            for m in payload['messages'] if m['role'] == 'tool' and '"observations"' in m['content']][0]
+            self.assertEqual(observations[0]['source_kind'], 'image_ocr')
+            self.assertEqual(observations[0]['ocr']['image_sha256'], image['image_sha256'])
+            bridge.command('load', {'path': str(path)})
+            insight = bridge.command('inspection', {'run_id': bridge.run_id})
+            supplemental = next(p for p in insight['packets'] if p.get('supplemental') and p.get('image_id'))
+            self.assertEqual(supplemental['image_id'], 'agent_0_'+image['id'])
+            by_id = {i['id']: i for i in insight['ocr_images']}
+            self.assertEqual(by_id[supplemental['image_id']]['image_sha256'], image['image_sha256'])
+            self.assertEqual(by_id[original_image['id']]['image_sha256'], original_image['image_sha256'])
+            self.assertNotEqual(image['image_sha256'], original_image['image_sha256'])
+            for name, raw in original.items(): self.assertEqual(path.with_name(name).read_bytes(), raw)
+            asset.write_bytes(b'corrupt')
+            bridge.command('load', {'path': str(path)})
+            self.assertEqual(bridge.command('agent-status', {})['ledger']['call_limit'], 1)
+            asset.unlink()
+            bridge.command('load', {'path': str(path)})
+            self.assertEqual(bridge.command('agent-status', {})['ledger']['call_limit'], 1)
 
     def test_http_redirect_chain_javascript_and_meta_never_reach_other_origin(self):
         for path in ('redirect', 'chain', 'js', 'meta'):

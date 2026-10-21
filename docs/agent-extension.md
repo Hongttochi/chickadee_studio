@@ -16,6 +16,7 @@
 
 | 도구 | 역할 | 효과 |
 | --- | --- | --- |
+| `content.analyze` | [이미지·텍스트 직접 분석](content-analysis.md), ID로 조회·취소 | 무료 로컬 연산 |
 | `scan.start` | URL·연결 구성·한도를 검증한 뒤 검사 시작 | 사이트 읽기 |
 | `scan.status` | 현재 실행 ID·상태·단계·순번 | 조회 |
 | `scan.pause` / `scan.resume` | 페이지 경계에서 정지·재개 | 실행 제어 |

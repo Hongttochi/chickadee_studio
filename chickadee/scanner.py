@@ -20,7 +20,7 @@ from urllib.error import HTTPError
 from . import __version__
 from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
-from .image_ocr import OCRSession, fetch_image, inline_image
+from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text
 from .local_ai import enrich_report, visual_analysis, prepare_models
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write
 from .profiles import SiteProfile
@@ -345,7 +345,9 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
 def _ocr_element(image, record):
     return {**image, 'node_id': 'ocr:' + record['id'], 'parent_id': None,
             'text': record['text'], 'direct_text': record['text'], 'text_breaks': [],
-            'source_kind': 'image_ocr', 'image_id': record['id']}
+            'source_kind': 'image_ocr', 'image_id': record['id'],
+            'ocr': {'engine': record['engine'], 'model': record['model'], 'image_sha256': record['image_sha256'],
+                    **{k: record[k] for k in ('text_truncated', 'confidence_threshold', 'accepted_lines', 'rejected_lines', 'mean_confidence')}}}
 
 
 def _observation(hit, location, screenshot_id=None):
@@ -961,8 +963,9 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
             relative = 'evidence/images/' + digest + '.' + extension
             record['relative_path'] = relative
             state.image_assets[relative] = data
-            text = '\n'.join(line['text'] for line in record['lines'] if line['confidence'] >= .55)[:4000]
-            record['text'] = text
+            observation = recognized_text(result)
+            record.update(observation)
+            text = observation['text']
             record['recognition_status'] = 'readable' if text else 'unreadable'
             if not text:
                 message = '이미지에서 신뢰할 수 있는 문구를 읽지 못했습니다. 정상 판정이 아닙니다.'

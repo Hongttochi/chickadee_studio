@@ -2,6 +2,7 @@
 import asyncio
 import base64
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -37,6 +38,17 @@ def inline_image(url):
     if len(data) > 2_000_000:
         raise ValueError('내장 이미지 크기 초과')
     return data, 'image/' + match[1]
+
+
+def recognized_text(result, limit=4000):
+    """One confidence/truncation policy for scanned and directly submitted images."""
+    lines = result.get('lines', [])
+    accepted = [line for line in lines if type(line.get('confidence')) in (int, float)
+                and math.isfinite(line['confidence']) and .55 <= line['confidence'] <= 1]
+    full = '\n'.join(line['text'] for line in accepted)
+    return {'text': full[:limit], 'text_truncated': len(full) > limit or bool(result.get('truncated')),
+            'confidence_threshold': .55, 'accepted_lines': len(accepted), 'rejected_lines': len(lines)-len(accepted),
+            'mean_confidence': round(sum(line['confidence'] for line in accepted)/len(accepted), 4) if accepted else None}
 
 
 class OCRSession:

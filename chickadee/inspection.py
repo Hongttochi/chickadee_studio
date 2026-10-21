@@ -81,7 +81,8 @@ class InspectionTrace:
             style = element.get('computed_style')
             identity = fingerprint([url, frame_path, location])
             link_targets = element.get('link_targets', [])[:20]
-            content_hash = fingerprint([text, comparable_style(style), link_targets, inherited])
+            content_hash = fingerprint([text, comparable_style(style), link_targets, inherited] +
+                                       ([element['ocr']] if element.get('ocr') else []))
             key = 'e_' + fingerprint([identity, content_hash])[:24]
             if key not in self.packets and len(self.packets) >= self.MAX_PACKETS:
                 self.truncated = True
@@ -98,12 +99,13 @@ class InspectionTrace:
                     'style_reasons': element.get('reasons', []), 'text_breaks': element.get('text_breaks', []),
                     'scope_quality': 'overlapping' if element.get('nested_content_scopes') else
                                      'semantic' if element.get('content_scope') else 'element',
-                    'truncated': len(element['text']) > len(text),
+                    'truncated': len(element['text']) > len(text) or element.get('ocr', {}).get('text_truncated', False),
                     'missing_evidence': ([] if style is not None else ['computed_style']) +
                                         (['isolated_scope_context'] if element.get('nested_content_scopes') else []),
                     'snapshot_id': self.active, 'observed_at': datetime.now().astimezone().isoformat(),
                     'source_kind': element.get('source_kind', 'dom_text'), 'image_id': element.get('image_id'),
                 }
+                if element.get('ocr'): self.packets[key]['ocr'] = deepcopy(element['ocr'])
                 size = len(json.dumps(self.packets[key], ensure_ascii=False).encode('utf-8'))
                 if self.packet_bytes + size > self.MAX_PACKET_BYTES:
                     self.packets.pop(key)
@@ -149,6 +151,20 @@ def validate_inspection(report):
             raise ValueError('영역 링크 형식 오류')
         seen.add(packet['id'])
         validate_local_ai(packet.get('local_ai'))
+        if 'ocr' in packet:
+            ocr = packet['ocr']
+            if packet.get('source_kind') != 'image_ocr' or not isinstance(ocr, dict): raise ValueError('OCR 근거 출처 오류')
+            if not all(isinstance(ocr.get(k), str) and len(ocr[k]) < 200 for k in ('engine', 'model', 'image_sha256')):
+                raise ValueError('OCR 근거 메타데이터 오류')
+            if not re.fullmatch('[0-9a-f]{64}', ocr['image_sha256']) or type(ocr.get('text_truncated')) is not bool:
+                raise ValueError('OCR 근거 해시·생략 정보 오류')
+            if any(type(ocr.get(k)) is not int or not 0 <= ocr[k] <= 80 for k in ('accepted_lines', 'rejected_lines')):
+                raise ValueError('OCR 근거 문구 수 오류')
+            mean = ocr.get('mean_confidence')
+            if ocr.get('confidence_threshold') != .55 or mean is not None and (type(mean) not in (int, float) or not math.isfinite(mean) or not 0 <= mean <= 1):
+                raise ValueError('OCR 근거 신뢰도 오류')
+            image = next((i for i in report.get('ocr_images', []) if i['id'] == packet.get('image_id')), None)
+            if image and image.get('image_sha256') != ocr['image_sha256']: raise ValueError('OCR 근거 이미지 불일치')
     graph = report.get('exploration', {'nodes': [], 'edges': []})
     if not isinstance(graph, dict) or any(not isinstance(graph.get(k), list) for k in ('nodes', 'edges')):
         raise ValueError('탐색 그래프 형식 오류')
@@ -238,6 +254,9 @@ def validate_ocr_images(images):
                 not isinstance(point, list) or len(point) != 2 or any(type(v) not in (int, float) or not math.isfinite(v) for v in point)
                 or not (0 <= point[0] <= w and 0 <= point[1] <= h) for point in box):
                 raise ValueError('OCR 좌표 오류')
+        if 'text_truncated' in item:
+            from .image_ocr import recognized_text
+            if any(item.get(k) != v for k, v in recognized_text(item).items()): raise ValueError('OCR 추출 문구·메타데이터 불일치')
         if 'preview_data_url' in item:
             validate_screenshots({'image': {'data_url': item['preview_data_url'], 'sha256': item.get('preview_sha256')}})
             preview_size += len(item['preview_data_url'])

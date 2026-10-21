@@ -207,13 +207,16 @@ class EvidenceAgent:
             self.ledger['site_visits'] = self.ledger.get('site_visits', 0) + 1
             self.persist(deepcopy(self.ledger))
             self.emit({'kind': 'agent_step', 'action': 'site_explore', 'link_id': link_id, 'url': by_id[link_id]['url']})
-            page = explore(by_id[link_id], min(10, remaining - 3))
+            page = explore(by_id[link_id], min(20, remaining - 3))
             visits.append({'link_id': link_id, 'status': page['status'], 'packet_ids': [p['id'] for p in page['packets']]})
             # Bound text sent to Groq independently of browser collection limits.
             for p in page['packets'][:2]:
                 observed.add(p['id'])
                 observations.append({'evidence_id': p['id'], 'link_id': link_id, 'text': redact(p['text'][:600]),
                                      'truncated': p.get('truncated') or len(p['text']) > 600,
+                                     'source_kind': p.get('source_kind', 'dom_text'), 'ocr': p.get('ocr'),
+                                     'local_ai': {kind: {k: v for k, v in signal.items() if k in ('status', 'score', 'label', 'score_kind')}
+                                                  for kind, signal in p.get('local_ai', {}).items()},
                                      'scope_quality': p.get('scope_quality'), 'style_observed': p.get('computed_style') is not None})
         if not observations:
             raise ValueError('추가 문맥을 수집하지 못했습니다.')
@@ -280,6 +283,7 @@ class EvidenceAgent:
                     ('status', 'model', 'version', 'score', 'score_kind', 'label', 'review_priority', 'feature_count')}
                     for kind, signal in packet.get('local_ai', {}).items() if kind in ('text', 'visual')}
                 if value['source_kind'] == 'image_ocr':
+                    value['ocr'] = packet.get('ocr')
                     value['source_note'] = 'Local OCR transcription of an image; original Unicode code points cannot be inferred from pixels.'
             elif name == 'style_read':
                 style = packet.get('computed_style')

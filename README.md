@@ -209,6 +209,6 @@ macOS에서는 Python 실행 경로를 `.venv/bin/python`으로 바꿉니다. �
 
 </details>
 
-## 라이선스와 코드 서명
+## 라이선스
 
-원본 코드는 [Apache-2.0](LICENSE)으로 배포합니다. 외부 구성요소의 라이선스는 각각 유지됩니다. **Code signing policy:** [Windows 서명·무료 신청 준비](docs/windows-signing.md). 0.10.1은 서명 승인 전 테스트 빌드이며, 공인 서명과 실행 검사가 통과한 파일만 정식 릴리스로 게시합니다.
+원본 코드는 [Apache-2.0](LICENSE)으로 배포합니다. 외부 구성요소의 라이선스는 각각 유지됩니다.
