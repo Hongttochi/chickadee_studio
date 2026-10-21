@@ -176,23 +176,3 @@ def validate_screenshots(screenshots):
             raise ValueError('근거 화면 크기·해시 오류')
     if size > 3_000_000:
         raise ValueError('근거 화면 총 크기 초과')
-
-
-def compare_reports(previous, current):
-    """Same URL/frame/selector identity; absence is not proof of removal."""
-    def latest(report):
-        return {p['identity']: p for p in report.get('evidence_packets', [])}
-    before, after = latest(previous), latest(current)
-    changes = []
-    for key in sorted(before.keys() | after.keys()):
-        a, b = before.get(key), after.get(key)
-        status = ('newly_observed' if a is None else 'not_observed' if b is None else
-                  'changed' if a['content_sha256'] != b['content_sha256'] else 'unchanged')
-        changes.append({'identity': key, 'status': status, 'before': a, 'after': b})
-    counts = {status: sum(c['status'] == status for c in changes)
-              for status in ('newly_observed', 'changed', 'not_observed', 'unchanged')}
-    complete = previous.get('status') == current.get('status') == 'completed' and not any(
-        r.get('exploration', {}).get('truncated') for r in (previous, current))
-    return {'version': 1, 'matching': 'exact URL + frame path + selector; changed selectors may appear as two entries',
-            'coverage_complete': complete, 'counts': counts, 'changes': changes,
-            'warning': '미관측은 삭제 확정이 아닙니다. 탐색 범위·상태·선택자가 달라질 수 있습니다.'}

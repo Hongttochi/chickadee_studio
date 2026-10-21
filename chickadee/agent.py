@@ -1,4 +1,4 @@
-"""Groq-only agent with bounded, host-validated follow-up collection."""
+"""Grok-only agent with bounded, host-validated follow-up collection."""
 from copy import deepcopy
 import json
 import os
@@ -13,8 +13,8 @@ from jsonschema import Draft202012Validator
 from .detection import analyze_element
 from . import __version__
 
-ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
-DEFAULT_MODEL = 'openai/gpt-oss-20b'
+ENDPOINT = 'https://api.x.ai/v1/chat/completions'
+DEFAULT_MODEL = 'grok-4.7'
 ASSESSMENT_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'required': ['assessment', 'evidence_ids', 'summary', 'missing_evidence', 'recommended_next_action'],
@@ -39,7 +39,7 @@ def redact(text):
     text = re.sub(r'https?://[^\s<>]+', '[URL]', str(text), flags=re.I)
     text = re.sub(r'[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}', '[EMAIL]', text)
     text = re.sub(r'(?<!\d)0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)', '[PHONE]', text)
-    return re.sub(r'\b(?:gsk_|sk-)[A-Za-z0-9_-]{12,}', '[SECRET]', text)
+    return re.sub(r'\b(?:xai-|gsk_|sk-)[A-Za-z0-9_-]{12,}', '[SECRET]', text)
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -47,7 +47,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def groq_request(payload, key, timeout):
+def grok_request(payload, key, timeout):
     # No arbitrary base URL, proxy, alternate provider, browser/search or code tool.
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
     request = urllib.request.Request(ENDPOINT, json.dumps(payload, ensure_ascii=False).encode('utf-8'),
@@ -57,7 +57,7 @@ def groq_request(payload, key, timeout):
         with opener.open(request, timeout=timeout) as response:
             raw = response.read(524289)
             if len(raw) > 524288:
-                raise ValueError('Groq 응답 크기 한도 초과')
+                raise ValueError('Grok 응답 크기 한도 초과')
             return json.loads(raw)
     except urllib.error.HTTPError as error:
         code = ''
@@ -67,22 +67,24 @@ def groq_request(payload, key, timeout):
             if isinstance(candidate, str) and re.fullmatch(r'[a-zA-Z0-9_:-]{1,80}', candidate): code = ' (' + candidate + ')'
         except (ValueError, OSError, AttributeError):
             pass
-        raise ValueError(f'Groq HTTP {error.code}{code}. 재시도 없이 중단했습니다.') from None
+        raise ValueError(f'Grok HTTP {error.code}{code}. 재시도 없이 중단했습니다.') from None
     except (OSError, ValueError) as error:
-        if isinstance(error, ValueError) and str(error).startswith('Groq 응답'):
+        if isinstance(error, ValueError) and str(error).startswith('Grok 응답'):
             raise
-        raise ValueError('Groq 응답 또는 연결 오류. 재시도 없이 중단했습니다.') from None
+        raise ValueError('Grok 응답 또는 연결 오류. 재시도 없이 중단했습니다.') from None
 
 
 def settings(value):
     if not isinstance(value, dict) or set(value) - {'api_key', 'model', 'token_limit', 'call_limit'}:
-        raise ValueError('Groq 설정 형식 오류')
-    key = value.get('api_key') or os.environ.get('GROQ_API_KEY', '')
+        raise ValueError('Grok 설정 형식 오류')
+    key = value.get('api_key') or os.environ.get('XAI_API_KEY', '')
     model = value.get('model', DEFAULT_MODEL)
+    if isinstance(key, str) and key.startswith('gsk_'):
+        raise ValueError('Groq 키는 사용할 수 없습니다. xAI API 키를 입력하세요.')
     if not isinstance(key, str) or not 10 <= len(key) <= 500 or any(c.isspace() for c in key):
-        raise ValueError('GROQ_API_KEY 또는 앱에 입력한 Groq API 키가 필요합니다.')
+        raise ValueError('XAI_API_KEY 또는 앱에 입력한 Grok API 키가 필요합니다.')
     if not isinstance(model, str) or not re.fullmatch(r'[A-Za-z0-9_./-]{1,120}', model):
-        raise ValueError('Groq 모델 이름이 올바르지 않습니다.')
+        raise ValueError('Grok 모델 이름이 올바르지 않습니다.')
     limits = {k: value.get(k, default) for k, default in [('token_limit', 24000), ('call_limit', 6)]}
     if type(limits['token_limit']) is not int or not 1000 <= limits['token_limit'] <= 60000:
         raise ValueError('누적 토큰 한도는 1000~60000입니다.')
@@ -94,13 +96,13 @@ def settings(value):
 class EvidenceAgent:
     def __init__(self, config, ledger=None, *, transport=None, stop=None, emit=None, persist=None):
         self.config = settings(config)
-        self.transport = transport or groq_request
+        self.transport = transport or grok_request
         self.stop = stop or Event()
         self.emit = emit or (lambda value: None)
         self.persist = persist or (lambda ledger: None)
         self.ledger = deepcopy(ledger or {'calls': 0, 'charged_tokens': 0, 'usage_tokens': 0})
         if any(type(self.ledger.get(k)) is not int or self.ledger[k] < 0 for k in ('calls', 'charged_tokens', 'usage_tokens')):
-            raise ValueError('Groq 사용량 기록 형식 오류')
+            raise ValueError('Grok 사용량 기록 형식 오류')
         if type(self.ledger.get('site_visits', 0)) is not int or not 0 <= self.ledger.get('site_visits', 0) <= 6:
             raise ValueError('추가 탐색 사용량 기록 형식 오류')
         for name in ('token_limit', 'call_limit'):
@@ -112,7 +114,7 @@ class EvidenceAgent:
             raise ValueError('에이전트 취소 또는 30초 한도')
         payload = {'model': self.config['model'], 'messages': messages, 'temperature': 0,
                    'max_completion_tokens': 512, 'stream': False}
-        if self.config['model'].startswith('openai/gpt-oss-'):
+        if self.config['model'].startswith('grok-4.'):
             payload['reasoning_effort'] = 'low'
         if tools:
             payload.update(tools=tools, tool_choice='required', parallel_tool_calls=True)
@@ -122,7 +124,7 @@ class EvidenceAgent:
         # before sending; failed/missing-usage calls retain their reservation.
         reserve = len(json.dumps(payload, ensure_ascii=False).encode('utf-8')) + 512 + 1024
         if self.ledger['calls'] >= self.ledger['call_limit'] or self.ledger['charged_tokens'] + reserve > self.ledger['token_limit']:
-            raise ValueError('Groq 누적 호출·토큰 한도에 도달했습니다. 요청하지 않았습니다.')
+            raise ValueError('Grok 누적 호출·토큰 한도에 도달했습니다. 요청하지 않았습니다.')
         self.ledger['calls'] += 1
         self.ledger['charged_tokens'] += reserve
         self.persist(deepcopy(self.ledger))
@@ -144,7 +146,7 @@ class EvidenceAgent:
                 raise ValueError()
             return choice['message']
         except (KeyError, IndexError, TypeError, ValueError):
-            raise ValueError('Groq 응답이 불완전하거나 거부되었습니다.') from None
+            raise ValueError('Grok 응답이 불완전하거나 거부되었습니다.') from None
 
     def investigate(self, packet):
         return self.investigate_with_exploration(packet)
@@ -201,7 +203,7 @@ class EvidenceAgent:
             self.emit({'kind': 'agent_step', 'action': 'site_explore', 'link_id': link_id, 'url': by_id[link_id]['url']})
             page = explore(by_id[link_id], min(10, remaining - 3))
             visits.append({'link_id': link_id, 'status': page['status'], 'packet_ids': [p['id'] for p in page['packets']]})
-            # Bound text sent to Groq independently of browser collection limits.
+            # Bound text sent to Grok independently of browser collection limits.
             for p in page['packets'][:2]:
                 observed.add(p['id'])
                 observations.append({'evidence_id': p['id'], 'link_id': link_id, 'text': redact(p['text'][:600]),
@@ -231,7 +233,7 @@ class EvidenceAgent:
 
     def _investigate_collected(self, packet):
         if self.ledger['call_limit'] - self.ledger['calls'] < 2:
-            raise ValueError('Groq 분석에는 최소 2회 호출 여유가 필요합니다. 요청하지 않았습니다.')
+            raise ValueError('Grok 분석에는 최소 2회 호출 여유가 필요합니다. 요청하지 않았습니다.')
         evidence_id = packet['id']
         allowed = {'type': 'object', 'properties': {'evidence_id': {'enum': [evidence_id]}},
                    'required': ['evidence_id'], 'additionalProperties': False}
@@ -258,7 +260,7 @@ class EvidenceAgent:
                 args = json.loads(call['function']['arguments'])
                 call_id = call['id']
             except (KeyError, TypeError, ValueError):
-                raise ValueError('Groq 도구 요청 형식 오류') from None
+                raise ValueError('Grok 도구 요청 형식 오류') from None
             if name not in descriptions or not isinstance(call_id, str) or len(call_id) > 200:
                 raise ValueError('허용되지 않은 에이전트 도구')
             Draft202012Validator(allowed).validate(args)
@@ -298,6 +300,6 @@ class EvidenceAgent:
             result.update(assessment='uncertain', recommended_next_action='collect_more_evidence')
             result['missing_evidence'] = list(dict.fromkeys([*result['missing_evidence'], '충분한 동일 영역 문맥']))
         result['summary'] = redact(result['summary'])
-        return {**result, 'provider': 'groq', 'model': self.config['model'], 'reads': reads,
+        return {**result, 'provider': 'grok', 'model': self.config['model'], 'reads': reads,
                 'text_sha256': packet['text_sha256'], 'snapshot_id': packet.get('last_snapshot_id') or packet.get('snapshot_id'),
                 'ledger': deepcopy(self.ledger), 'status': 'completed'}

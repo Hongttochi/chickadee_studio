@@ -1,5 +1,6 @@
-"""Observed state/diff integration and bounded Groq protocol tests, offline."""
+"""Observed state/diff integration and bounded Grok protocol tests, offline."""
 import asyncio
+import os
 from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -9,10 +10,10 @@ from threading import Event, Thread
 import unittest
 from unittest.mock import patch
 
-from chickadee.agent import EvidenceAgent, ENDPOINT, groq_request
+from chickadee.agent import EvidenceAgent, ENDPOINT, grok_request
 from chickadee.bridge import DesktopBridge
 from chickadee.detection import analyze, techniques
-from chickadee.inspection import InspectionTrace, compare_reports, validate_inspection
+from chickadee.inspection import InspectionTrace, validate_inspection
 from chickadee.scanner import ScanConfig, scan
 from tests.test_desktop import workflow
 
@@ -29,7 +30,7 @@ def packet():
     return next(iter(trace.packets.values()))
 
 
-def groq_stub(payload, _key, _timeout):
+def grok_stub(payload, _key, _timeout):
     if payload.get('tools'):
         evidence_id = payload['tools'][0]['function']['parameters']['properties']['evidence_id']['enum'][0]
         message = {'role': 'assistant', 'tool_calls': [
@@ -71,14 +72,7 @@ class InspectionTests(unittest.TestCase):
         a, b = InspectionTrace(), InspectionTrace()
         a.capture([element(computed_style={'rect': {'y': 100}, 'scroll': {'y': 0}})], 'https://example.invalid/', '', emit)
         b.capture([element(computed_style={'rect': {'y': -100}, 'scroll': {'y': 200}})], 'https://example.invalid/', '', emit)
-        report = lambda t: {'status': 'completed', 'evidence_packets': list(t.packets.values())}
-        self.assertEqual(compare_reports(report(a), report(b))['counts']['unchanged'], 1)
-
-    def test_missing_observation_is_not_deletion(self):
-        value = packet()
-        result = compare_reports({'status': 'completed', 'evidence_packets': [value]}, {'status': 'partial'})
-        self.assertEqual(result['changes'][0]['status'], 'not_observed')
-        self.assertFalse(result['coverage_complete'])
+        self.assertEqual(next(iter(a.packets.values()))['content_sha256'], next(iter(b.packets.values()))['content_sha256'])
 
     def test_packet_limits_and_corrupt_report_rejection(self):
         trace = InspectionTrace(); trace.MAX_PACKETS = 1
@@ -99,7 +93,7 @@ class InspectionTests(unittest.TestCase):
         self.assertTrue(any(node['kind'] == 'frame' for node in trace.export()['nodes']))
         validate_inspection({'evidence_packets': list(trace.packets.values()), 'exploration': trace.export()})
 
-    def test_real_browser_graph_changed_text_style_link_and_bridge_reload(self):
+    def test_real_browser_graph_and_bridge_reload(self):
         revision = [0]
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *_): pass
@@ -117,20 +111,14 @@ class InspectionTests(unittest.TestCase):
                 options = {'url': url, 'workflow': workflow(), 'max_pages': 2, 'settle_ms': 0, 'interval_sec': 0, 'preview': False}
                 bridge.command('start', options); bridge.worker.join(30)
                 self.assertEqual(bridge.outcome.report['status'], 'completed')
-                first = bridge.run_id
                 revision[0] = 1
                 bridge.command('start', options); bridge.worker.join(30)
                 self.assertEqual(bridge.outcome.report['status'], 'completed')
                 insight = bridge.command('inspection', {'run_id': bridge.run_id})
                 self.assertTrue(insight['graph']['edges'])
                 self.assertTrue(any(n['kind'] == 'state' for n in insight['graph']['nodes']))
-                self.assertEqual(insight['comparison']['baseline_id'], first)
-                self.assertGreaterEqual(insight['comparison']['counts']['changed'], 1)
-                change = next(c for c in insight['comparison']['changes'] if c['status'] == 'changed')
-                self.assertNotEqual(change['before']['text'], change['after']['text'])
-                self.assertNotEqual(change['before']['link_targets'], change['after']['link_targets'])
                 path = Path(bridge.output_path); original = path.read_bytes()
-                with patch('chickadee.agent.groq_request', side_effect=groq_stub):
+                with patch('chickadee.agent.grok_request', side_effect=grok_stub):
                     bridge.command('agent-configure', {'api_key': 'test_key_not_real'})
                     bridge.command('agent-run', {'run_id': bridge.run_id, 'evidence_id': next(p['id'] for p in insight['packets'] if '카지노' in p['text'])})
                     bridge.agent_worker.join(5)
@@ -139,11 +127,39 @@ class InspectionTests(unittest.TestCase):
                 self.assertNotIn('test_key_not_real', path.with_name('agent.json').read_text(encoding='utf-8'))
                 bridge.command('load', {'path': str(path)})
                 loaded = bridge.command('inspection', {'run_id': bridge.run_id})
-                self.assertTrue(loaded['comparison']['changes'])
+                self.assertNotIn('comparison', loaded)
+                self.assertFalse(path.with_name('comparison.json').exists())
                 self.assertEqual(loaded['agent']['ledger']['calls'], 2)
                 self.assertTrue(loaded['agent']['assessments'])
         finally:
             server.shutdown(); server.server_close(); thread.join(3)
+
+
+class WholeReportTests(unittest.TestCase):
+    def test_all_packets_and_partial_failure(self):
+        for fail in (False, True):
+            with self.subTest(fail=fail), tempfile.TemporaryDirectory() as folder:
+                bridge = DesktopBridge(folder, lambda _: None)
+                bridge.agent_data['report'] = {'total': 3, 'completed': 0, 'status': 'running', 'assessments': []}
+                values = [{'id': str(i)} for i in range(3)]
+                answers = [{'summary': 'first'}, None] if fail else [{'summary': str(i)} for i in range(3)]
+                with patch.object(bridge, '_run_agent', side_effect=answers) as run, patch.object(bridge, '_save_agent'):
+                    bridge._run_agent_report({}, values)
+                report = bridge.agent_data['report']
+                self.assertEqual(report['completed'], 1 if fail else 3)
+                self.assertEqual(report['status'], 'partial' if fail else 'completed')
+                self.assertEqual(run.call_count, 2 if fail else 3)
+                self.assertEqual(len(report['assessments']), report['completed'])
+
+    def test_cancel_does_not_review_remaining_packets(self):
+        with tempfile.TemporaryDirectory() as folder:
+            bridge = DesktopBridge(folder, lambda _: None)
+            bridge.agent_data['report'] = {'total': 2, 'completed': 0, 'status': 'running', 'assessments': []}
+            bridge.agent_stop.set()
+            with patch.object(bridge, '_run_agent') as run, patch.object(bridge, '_save_agent'):
+                bridge._run_agent_report({}, [{'id': 'a'}, {'id': 'b'}])
+            run.assert_not_called()
+            self.assertEqual(bridge.agent_data['report']['status'], 'stopped')
 
 
 class AgentTests(unittest.TestCase):
@@ -156,7 +172,7 @@ class AgentTests(unittest.TestCase):
         calls = []
         def transport(payload, key, timeout):
             calls.append(deepcopy(payload))
-            return groq_stub(payload, key, timeout)
+            return grok_stub(payload, key, timeout)
         agent = EvidenceAgent(self.config(), transport=transport)
         result = agent.investigate(value)
         self.assertEqual(result['assessment'], 'ad_suspected')
@@ -188,7 +204,7 @@ class AgentTests(unittest.TestCase):
     def test_unknown_tool_wrong_scope_and_hallucinated_evidence_rejected(self):
         for kind in ('unknown_tool', 'wrong_scope', 'hallucinated'):
             def bad(payload, key, timeout):
-                result = groq_stub(payload, key, timeout)
+                result = grok_stub(payload, key, timeout)
                 message = result['choices'][0]['message']
                 if payload.get('tools'):
                     if kind == 'unknown_tool': message['tool_calls'][0]['function']['name'] = 'exec'
@@ -201,13 +217,13 @@ class AgentTests(unittest.TestCase):
 
     def test_short_fragment_abstains_and_null_css_remains_unknown(self):
         value = packet(); value['text'] = 'CΟΜ'; value['computed_style'] = None
-        result = EvidenceAgent(self.config(), transport=groq_stub).investigate(value)
+        result = EvidenceAgent(self.config(), transport=grok_stub).investigate(value)
         self.assertEqual(result['assessment'], 'uncertain')
         self.assertEqual(result['recommended_next_action'], 'collect_more_evidence')
         value = packet(); value['scope_quality'] = 'overlapping'
-        self.assertEqual(EvidenceAgent(self.config(), transport=groq_stub).investigate(value)['assessment'], 'uncertain')
+        self.assertEqual(EvidenceAgent(self.config(), transport=grok_stub).investigate(value)['assessment'], 'uncertain')
 
-    def test_fixed_groq_endpoint_and_provider_error_not_echoed(self):
+    def test_fixed_grok_endpoint_and_provider_error_not_echoed(self):
         class Response:
             def __enter__(self): return self
             def __exit__(self, *_): pass
@@ -218,8 +234,20 @@ class AgentTests(unittest.TestCase):
                 return Response()
         opener = Opener()
         with patch('chickadee.agent.urllib.request.build_opener', return_value=opener):
-            groq_request({'model': 'example'}, 'test_key_not_real', 1)
+            grok_request({'model': 'example'}, 'test_key_not_real', 1)
         self.assertEqual(opener.request.full_url, ENDPOINT)
         self.assertEqual(opener.request.get_method(), 'POST')
         with patch('chickadee.agent.urllib.request.build_opener', side_effect=OSError('secret')):
-            with self.assertRaises(OSError): groq_request({}, 'test_key_not_real', 1)
+            with self.assertRaises(OSError): grok_request({}, 'test_key_not_real', 1)
+
+class XaiMigrationTests(unittest.TestCase):
+    def test_xai_endpoint_key_source_and_old_key_rejection(self):
+        from chickadee.agent import settings, DEFAULT_MODEL, redact
+        self.assertEqual(ENDPOINT, 'https://api.x.ai/v1/chat/completions')
+        self.assertEqual(DEFAULT_MODEL, 'grok-4.7')
+        with patch.dict(os.environ, {'XAI_API_KEY': 'xai-testkey123456789', 'GROQ_API_KEY': 'gsk_oldkey123456789'}, clear=True):
+            self.assertEqual(settings({})['api_key'], 'xai-testkey123456789')
+        with patch.dict(os.environ, {'GROQ_API_KEY': 'gsk_oldkey123456789'}, clear=True):
+            with self.assertRaises(ValueError): settings({})
+        with self.assertRaises(ValueError): settings({'api_key': 'gsk_oldkey123456789'})
+        self.assertNotIn('xai-testkey123456789', redact('key xai-testkey123456789'))

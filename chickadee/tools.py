@@ -13,12 +13,9 @@ REVIEW = {**RUN, 'ids': {'type': 'array', 'items': {'type': 'string'}, 'minItems
           'note': {'type': 'string', 'maxLength': 2000}, 'expected_revision': {'type': 'integer', 'minimum': 0}}
 CATALOG = [
     {'name': 'inspection.read', 'method': 'inspection', 'effect': 'read',
-     'description': '현재 실행의 탐색 그래프·수집 영역·변경 비교·AI 검토를 조회합니다.', 'input_schema': schema(RUN, ['run_id'])},
-    {'name': 'inspection.compare', 'method': 'compare', 'effect': 'local_write',
-     'description': '같은 시작 URL의 이전 검사와 관측된 영역을 비교해 저장합니다.',
-     'input_schema': schema({**RUN, 'baseline_id': {'type': 'string', 'minLength': 1, 'maxLength': 100}}, ['run_id', 'baseline_id'])},
+     'description': '현재 실행의 탐색 그래프·수집 영역·AI 검토를 조회합니다.', 'input_schema': schema(RUN, ['run_id'])},
     {'name': 'agent.status', 'method': 'agent-status', 'effect': 'read',
-     'description': 'Groq 설정 여부·누적 사용량·검토 제안을 조회합니다.', 'input_schema': schema()},
+     'description': 'Grok 설정 여부·누적 사용량·검토 제안을 조회합니다.', 'input_schema': schema()},
     {'name': 'scan.start', 'method': 'start', 'effect': 'network_read',
      'description': '지정한 사이트와 한도에서 읽기 전용 검사를 시작합니다.',
      'input_schema': schema({'url': {'type': 'string', 'minLength': 1, 'maxLength': 4096},

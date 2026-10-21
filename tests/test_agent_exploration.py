@@ -17,7 +17,7 @@ from chickadee.inspection import validate_screenshots
 from chickadee.scanner import ScanConfig, ScanOutcome, scan
 from chickadee.site_explorer import collect_page, exploration_options
 from tests.test_desktop import workflow
-from tests.test_inspection_agent import packet, groq_stub
+from tests.test_inspection_agent import packet, grok_stub
 
 
 class FollowupStub:
@@ -40,7 +40,7 @@ class FollowupStub:
                       'summary': '같은 게시물의 상세 문맥에서 가입 유도를 추가 확인했습니다.',
                       'missing_evidence': [], 'recommended_next_action': 'human_review'}
             return {'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(result)}}], 'usage': {'total_tokens': 200}}
-        response = groq_stub(payload, key, timeout)
+        response = grok_stub(payload, key, timeout)
         if not payload.get('tools'):
             result = json.loads(response['choices'][0]['message']['content'])
             result.update(assessment='uncertain', missing_evidence=['같은 게시물의 상세 문맥'], recommended_next_action='collect_more_evidence')
@@ -104,7 +104,7 @@ class FollowupTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(pixels).hexdigest(), image['sha256'])
             self.assertEqual((path.parent / image['relative_path']).read_bytes(), pixels)
             stub = FollowupStub()
-            with patch('chickadee.agent.groq_request', side_effect=stub):
+            with patch('chickadee.agent.grok_request', side_effect=stub):
                 bridge.command('agent-configure', {'api_key': 'test_key_not_real'})
                 bridge.command('agent-run', {'run_id': bridge.run_id, 'evidence_id': source['id']})
                 bridge.agent_worker.join(25)
@@ -123,7 +123,7 @@ class FollowupTests(unittest.TestCase):
             bridge.command('load', {'path': str(path)})
             insight = bridge.command('inspection', {'run_id': bridge.run_id})
             self.assertTrue(any(n['id'].startswith('agent_') for n in insight['graph']['nodes']))
-            self.assertTrue(any(e['label'] == 'Groq 추가 확인' for e in insight['graph']['edges']))
+            self.assertTrue(any(e['label'] == 'Grok 추가 확인' for e in insight['graph']['edges']))
             self.assertEqual(insight['agent']['ledger']['calls'], 4)
             self.assertNotIn('test_key_not_real', path.with_name('agent.json').read_text(encoding='utf-8'))
             ScanOutcome.load(path)

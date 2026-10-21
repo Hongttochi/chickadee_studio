@@ -18,7 +18,7 @@ from .workflow import compile_workflow
 from .control import ScanControl
 from .reviews import ReviewStore
 from .tools import capabilities, resolve_tool
-from .inspection import compare_reports, validate_inspection, validate_screenshots
+from .inspection import validate_inspection, validate_screenshots
 from .agent import EvidenceAgent, settings as agent_settings
 from .site_explorer import exploration_options, collect_page
 import os
@@ -50,7 +50,6 @@ class DesktopBridge:
         self.agent_worker = None
         self.agent_stop = Event()
         self.agent_data = {'ledger': {}, 'assessments': [], 'events': []}
-        self.comparison = None
         try:
             self.history = json.loads(self.history_path.read_text(encoding='utf-8'))[:30]
         except (OSError, ValueError, TypeError):
@@ -77,8 +76,8 @@ class DesktopBridge:
             raise ValueError('명령 인자가 올바르지 않습니다.')
         if method == 'capabilities':
             return {**capabilities(), 'agent_available': True, 'agent_connected': self.agent_config is not None,
-                    'providers': ['groq']}
-        if method in ('inspection', 'compare', 'agent-configure', 'agent-run', 'agent-stop', 'agent-status'):
+                    'providers': ['grok']}
+        if method in ('inspection', 'agent-configure', 'agent-run', 'agent-stop', 'agent-status'):
             return self._inspection_command(method, params)
         if method == 'tool-call':
             arguments = params.get('arguments', {})
@@ -158,7 +157,6 @@ class DesktopBridge:
             self.live_records.clear()
             self.live_graph = {'nodes': {}, 'edges': {}}
             self.agent_data = {'ledger': {}, 'assessments': [], 'events': []}
-            self.comparison = None
             self.phase = None
             self.last_status = 'running'
             self.busy = Event()
@@ -194,7 +192,6 @@ class DesktopBridge:
                            'data_url': 'data:image/jpeg;base64,' + base64.b64encode(image.read_bytes()).decode('ascii')}
             self.outcome, self.output_path, self.reviews = loaded, loaded_path, loaded_reviews
             self.agent_data = self._sidecar('agent.json', {'ledger': {}, 'assessments': [], 'events': []})
-            self.comparison = self._sidecar('comparison.json', None)
             self.last_status = loaded.report['status']
             self.run_id = loaded.report.get('run_id') or Path(loaded_path).parent.name
             self.phase = None
@@ -261,11 +258,12 @@ class DesktopBridge:
                 raise ValueError('에이전트 종료 후 설정을 변경하세요.')
             self.agent_config = agent_settings({**params, 'api_key': params.get('api_key') or
                                                  (self.agent_config or {}).get('api_key', '')})
-            return {'configured': True, 'provider': 'groq', **{k: v for k, v in self.agent_config.items() if k != 'api_key'}}
+            return {'configured': True, 'provider': 'grok', **{k: v for k, v in self.agent_config.items() if k != 'api_key'}}
         if method == 'agent-status':
-            return {'provider': 'groq', 'configured': self.agent_config is not None or bool(os.environ.get('GROQ_API_KEY')),
+            return {'provider': 'grok', 'configured': self.agent_config is not None or bool(os.environ.get('XAI_API_KEY')),
                     'running': bool(self.agent_worker and self.agent_worker.is_alive()),
                     'ledger': self.agent_data.get('ledger', {}), 'assessments': self.agent_data.get('assessments', []),
+                    'report': self.agent_data.get('report'),
                     'events': self.agent_data.get('events', [])[-40:],
                     'explorations': self.agent_data.get('explorations', [])}
         if method == 'agent-stop':
@@ -278,7 +276,7 @@ class DesktopBridge:
             graph = report.get('exploration') or {'version': 1, 'nodes': list(self.live_graph['nodes'].values()),
                                                    'edges': list(self.live_graph['edges'].values())}
             # Follow-up observations stay in agent.json, with independent graph
-            # identities. The original scan/result and comparison remain immutable.
+            # identities. The original scan/result remains immutable.
             nodes, edges = list(graph['nodes']), list(graph['edges'])
             screenshots = dict(report.get('screenshots', {}))
             packets = {p['id']: p for p in report.get('evidence_packets', [])}
@@ -293,46 +291,58 @@ class DesktopBridge:
                 source = next((n for n in graph['nodes'] if visit['source_evidence_id'] in n.get('packet_ids', [])), None)
                 target = next((n for n in visit['graph']['nodes'] if n['kind'] == 'page'), None)
                 if source and target:
-                    edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'Groq 추가 확인'})
+                    edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'Grok 추가 확인'})
                 packets.update((p['id'], {**p, 'supplemental': True, 'snapshot_id': prefix + (p.get('snapshot_id') or '')}) for p in visit['packets'] if p['id'] not in packets)
                 screenshots.update((prefix + key, image) for key, image in visit.get('screenshots', {}).items())
             return {'run_id': self.run_id, 'graph': {**graph, 'nodes': nodes, 'edges': edges}, 'packets': list(packets.values()),
-                    'screenshots': screenshots, 'comparison': self.comparison, 'agent': self._inspection_command('agent-status', {})}
+                    'screenshots': screenshots, 'agent': self._inspection_command('agent-status', {})}
         if self.running or self.outcome is None:
             raise ValueError('검사 완료 후 실행하세요.')
-        if method == 'compare':
-            return self._compare_with(params.get('baseline_id'))
         if method == 'agent-run':
             if self.agent_worker and self.agent_worker.is_alive():
                 raise ValueError('에이전트가 실행 중입니다.')
+            if params.get('scope') == 'all':
+                packets = self.outcome.report.get('evidence_packets', [])
+                if not packets:
+                    raise ValueError('검토할 수집 영역이 없습니다.')
+                config = self.agent_config or agent_settings({})
+                self.agent_stop = Event()
+                self.agent_data['report'] = {'total': len(packets), 'completed': 0, 'status': 'running', 'assessments': []}
+                self.agent_worker = Thread(target=self._run_agent_report, args=(config, packets), daemon=True)
+                self.agent_worker.start()
+                return {'started': True, 'provider': 'grok', 'scope': 'all'}
             packet = next((p for p in self.outcome.report.get('evidence_packets', []) if p['id'] == params.get('evidence_id')), None)
             if packet is None:
-                raise ValueError('수집된 근거 ID가 아닙니다.')
+                raise ValueError('검토할 내용을 찾지 못했습니다. 검사 기록을 다시 열어 주세요.')
             config = self.agent_config or agent_settings({})
             self.agent_stop = Event()
             self.agent_worker = Thread(target=self._run_agent, args=(config, packet), daemon=True)
             self.agent_worker.start()
-            return {'started': True, 'provider': 'groq', 'evidence_id': packet['id']}
+            return {'started': True, 'provider': 'grok', 'evidence_id': packet['id']}
         raise ValueError('지원하지 않는 검사 확장 명령입니다.')
 
-    def _compare_with(self, baseline_id):
-        if not self.outcome.report.get('evidence_packets'):
-            raise ValueError('이 기록에는 비교용 영역 근거가 없습니다. 새 검사를 실행하세요.')
-        baseline = next((h for h in self.history if h['id'] == baseline_id), None)
-        if baseline is None or baseline['id'] == self.run_id:
-            raise ValueError('비교할 이전 검사 기록을 선택하세요.')
-        prior = ScanOutcome.load(Path(baseline['path']))
-        if prior.result['meta']['entry_url'] != self.outcome.result['meta']['entry_url']:
-            raise ValueError('같은 시작 URL의 검사끼리 비교하세요.')
-        if not prior.report.get('evidence_packets'):
-            raise ValueError('이전 기록에 비교용 영역 근거가 없습니다.')
-        self.comparison = {**compare_reports(prior.report, self.outcome.report), 'baseline_id': baseline['id'],
-                           'baseline_result_sha256': prior.report['result_sha256'],
-                           'result_sha256': self.outcome.report['result_sha256']}
-        atomic_write(Path(self.output_path).with_name('comparison.json'), json.dumps(self.comparison, ensure_ascii=False).encode('utf-8'))
-        return self.comparison
+    def _run_agent_report(self, config, packets):
+        report = self.agent_data['report']
+        self.emit({'kind': 'agent_started', 'scope': 'all', 'provider': 'grok'})
+        try:
+            for packet in packets:
+                if self.agent_stop.is_set():
+                    report['status'] = 'stopped'
+                    break
+                assessment = self._run_agent(config, packet, batch=True)
+                if assessment is None:
+                    report['status'] = 'partial'
+                    break
+                report['assessments'].append(assessment)
+                report['completed'] += 1
+                self._save_agent()
+            else:
+                report['status'] = 'completed'
+        finally:
+            self._save_agent()
+            self.emit({'kind': 'agent_done', 'scope': 'all'})
 
-    def _run_agent(self, config, packet):
+    def _run_agent(self, config, packet, batch=False):
         def persist(ledger):
             self.agent_data['ledger'] = ledger
             self._save_agent()
@@ -340,7 +350,8 @@ class DesktopBridge:
             self.agent_data['events'] = [*self.agent_data.get('events', [])[-199:], event]
             self.emit(event)
         try:
-            observe({'kind': 'agent_started', 'evidence_id': packet['id'], 'provider': 'groq'})
+            if not batch:
+                observe({'kind': 'agent_started', 'evidence_id': packet['id'], 'provider': 'grok'})
             agent = EvidenceAgent(config, self.agent_data.get('ledger'), stop=self.agent_stop, emit=observe, persist=persist)
             persist(agent.ledger)
             entry = self.outcome.result['meta']['entry_url']
@@ -368,7 +379,9 @@ class DesktopBridge:
             assessment = agent.investigate_with_exploration(packet, options, explore)
             self.agent_data['assessments'] = [*self.agent_data.get('assessments', [])[-99:], assessment]
             self._save_agent()
-            self.emit({'kind': 'agent_done', 'assessment': assessment})
+            if not batch:
+                self.emit({'kind': 'agent_done', 'assessment': assessment})
+            return assessment
         except Exception as error:
             observe({'kind': 'agent_failed', 'message': str(error)[:300]})
             self._save_agent()
@@ -412,12 +425,6 @@ class DesktopBridge:
             path = self.outcome.save(folder)
             self.output_path = str(path)
             self.reviews = ReviewStore(path, self.outcome)
-            prior = next((h for h in self.history if h['url'] == config.entry_url), None)
-            if prior and self.outcome.report.get('evidence_packets'):
-                try:
-                    self._compare_with(prior['id'])
-                except (ValueError, OSError):
-                    pass
             entry = {'id': folder.name, 'url': config.entry_url, 'status': self.outcome.report['status'],
                      'findings': len(self.outcome.result['findings']), 'candidates': self.outcome.report['candidate_count'],
                      'pages': len(self.outcome.report['pages_scanned']), 'path': str(path),

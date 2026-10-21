@@ -1,6 +1,6 @@
-"""Opt-in paid integration: real Groq -> real localhost Chromium follow-up.
+"""Opt-in paid integration: real Grok -> real localhost Chromium follow-up.
 
-At most four Groq requests / 24000 reserved tokens. Synthetic data only.
+At most four Grok requests / 24000 reserved tokens. Synthetic data only.
 An existing output ledger is resumed; failed calls are never silently retried.
 """
 import argparse
@@ -24,7 +24,7 @@ def main():
     config = {'call_limit': 4, 'token_limit': 24000}
     if args.env_file:
         for line in args.env_file.read_text(encoding='utf-8-sig').splitlines():
-            match = re.match(r'\s*(?:export\s+)?GROQ_API_KEY\s*=\s*(.*?)\s*$', line)
+            match = re.match(r'\s*(?:export\s+)?XAI_API_KEY\s*=\s*(.*?)\s*$', line)
             if match:
                 value = match.group(1)
                 if value[:1] in ('"', "'") and value[-1:] == value[:1]: value = value[1:-1]
@@ -72,8 +72,8 @@ def main():
             status = bridge.command('agent-status', {})
             results = status['assessments']
             completed = bool(results and results[0].get('exploration_status') == 'completed' and status['explorations'])
-            proof = {'scope': 'Real Groq tool selection + real Chromium on owned synthetic localhost pages; no real-site accuracy claim.',
-                     'provider': 'groq', 'completed': completed, 'ledger': status['ledger'],
+            proof = {'scope': 'Real Grok tool selection + real Chromium on owned synthetic localhost pages; no real-site accuracy claim.',
+                     'provider': 'grok', 'completed': completed, 'ledger': status['ledger'],
                      'local_paths_requested': requests,
                      'assessments': [{k: a.get(k) for k in ('assessment', 'exploration_status', 'reads', 'missing_evidence', 'model')} for a in results],
                      'collected_pages': len(status['explorations']),
