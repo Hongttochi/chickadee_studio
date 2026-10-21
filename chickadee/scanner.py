@@ -19,7 +19,7 @@ from urllib.error import HTTPError
 
 from . import __version__
 from .detection import Rules, analyze, classify_elements
-from .candidates import classify_candidates, analyze_candidate, CATEGORY_LABELS
+from .candidates import classify_candidates, CATEGORY_LABELS
 from .image_ocr import OCRSession, fetch_image, inline_image
 from .local_ai import enrich_report, visual_analysis, prepare_models
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write
@@ -113,9 +113,11 @@ class ScanConfig:
     interval_sec: float = 1.0
     capture_previews: bool = False
     follow_links: bool = True
+    ocr_enabled: bool = True
+    ocr_techniques: bool = True
+    ocr_candidates: bool = True
     detect_techniques: bool = True
     detect_candidates: bool = True
-    ocr_enabled: bool = True
     ocr_max_images: int = 50
     runtime_mode: str = 'standard'
 
@@ -136,7 +138,7 @@ class ScanConfig:
             raise ValueError("재시도는 0~3회, 요청 간격은 0~30초여야 합니다.")
         Rules.load(self.rules_path)
         SiteProfile.load(self.profile_path)
-        if not all(type(v) is bool for v in (self.capture_previews, self.follow_links, self.detect_techniques, self.detect_candidates)):
+        if not all(type(v) is bool for v in (self.ocr_enabled, self.ocr_techniques, self.ocr_candidates, self.capture_previews, self.follow_links, self.detect_techniques, self.detect_candidates)):
             raise ValueError("검사 단계 설정은 true/false여야 합니다.")
         if not (self.detect_techniques or self.detect_candidates):
             raise ValueError("하나 이상의 분석 단계를 연결하세요.")
@@ -249,6 +251,8 @@ class _State:
     ocr_enabled: bool = True
     ocr_max_images: int = 50
     ocr_skipped: int = 0
+    merged_observations: int = 0
+
     image_origins: set = field(default_factory=set)
     image_allow_network: bool = False
 
@@ -293,6 +297,8 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
         state.errors.append({'url': url, 'message': '동적 HTTP 이동은 자동 추적하지 않았습니다: ' + target})
     if status == "completed" and (state.errors or state.remaining):
         status = "partial" if state.pages else "failed"
+    emit({'kind': 'phase', 'stage': 'dedup', 'action': 'merge',
+          'message': f'동일 문구의 본문·OCR 근거 {state.merged_observations}건을 합쳤습니다.'})
     finished = datetime.now().astimezone()
     result = {
         "meta": {"topic": "TOPIC", "entry_url": config.entry_url,
@@ -303,11 +309,10 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     report = {"status": status, "pages_scanned": state.pages, "pages_remaining": state.remaining,
               "exploration": state.trace.export(), "evidence_packets": list(state.trace.packets.values()),
               "screenshots": state.screenshots,
-              "ocr_images": state.ocr_images,
-              "ocr_summary": {"engine": "PaddleOCR", "enabled": config.ocr_enabled, "skipped": state.ocr_skipped,
-                              "max_images": config.ocr_max_images, "runtime_mode": config.runtime_mode, "images": len(state.ocr_images),
-                              "completed": sum(i['status'] == 'completed' for i in state.ocr_images),
-                              "failed": sum(i['status'] != 'completed' for i in state.ocr_images)},
+              "ocr_images": [{k: v for k, v in image.items() if not k.startswith("_")} for image in state.ocr_images],
+              "ocr_summary": _ocr_summary(state, config),
+              "deduplication": {"merged_observations": state.merged_observations, "policy": "same_page_type_text_cross_source"},
+
               "page_diagnostics": state.page_diagnostics,
               "pending_urls": list(state.pending_urls.values()),
               "crawl_summary": {"discovered_urls": state.discovered_urls, "pages_scanned": len(state.pages),
@@ -324,15 +329,56 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
                          "page_timeout_sec": config.page_timeout_sec, "settle_ms": config.settle_ms,
                          "retries": config.retries, "interval_sec": config.interval_sec},
               "enabled_stages": {"follow_links": config.follow_links, "techniques": config.detect_techniques,
-                                 "candidates": config.detect_candidates, "live_preview": config.capture_previews}}
+                                 "candidates": config.detect_candidates, "ocr": config.ocr_enabled,
+                                 "ocr_techniques": config.ocr_techniques, "ocr_candidates": config.ocr_candidates, "live_preview": config.capture_previews}}
     emit({'kind': 'phase', 'stage': 'classifier', 'action': 'local_ai', 'message': '학습한 로컬 AI로 문자 문맥과 화면 특징을 분석합니다.'})
     await asyncio.to_thread(enrich_report, report, candidates=config.detect_candidates)
+
     report["candidate_count"] = len(report["ad_candidates"])
     emit({'kind': 'local_ai', **report['local_ai']})
     report['paused_sec'] = round(control.paused_seconds if control else 0, 3)
     report['active_elapsed_sec'] = round(time.monotonic() - clock - report['paused_sec'], 3)
     report["csv_schema_version"] = "1.0"
     return ScanOutcome(result, report, state.image_assets)
+
+
+def _ocr_element(image, record):
+    return {**image, 'node_id': 'ocr:' + record['id'], 'parent_id': None,
+            'text': record['text'], 'direct_text': record['text'], 'text_breaks': [],
+            'source_kind': 'image_ocr', 'image_id': record['id']}
+
+
+def _observation(hit, location, screenshot_id=None):
+    return {'source_kind': hit.get('source_kind', 'dom_text'), 'image_id': hit.get('image_id'),
+            'location': location, 'text': hit['text'], 'screenshot_id': screenshot_id,
+            'computed_style': hit.get('computed_style', {}),
+            'transparent': hit.get('transparent', False), 'offscreen': hit.get('offscreen', False)}
+
+
+def _cross_source_match(records, incoming, details=None):
+    # Exact text apart from whitespace only: do not merge different ads or
+    # normalize away homoglyph evidence. Keep every source location for review.
+    key = (incoming['url'], incoming.get('technique') or incoming.get('category'),
+           ' '.join(incoming['evidence_text'].split()))
+    incoming_kind = incoming.get('source_kind', 'dom_text')
+    for record in records:
+        other = (record['url'], record.get('technique') or record.get('category'),
+                 ' '.join(record['evidence_text'].split()))
+        evidence = details.get(record['id'], {}) if details is not None else record
+        if other == key and any(item['source_kind'] != incoming_kind for item in evidence.get('evidence_sources', [])):
+            return record
+    return None
+
+
+def _ocr_summary(state, config):
+    unreadable = sum(i.get('recognition_status') == 'unreadable' for i in state.ocr_images)
+    failed = sum(i['status'] == 'failed' for i in state.ocr_images)
+    return {'engine': 'PaddleOCR', 'images': len(state.ocr_images),
+            'enabled': config.ocr_enabled, 'max_images': config.ocr_max_images, 'runtime_mode': config.runtime_mode,
+            'completed': sum(i['status'] == 'completed' for i in state.ocr_images),
+            'failed': failed, 'unreadable': unreadable, 'skipped': state.ocr_skipped,
+            'status': 'disabled' if not config.ocr_enabled else 'partial' if failed or unreadable or state.ocr_skipped
+                      else 'completed' if state.ocr_images else 'no_images'}
 
 
 def _final_candidates(state):
@@ -648,9 +694,10 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
             emit({"kind": "phase", "stage": "collector", "action": "extract", "url": page.url,
                   "message": "DOM·본문·계산된 CSS·링크를 수집합니다."})
             links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules,
-                                              profile.content_selector, config.detect_techniques, config.detect_candidates))
+                                              profile.content_selector, config.detect_techniques, config.detect_candidates, config.ocr_enabled, config.ocr_techniques, config.ocr_candidates))
             if config.detect_candidates and page.url not in state.pages:
                 await _evidence_screenshot(page, state, emit)
+
             if config.capture_previews:
                 try:
                     pixels = await page.screenshot(type='jpeg', quality=45, timeout=1500)
@@ -718,12 +765,15 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
 
 
 async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit, rules=None, content_selector=None,
-                         detect_techniques=True, detect_candidates=True):
+                         detect_techniques=True, detect_candidates=True, ocr_enabled=True, ocr_techniques=True, ocr_candidates=True):
     data = await frame.evaluate(script, {"contentSelector": content_selector})
     state.trace.capture(data['elements'], page_url, prefix, emit, inherited)
-    if detect_candidates:
-        await _inspect_images(frame, data.get('images', []), prefix, page_url, state, emit, rules)
+    ocr_elements = []
+    if ocr_enabled and ((detect_techniques and ocr_techniques) or (detect_candidates and ocr_candidates)):
+        ocr_elements = await _inspect_images(frame, data.get('images', []), prefix, page_url, state, emit, rules)
+        state.trace.capture(ocr_elements, page_url, prefix, emit, inherited)
         if data.get('images_truncated'):
+            state.ocr_skipped += 1
             state.errors.append({'url': page_url, 'message': '이미지 수집 한도 도달: 일부 이미지를 처리하지 못했습니다.'})
     if state.page_diagnostics:
         diagnostic = state.page_diagnostics[-1]
@@ -737,8 +787,8 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
     if detect_techniques:
         emit({"kind": "phase", "stage": "techniques", "action": "analyze", "url": page_url,
               "message": f"{len(data['elements'])}개 요소의 문자 위장·자모·투명·화면 밖 은닉을 검사합니다.", "frame_depth": prefix.count(' >>> ')})
-    hits = classify_elements(data["elements"], inherited, rules) if detect_techniques else []
-    candidates = classify_candidates(data["elements"], rules) if detect_candidates else []
+    hits = classify_elements(data["elements"] + (ocr_elements if ocr_techniques else []), inherited, rules) if detect_techniques else []
+    candidates = classify_candidates(data["elements"] + (ocr_elements if ocr_candidates else []), rules) if detect_candidates else []
     fresh = any((page_url, prefix + h['location'], h['technique']) not in state.seen_findings for h in hits)
     fresh |= any((page_url, prefix + (h.get('content_scope') or h['location']), h['category']) not in state.candidate_keys for h in candidates)
     screenshot_id = await _evidence_screenshot(frame.page, state, emit) if fresh else None
@@ -752,9 +802,19 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
         state.seen_findings.add(key)
         finding = {"id": f"f_{len(state.findings) + 1:05d}", "url": page_url, "is_violation": True,
                    "location": location, "evidence_text": hit["text"], "technique": hit["technique"]}
+        source = _observation(hit, location, screenshot_id)
+        previous = _cross_source_match(state.findings, {**finding, 'source_kind': hit.get('source_kind', 'dom_text')}, state.evidence_details)
+        if previous:
+            state.evidence_details[previous['id']]['evidence_sources'].append(source)
+            state.merged_observations += 1
+            emit({'kind': 'finding', 'finding': previous, 'detail': state.evidence_details[previous['id']]})
+            continue
         state.findings.append(finding)
         state.evidence_details[finding["id"]] = {"analysis": hit["analysis"],
             "url": page_url, "location": location,
+            "source_kind": hit.get("source_kind", "dom_text"), "image_id": hit.get("image_id"),
+            "evidence_sources": [source],
+
             "style_reasons": hit.get("reasons", []), "computed_style": hit.get("computed_style", {}),
             "frame_flags": inherited, "action_sequence": list(state.actions),
             "scope_location": scope, "observed_at": datetime.now().astimezone().isoformat(),
@@ -776,6 +836,15 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
                      "observed_at": datetime.now().astimezone().isoformat(), "analysis": hit.get("analysis", {}),
                      "screenshot_id": screenshot_id,
                      "screenshot_region": await _screen_region(frame, hit['location']) if screenshot_id else None}
+        candidate.update(source_kind=hit.get('source_kind', 'dom_text'), image_id=hit.get('image_id'),
+                         evidence_sources=[_observation(hit, prefix + hit['location'], screenshot_id)])
+        previous = _cross_source_match(state.ad_candidates, candidate)
+        if previous:
+            previous['evidence_sources'].extend(candidate['evidence_sources'])
+            state.candidate_keys[key] = previous['id']
+            state.merged_observations += 1
+            emit({'kind': 'candidate', 'candidate': previous})
+            continue
         if hit.get('related_content_url'):
             candidate['related_content_url'] = hit['related_content_url']
         state.candidate_keys[key] = candidate["id"]
@@ -795,7 +864,7 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
                 frame_selector += "[src=" + json.dumps(probe["src"], ensure_ascii=False) + "]"
             await child.wait_for_load_state("domcontentloaded", timeout=1500)
             links.extend(await _inspect_frame(child, prefix + frame_selector + " >>> ", flags, page_url, script, state, emit, rules,
-                                              None, detect_techniques, detect_candidates))
+                                              None, detect_techniques, detect_candidates, ocr_enabled, ocr_techniques, ocr_candidates))
         except Exception as exc:
             state.errors.append({"url": page_url, "message": f"iframe 점검 실패 ({child.url}): {exc}"})
     return links
@@ -836,13 +905,16 @@ async def _fetch_image_bounded(url, state):
 
 
 async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
+    elements = []
     if not state.ocr_enabled:
         for image in images:
             key = page_url, prefix + image['location'], hashlib.sha256(image['source_url'].encode()).hexdigest()
             if key not in state.ocr_seen: state.ocr_seen.add(key); state.ocr_skipped += 1
-        return
-    for image in images:
+        return elements
+    for index, image in enumerate(images):
         if len(state.ocr_images) >= state.ocr_max_images or state.ocr_disabled:
+            state.ocr_skipped += len(images) - index
+
             if not state.ocr_disabled:
                 state.errors.append({'url': page_url, 'message': f'OCR 이미지 {state.ocr_max_images}개 처리 한도 도달'})
             break
@@ -850,16 +922,20 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         source = image['source_url']
         source_key = page_url, location, hashlib.sha256(source.encode()).hexdigest()
         if source_key in state.ocr_seen:
+            # Reuse recognized text on later DOM observations as well.
+            previous = next((item for item in state.ocr_images if item.get('_source_key') == source_key), None)
+            if previous and previous.get('text'):
+                elements.append(_ocr_element(image, previous))
             continue
         state.ocr_seen.add(source_key)
         record = {'id': 'im_' + str(len(state.ocr_images) + 1), 'url': page_url, 'location': location,
                   'source_url': '(inline)' if source.startswith('data:') else source[:2000],
-                  'source_type': image['source_type'], 'status': 'failed', 'lines': []}
+                  'source_type': image['source_type'], 'status': 'failed', 'lines': [], '_source_key': source_key}
         state.ocr_images.append(record)
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
             digest = hashlib.sha256(data).hexdigest()
-            emit({'kind': 'phase', 'stage': 'collector', 'action': 'image_ocr', 'url': page_url,
+            emit({'kind': 'phase', 'stage': 'ocr', 'action': 'image_ocr', 'url': page_url,
                   'message': 'PaddleOCR로 이미지 속 글자를 읽습니다.', 'location': location})
             if digest not in state.ocr_cache:
                 state.ocr_cache[digest] = await state.ocr.recognize(data)
@@ -879,27 +955,22 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
             state.image_assets[relative] = data
             text = '\n'.join(line['text'] for line in record['lines'] if line['confidence'] >= .55)[:4000]
             record['text'] = text
+            record['recognition_status'] = 'readable' if text else 'unreadable'
             if not text:
-                continue
-            element = {**image, 'text': text, 'direct_text': text, 'text_breaks': [],
-                       'source_kind': 'image_ocr', 'image_id': record['id']}
-            state.trace.capture([element], page_url, prefix, emit)
-            for hit in analyze_candidate(text, rules):
-                candidate = {'id': f'c_{len(state.ad_candidates) + 1:05d}', 'url': page_url,
-                    'location': location, 'scope_location': location, 'evidence_text': text,
-                    'category': hit['category'], 'review_required': True, 'matched_keywords': hit['matched_keywords'],
-                    'reasons': ['이미지 OCR 문구에서 광고 권유 문맥 확인', *hit['reasons']],
-                    'analysis': hit.get('analysis', {}), 'source_kind': 'image_ocr', 'image_id': record['id'],
-                    'observed_at': datetime.now().astimezone().isoformat(),
-                    'screenshot_id': await _evidence_screenshot(frame.page, state, emit)}
-                state.ad_candidates.append(candidate)
-                emit({'kind': 'candidate', 'candidate': candidate})
+                message = '이미지에서 신뢰할 수 있는 문구를 읽지 못했습니다. 정상 판정이 아닙니다.'
+                record['message'] = message
+                state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + message})
+                emit({'kind': 'warning', 'stage': 'ocr', 'message': message, 'url': page_url})
+            else:
+                elements.append(_ocr_element(image, record))
             emit({'kind': 'image_ocr', 'image_id': record['id'], 'status': 'completed',
                   'line_count': len(record['lines']), 'url': page_url})
         except Exception as error:
             record.update(status='failed', message=str(error)[:300])
             state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + str(error)[:160]})
             emit({'kind': 'image_ocr', 'image_id': record['id'], 'status': 'failed', 'message': str(error)[:160]})
+            emit({'kind': 'warning', 'stage': 'ocr', 'url': page_url, 'message': '이미지 OCR 처리 실패: ' + str(error)[:160]})
+    return elements
 
 
 async def _evidence_screenshot(page, state, emit):
@@ -927,7 +998,8 @@ async def _evidence_screenshot(page, state, emit):
         except Exception:
             # A model failure never discards the original screenshot or findings.
             state.screenshots[key]['local_ai'] = {'visual': {'status': 'unavailable', 'message': '화면 모델 분석 실패'}}
-        emit({'kind': 'evidence_screenshot', 'screenshot_id': key, 'sha256': state.screenshots[key]['sha256']})
+        emit({'kind': 'evidence_screenshot', 'screenshot_id': key, 'sha256': state.screenshots[key]['sha256'], 'screenshot': state.screenshots[key]})
+
         return key
     except Exception:
         emit({'kind': 'warning', 'message': '근거 화면 촬영 실패: 원문·CSS 근거는 보존합니다.'})

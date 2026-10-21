@@ -77,7 +77,7 @@ class DesktopBridge:
             value = {**event, 'timestamp': datetime.now().astimezone().isoformat(),
                      'run_id': self.run_id, 'sequence': self.sequence, 'protocol_version': 1}
             if event['kind'] != 'preview':
-                self.recent_events.append(value)
+                self.recent_events.append({k: v for k, v in value.items() if k != 'screenshot'})
             if event['kind'] == 'phase':
                 self.phase = event['stage']
         self.send({'event': value})
@@ -175,7 +175,7 @@ class DesktopBridge:
                                 timeout_sec=params.get('timeout_sec', 300), settle_ms=params.get('settle_ms', 350),
                                 interval_sec=params.get('interval_sec', .5), allow_network=True,
                                 profile_path=profile_path, capture_previews=params.get('preview', True),
-                                ocr_enabled=self.run_environment['features']['ocr_enabled'],
+                                ocr_enabled=flags.pop('ocr_enabled') and self.run_environment['features']['ocr_enabled'],
                                 ocr_max_images=self.run_environment['ocr_max_images'],
                                 runtime_mode=self.run_environment['effective_mode'], **flags)
             output_root = Path(params['output_root']) if params.get('output_root') else self.data_dir/'scans'
@@ -470,7 +470,7 @@ class DesktopBridge:
                 value = self.emit(event)
                 # Persist a complete process timeline without huge image payloads.
                 if event['kind'] != 'preview' and len(events) < 100000:
-                    events.append(value)
+                    events.append({k: v for k, v in value.items() if k != 'screenshot'})
             observe({'kind': 'started', 'url': config.entry_url, 'folder': str(folder)})
             # Initialize the event loop before constructing the coroutine so an
             # OS startup failure does not leak an unawaited scan coroutine.

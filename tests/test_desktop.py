@@ -87,11 +87,11 @@ class DesktopTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     bridge.command('tool-call', {'name': name, 'arguments': arguments})
 
-    def test_graph_connections_control_real_analysis(self):
+    def test_saved_connections_cannot_disable_fixed_analysis(self):
         value = workflow()
         value['edges'] = [e for e in value['edges'] if e['source'] != 'techniques']
         flags = compile_workflow(value)
-        self.assertFalse(flags['detect_techniques'])
+        self.assertTrue(flags['detect_techniques'])
         self.assertTrue(flags['detect_candidates'])
         with DemoSite() as site:
             outcome = asyncio.run(scan(ScanConfig(site.url+'board?id=1', max_pages=1, settle_ms=0, interval_sec=0,
@@ -102,7 +102,7 @@ class DesktopTests(unittest.TestCase):
         self.assertTrue(outcome.report['ad_candidates'])
 
     def test_broken_or_injected_graph_is_rejected(self):
-        for edges in ([], [{'source': 'target', 'target': 'report'}], [{'source': 'exec', 'target': 'report'}]):
+        for edges in ([{'source': 'target', 'target': 'report'}], [{'source': 'exec', 'target': 'report'}]):
             with self.assertRaises(ValueError):
                 compile_workflow({'edges': edges})
 

@@ -26,6 +26,10 @@ export const DEFINITIONS = {
     input: "left",
     output: "right",
   },
+  ocr: {
+    title: "이미지 OCR", subtitle: "이미지 속 글자", icon: "ScanLine", tone: "teal",
+    detail: "PaddleOCR로 이미지 속 글자를 읽어 필수 탐지와 광고 분류에 전달합니다.", input: "left", output: "right",
+  },
   techniques: {
     title: "필수 탐지",
     subtitle: "4개 유형",
@@ -44,6 +48,10 @@ export const DEFINITIONS = {
     input: "left",
     output: "right",
   },
+  dedup: {
+    title: "중복 정리", subtitle: "본문 · 이미지 근거", icon: "Copy", tone: "teal",
+    detail: "같은 페이지·유형·문구의 본문과 OCR 결과를 합치고 각각의 근거를 보존합니다.", input: "left", output: "right",
+  },
   report: {
     title: "결과 출력",
     subtitle: "JSON · CSV",
@@ -59,8 +67,12 @@ export const PAIRS = [
   ["browser", "collector"],
   ["collector", "techniques"],
   ["collector", "candidates"],
-  ["techniques", "report"],
-  ["candidates", "report"],
+  ["collector", "ocr"],
+  ["ocr", "candidates"],
+  ["ocr", "techniques"],
+  ["techniques", "dedup"],
+  ["candidates", "dedup"],
+  ["dedup", "report"],
 ];
 export const edgeFor = (source, target) => ({
   id: source + "-" + target,
@@ -71,15 +83,18 @@ export const edgeFor = (source, target) => ({
   targetHandle: "in",
 });
 export const defaultWorkflow = () => ({
-  version: 1,
+  version: 2,
   follow_links: true,
+  ocr_enabled: true,
   nodes: [
-    { id: "target", position: { x: 0, y: 160 } },
-    { id: "browser", position: { x: 220, y: 160 } },
-    { id: "collector", position: { x: 440, y: 160 } },
-    { id: "techniques", position: { x: 660, y: 0 } },
-    { id: "candidates", position: { x: 660, y: 320 } },
-    { id: "report", position: { x: 900, y: 160 } },
+    { id: "target", position: { x: 0, y: 200 } },
+    { id: "browser", position: { x: 220, y: 200 } },
+    { id: "collector", position: { x: 440, y: 200 } },
+    { id: "techniques", position: { x: 880, y: 0 } },
+    { id: "ocr", position: { x: 660, y: 400 } },
+    { id: "candidates", position: { x: 880, y: 200 } },
+    { id: "dedup", position: { x: 1100, y: 200 } },
+    { id: "report", position: { x: 1320, y: 200 } },
   ],
   edges: PAIRS.map(([a, b]) => edgeFor(a, b)),
 });
@@ -91,11 +106,12 @@ export function validConnection(connection) {
 export function normalizeWorkflow(value) {
   if (
     !value ||
-    value.version !== 1 ||
+    ![1, 2].includes(value.version) ||
     !Array.isArray(value.nodes) ||
-    value.nodes.length !== 6 ||
+    !(value.version === 2 ? value.nodes.length === 8 : [6, 7].includes(value.nodes.length)) ||
+    (value.ocr_enabled !== undefined && typeof value.ocr_enabled !== "boolean") ||
     !Array.isArray(value.edges) ||
-    value.edges.length > 6
+    value.edges.length > 10
   )
     throw new Error("지원하는 워크플로 JSON이 아닙니다.");
   const ids = new Set();
@@ -112,34 +128,27 @@ export function normalizeWorkflow(value) {
     return { id: node.id, position: node.position };
   });
   const keys = new Set();
-  const edges = value.edges.map((edge) => {
-    if (!validConnection(edge) || keys.has(edge.source + "-" + edge.target))
+  value.edges.forEach((edge) => {
+    if (!(validConnection(edge) || (value.version === 1 && ["techniques", "candidates"].includes(edge.source) && edge.target === "report")) || keys.has(edge.source + "-" + edge.target))
       throw new Error("지원하지 않거나 중복된 연결입니다.");
     keys.add(edge.source + "-" + edge.target);
-    return edgeFor(edge.source, edge.target);
   });
+  if (!ids.has("ocr")) {
+    nodes.push(defaultWorkflow().nodes.find(node => node.id === "ocr"));
+  }
+  if (value.version === 1) {
+    if (!ids.has("dedup")) nodes.push(defaultWorkflow().nodes.find(node => node.id === "dedup"));
+
+  }
+  if (Object.keys(DEFINITIONS).some(id => !nodes.some(node => node.id === id))) throw new Error("필수 노드가 없습니다.");
   return {
-    version: 1,
+    version: 2,
+    ocr_enabled: value.ocr_enabled !== false,
     nodes,
-    edges,
+    edges: defaultWorkflow().edges,
     follow_links: value.follow_links !== false,
   };
 }
-export function workflowError(flow) {
-  const has = (a, b) =>
-    flow.edges.some((e) => e.source === a && e.target === b);
-  if (!has("target", "browser") || !has("browser", "collector"))
-    return "검사 대상 → 브라우저 → 콘텐츠 수집을 연결해 주세요.";
-  if (
-    !(has("collector", "techniques") && has("techniques", "report")) &&
-    !(has("collector", "candidates") && has("candidates", "report"))
-  )
-    return "분석 노드 하나 이상을 결과 저장까지 연결해 주세요.";
-  return "";
-}
 export function branchEnabled(flow, id) {
-  return (
-    flow.edges.some((e) => e.source === "collector" && e.target === id) &&
-    flow.edges.some((e) => e.source === id && e.target === "report")
-  );
+  return id !== "ocr" || flow.ocr_enabled !== false;
 }
