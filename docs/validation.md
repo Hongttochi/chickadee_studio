@@ -154,3 +154,9 @@
 - 사용자가 입력한 Groq 키가 없으면 환경 변수에 키가 있어도 연결·검토를 시작하지 않습니다. 등록 후 한도 재적용은 같은 세션 키를 유지하고 앱 재시작 시 키가 사라지는 회귀 검사를 추가했습니다. 관련 Python 검사 22개와 실제 화면의 키 미등록·등록·한도 차단·기록 복원 검사가 통과했습니다. 로그: `artifacts/user-key-and-signing-tests.log`, `artifacts/user-key-source-ui.log`.
 - Windows 서명 검사 스크립트가 미서명 빌드를 신뢰된 것으로 수용하지 않고 실패하는지 실제 파일로 확인했습니다. `artifacts/windows-signature-check.log`, `artifacts/windows-signature-enforcement.log`에 보존했습니다.
 - Apache-2.0을 적용하고 무료 SignPath 신청 초안·설정 방법과 공식 Action 연결을 추가했습니다. 가입·심사·승인된 인증서는 아직 없어 실제 SignPath 서명 요청은 실행하지 않았습니다. 서명·네이티브 테스트가 통과하지 않은 빌드는 정식 릴리스로 게시하지 않습니다. 앱 화면 스타일·버튼 구성은 이 수정에서 바꾸지 않았습니다.
+
+## 최종 GitHub Windows 실행 검증
+
+[실제 실행 로그와 빌드 파일](https://github.com/orqan137/chickadee_studio/actions/runs/39601194680)은 소스 커밋 `8d272af8ecfd829d6c55ee3dbe9693b9c9506544`를 대상으로 성공했습니다. Python 16개 모듈의 99개 검사, desktop 단위 검사 13개, 실제 패키지 Electron 창에서 실행한 4개 통합 시나리오가 통과했습니다. 일반 검사·일시정지/재개·CSV·미리보기·기록/검토 복원, 탐색 그래프·캡처·사용자 API 키 미등록/등록·한도 차단, 한국어 이미지 OCR·좌표, 실행 모드 보존·절약 모드·공식 OCR 자체 구동을 포함합니다. 테스트에서 유료 요청은 보내지 않았습니다.
+
+테스트한 Windows 빌드의 ZIP과 SHA-256은 해당 실행의 `windows-release-assets` Artifact로 보존했습니다. **서명 상태는 미서명이며 무료 서명 신청·심사 전입니다.** 따라서 정식 릴리스 작업은 의도대로 보류됐습니다. GitHub-hosted Windows에서의 기능 시험 성공은 이 PC의 코드 서명 정책 차단이 해결됐다는 의미가 아닙니다. 이 PC의 Windows 보안 설정·신뢰 저장소는 변경하지 않았습니다.
