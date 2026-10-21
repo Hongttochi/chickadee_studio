@@ -35,6 +35,8 @@ class ContentAnalysisTests(unittest.TestCase):
             self.assertEqual(typed['ad_candidates'], [])
             self.assertIn('카지노', ocr['text'])
             self.assertTrue(ocr['ad_candidates']); self.assertFalse(ocr['original_unicode_observed'])
+            self.assertEqual(ocr['ocr']['image_sha256'], result['image']['image_sha256'])
+            self.assertEqual(ocr['ocr']['engine'], 'PaddleOCR')
             self.assertTrue(typed['original_unicode_observed'])
             self.assertEqual(result['image']['local_ai']['visual']['status'], 'completed')
             self.assertEqual(ocr['local_ai']['text']['status'], 'completed')
@@ -75,6 +77,15 @@ class ContentAnalysisTests(unittest.TestCase):
         self.assertEqual(result['status'], 'partial')
         self.assertEqual(result['sources'][0]['text'], '도서관 이용 안내')
         self.assertEqual(result['image']['ocr']['status'], 'failed')
+
+    def test_unreadable_image_is_partial_with_no_advertising_conclusion(self):
+        value = {'status': 'completed', 'engine': 'PaddleOCR', 'model': 'fixture', 'lines': []}
+        with patch('chickadee.content_analysis.OCRSession.recognize', new_callable=AsyncMock, return_value=value):
+            result = asyncio.run(analyze_content('', PIXELS, environment('standard'), Event()))
+        self.assertEqual(result['status'], 'partial')
+        self.assertEqual(result['image']['ocr']['recognition_status'], 'unreadable')
+        self.assertEqual(result['candidate_count'], 0)
+        self.assertTrue(result['errors'])
 
     def test_background_request_is_responsive_and_cancellable(self):
         async def slow(text, pixels, runtime, stop, progress):
