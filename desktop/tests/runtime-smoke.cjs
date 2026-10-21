@@ -68,7 +68,9 @@ const http = require('node:http');
     await page.screenshot({ path: path.join(root, 'artifacts/runtime-settings.png') });
     assert.equal(JSON.parse(await fs.readFile(path.join(data, 'runtime-settings.json'), 'utf8')).mode, 'standard');
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: 'passed', mode: packaged ? 'electron-packaged' : 'source-ui-real-python', economyReport: true, persisted: true, offlineOCR: true, environment, browserImageRequests: images }));
+    const direct = await require('./content-smoke.cjs').checkContent(page, root);
+    assert.deepEqual(errors, []);
+    console.log(JSON.stringify({ status: 'passed', mode: packaged ? 'electron-packaged' : 'source-ui-real-python', economyReport: true, persisted: true, offlineOCR: true, environment, browserImageRequests: images, ...direct }));
   } finally {
     if (app) await app.close();
     server.closeAllConnections(); await new Promise(resolve => server.close(resolve));

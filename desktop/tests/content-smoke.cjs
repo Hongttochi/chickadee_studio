@@ -4,17 +4,9 @@ const launch = packaged ? options => require('playwright')._electron.launch(opti
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-(async () => {
-  const root = path.resolve(__dirname, '../..');
+async function checkContent(page, root) {
   const image = 'data:image/png;base64,' + (await fs.readFile(path.join(root, 'tests/fixtures/ocr/promotion.png'))).toString('base64');
-  const app = await launch({ env: { ...process.env, CHICKADEE_TEST_DATA: path.join(root, 'artifacts/content-ui-' + Date.now()) },
-    ...(packaged ? { executablePath: process.env.CHICKADEE_PACKAGED_EXE, args: [] } : {}) });
-  try {
-    const page = await app.firstWindow();
-    page.setDefaultTimeout(20000);
-    const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await page.getByRole('button', { name: '사용 가이드 닫기', exact: true }).click();
-    await page.locator('.header-run-controls button.primary:not(:disabled)').waitFor();
+    const history = (await page.evaluate(() => window.chickadee.state())).history;
     const before = await page.getByRole('button').count();
     await page.evaluate(() => window.chickadee.configureRuntime({ mode: 'standard' }));
     const job = await page.evaluate(image_data_url => window.chickadee.analyzeContent({ text: '도서관 이용 안내', image_data_url }), image);
@@ -34,8 +26,23 @@ const path = require('node:path');
     assert.equal(value.result.image.local_ai.visual.status, 'completed');
     assert.equal(value.result.sources[1].local_ai.text.status, 'completed');
     assert.equal(value.result.paid_requests, 0);
-    assert.equal((await page.evaluate(() => window.chickadee.state())).history.length, 0);
+    assert.deepEqual((await page.evaluate(() => window.chickadee.state())).history, history);
     assert.equal(await page.getByRole('button').count(), before);
+    return { directImageText: true, sourceSeparation: true, models: true, paidCalls: 0, newButtons: 0 };
+}
+module.exports = { checkContent };
+
+if (require.main === module) (async () => {
+  const root = path.resolve(__dirname, '../..');
+  const app = await launch({ env: { ...process.env, CHICKADEE_TEST_DATA: path.join(root, 'artifacts/content-ui-' + Date.now()) },
+    ...(packaged ? { executablePath: process.env.CHICKADEE_PACKAGED_EXE, args: [] } : {}) });
+  try {
+    const page = await app.firstWindow();
+    page.setDefaultTimeout(20000);
+    const errors = []; page.on('pageerror', e => errors.push(e.message));
+    await page.getByRole('button', { name: '사용 가이드 닫기', exact: true }).click();
+    await page.locator('.header-run-controls button.primary:not(:disabled)').waitFor();
+    await checkContent(page, root);
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ status: 'passed', mode: packaged ? 'electron-packaged' : 'source-ui-real-python', directImageText: true, sourceSeparation: true, models: true, paidCalls: 0, newButtons: 0 }));
   } finally { await app.close(); }

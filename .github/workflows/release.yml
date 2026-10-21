@@ -91,7 +91,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/runtime-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tests/content-smoke.cjs
       - name: Package ZIP and SHA256
         run: .\.venv\Scripts\python.exe scripts/package-desktop.py
       - name: Verify release files

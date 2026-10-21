@@ -211,6 +211,6 @@ The linked documents are primarily in Korean.
 
 </details>
 
-## License and code signing
+## License
 
 Original project code is licensed under [Apache-2.0](LICENSE). Third-party components retain their respective licenses.
