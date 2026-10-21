@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
+import ImageOCR from "./ImageOCR.jsx";
 import ShortcutSettings from "./ShortcutSettings.jsx";
 import { defaults as defaultShortcuts, validateShortcuts, fromEvent } from "./shortcuts.mjs";
 import SettingsNav from "./SettingsNav.jsx";
@@ -2764,6 +2765,7 @@ function RecordDetail({
             <li key={index}>{reason}</li>
           ))}
         </ul>
+        <ImageOCR image={outcome?.report.ocr_images?.find((image) => image.id === detail.image_id)} />
         <EvidenceScreenshot screenshot={outcome?.report.screenshots?.[detail.screenshot_id]}
           hidden={record.technique === "TRANSPARENT" || record.technique === "OFFSCREEN"} />
         <div className="review-editor">

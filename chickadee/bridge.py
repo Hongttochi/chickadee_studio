@@ -295,7 +295,8 @@ class DesktopBridge:
                 packets.update((p['id'], {**p, 'supplemental': True, 'snapshot_id': prefix + (p.get('snapshot_id') or '')}) for p in visit['packets'] if p['id'] not in packets)
                 screenshots.update((prefix + key, image) for key, image in visit.get('screenshots', {}).items())
             return {'run_id': self.run_id, 'graph': {**graph, 'nodes': nodes, 'edges': edges}, 'packets': list(packets.values()),
-                    'screenshots': screenshots, 'agent': self._inspection_command('agent-status', {})}
+                    'screenshots': screenshots, 'ocr_images': report.get('ocr_images', []),
+                    'agent': self._inspection_command('agent-status', {})}
         if self.running or self.outcome is None:
             raise ValueError('검사 완료 후 실행하세요.')
         if method == 'agent-run':

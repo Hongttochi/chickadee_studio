@@ -17,7 +17,7 @@ export default function EvidenceScreenshot({ screenshot, hidden = false, caption
       {expanded ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
     </button>
     </div>
-    <p className="evidence-capture-note">{hidden ? "숨김·화면 밖 요소는 이미지에 보이지 않을 수 있습니다. 원문·CSS와 함께 확인하세요. " : "촬영 당시 보이는 영역입니다. "}외부 이미지·글꼴 로딩은 제한됩니다.</p>
+    <p className="evidence-capture-note">촬영 당시 화면</p>
     <details><summary>촬영 정보</summary><p>{screenshot.url}</p><time>{screenshot.observed_at}</time><p className="mono">SHA-256 {screenshot.sha256}</p></details>
   </figure>;
 }

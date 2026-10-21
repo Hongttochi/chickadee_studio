@@ -4,6 +4,8 @@ from datetime import datetime
 import base64
 import hashlib
 import json
+import math
+import re
 
 
 def fingerprint(value):
@@ -100,6 +102,7 @@ class InspectionTrace:
                     'missing_evidence': ([] if style is not None else ['computed_style']) +
                                         (['isolated_scope_context'] if element.get('nested_content_scopes') else []),
                     'snapshot_id': self.active, 'observed_at': datetime.now().astimezone().isoformat(),
+                    'source_kind': element.get('source_kind', 'dom_text'), 'image_id': element.get('image_id'),
                 }
                 size = len(json.dumps(self.packets[key], ensure_ascii=False).encode('utf-8'))
                 if self.packet_bytes + size > self.MAX_PACKET_BYTES:
@@ -129,6 +132,7 @@ class InspectionTrace:
 def validate_inspection(report):
     """Legacy reports are accepted; malformed new feature data is rejected."""
     validate_screenshots(report.get('screenshots', {}))
+    validate_ocr_images(report.get('ocr_images', []))
     packets = report.get('evidence_packets', [])
     if not isinstance(packets, list) or len(packets) > InspectionTrace.MAX_PACKETS:
         raise ValueError('수집 영역 목록 형식 오류')
@@ -176,3 +180,43 @@ def validate_screenshots(screenshots):
             raise ValueError('근거 화면 크기·해시 오류')
     if size > 3_000_000:
         raise ValueError('근거 화면 총 크기 초과')
+
+
+def validate_ocr_images(images):
+    if not isinstance(images, list) or len(images) > 50:
+        raise ValueError('OCR 이미지 목록 형식 오류')
+    ids, preview_size = set(), 0
+    for item in images:
+        if not isinstance(item, dict) or not isinstance(item.get('id'), str) or item['id'] in ids:
+            raise ValueError('OCR 이미지 ID 오류')
+        ids.add(item['id'])
+        if item.get('status') not in ('completed', 'failed'):
+            raise ValueError('OCR 처리 상태 오류')
+        lines = item.get('lines', [])
+        if not isinstance(lines, list) or len(lines) > 80:
+            raise ValueError('OCR 문구 목록 오류')
+        if item['status'] != 'completed':
+            continue
+        w, h = item.get('width'), item.get('height')
+        if type(w) is not int or type(h) is not int or min(w, h) < 8 or w * h > 8_000_000:
+            raise ValueError('OCR 이미지 크기 오류')
+        digest = item.get('image_sha256', '')
+        if not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest):
+            raise ValueError('OCR 원본 해시 오류')
+        if not re.fullmatch(r'evidence/images/' + digest + r'\.(png|jpg|webp|gif)', item.get('relative_path', '')):
+            raise ValueError('OCR 원본 경로 오류')
+        for line in lines:
+            if not isinstance(line, dict) or not isinstance(line.get('text'), str) or len(line['text']) > 1000:
+                raise ValueError('OCR 문구 오류')
+            confidence, box = line.get('confidence'), line.get('box')
+            if type(confidence) not in (int, float) or not math.isfinite(confidence) or not 0 <= confidence <= 1:
+                raise ValueError('OCR 신뢰도 오류')
+            if not isinstance(box, list) or len(box) != 4 or any(
+                not isinstance(point, list) or len(point) != 2 or any(type(v) not in (int, float) or not math.isfinite(v) for v in point)
+                or not (0 <= point[0] <= w and 0 <= point[1] <= h) for point in box):
+                raise ValueError('OCR 좌표 오류')
+        if 'preview_data_url' in item:
+            validate_screenshots({'image': {'data_url': item['preview_data_url'], 'sha256': item.get('preview_sha256')}})
+            preview_size += len(item['preview_data_url'])
+    if preview_size > 3_000_000:
+        raise ValueError('OCR 미리보기 총 크기 초과')

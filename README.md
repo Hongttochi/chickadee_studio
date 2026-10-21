@@ -11,13 +11,13 @@
 공공 웹사이트의 광고 의심 요소를 찾는 데스크톱 검사 도구입니다.<br />
 주소 입력부터 브라우저 검사, 근거 확인, JSON·CSV 저장까지 연결합니다.
 
-[![Release](https://img.shields.io/github/v/release/orqan137/chickadee_Bot?include_prereleases&style=flat&color=506b83&label=release)](https://github.com/orqan137/chickadee_Bot/releases)
-[![Release workflow](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_Bot/release.yml?branch=main&style=flat&label=build)](https://github.com/orqan137/chickadee_Bot/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/orqan137/chickadee_studio?include_prereleases&style=flat&color=506b83&label=release)](https://github.com/orqan137/chickadee_studio/releases)
+[![Release workflow](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_studio/release.yml?branch=main&style=flat&label=build)](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)
 [![Windows x64](https://img.shields.io/badge/Windows-x64-506b83?style=flat)](docs/quickstart-windows.md)
 [![Electron](https://img.shields.io/badge/Electron-44-47848f?style=flat&logo=electron&logoColor=white)](desktop/package.json)
 [![Python](https://img.shields.io/badge/Python-3.12-47779e?style=flat&logo=python&logoColor=white)](requirements.txt)
 
-[**Windows 다운로드**](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.9.0) · [빠른 시작](docs/quickstart-windows.md) · [사용 설명서](docs/manual.md) · [릴리스 노트](docs/releases/0.9.0.md)
+[**Windows 다운로드**](https://github.com/orqan137/chickadee_studio/releases/tag/v0.10.0) · [빠른 시작](docs/quickstart-windows.md) · [사용 설명서](docs/manual.md) · [릴리스 노트](docs/releases/0.10.0.md)
 
 </div>
 
@@ -31,14 +31,14 @@
 
 **Windows 배포 파일에는 앱·Python 검사 엔진·Chromium이 모두 포함됩니다.** Python, Node.js, Docker를 따로 설치할 필요가 없습니다.
 
-1. [**0.9.0 Windows ZIP**](https://github.com/orqan137/chickadee_Bot/releases/download/v0.9.0/Chickadee-Studio-0.9.0-win-x64.zip)을 내려받아 전체 압축을 풉니다.
-2. `Chickadee-0.9.0/Chickadee.exe`를 실행합니다.
+1. [**0.10.0 Windows ZIP**](https://github.com/orqan137/chickadee_studio/releases/download/v0.10.0/Chickadee-Studio-0.10.0-win-x64.zip)을 내려받아 전체 압축을 풉니다.
+2. `Chickadee-0.10.0/Chickadee.exe`를 실행합니다.
 3. **검사 대상** 노드를 누르고 오른쪽 URL 입력란에 주소를 입력합니다.
 4. 상단 **검사 실행**을 누릅니다. 먼저 둘러보려면 옆의 펼침 메뉴에서 **데모 검사**를 선택하세요.
 
 로컬 데모는 인터넷 없이 실행할 수 있습니다. 처음에는 앱 안의 **사용 가이드**에서 화면 예시와 단계별 설명을 확인하세요.
 
-> 현재 다운로드는 **Windows x64 프리릴리스**입니다. `Chickadee.exe`와 `resources` 등 동봉 파일을 같은 폴더에 유지하세요. macOS는 소스 실행을 지원하며 별도 배포 파일은 제공하지 않습니다.
+> 현재 다운로드는 **Windows x64**입니다. `Chickadee.exe`와 `resources` 등 동봉 파일을 같은 폴더에 유지하세요. macOS는 소스 실행을 지원하며 별도 배포 파일은 제공하지 않습니다.
 
 ## 화면으로 살펴보기
 
@@ -62,13 +62,14 @@
 
 </details>
 
-스크린샷은 현재 UI의 로컬 실행 화면입니다. 결과·기록 화면은 내장 데모를 사용했습니다. 실제 사이트의 탐지 성능을 나타내는 자료는 아닙니다.
+스크린샷은 내장 데모를 검사한 앱 실행 화면입니다.
 
 ## 주요 기능
 
 | 기능 | 할 수 있는 일 |
 | --- | --- |
 | 노드 기반 검사 구성 | 대상 → 브라우저 → 콘텐츠 수집 → 필수 탐지·광고 분류 → 결과 출력. 연결과 하위 링크 설정을 실행에 반영 |
+| 한국어 이미지 OCR | 게시글·배경 이미지의 글자 인식, 광고 문맥 분석, 원본·글자 위치·신뢰도 확인 |
 | 검사 제어 | 페이지 경계에서 일시정지·재개, 중단 후 일부 결과 저장, 특정 페이지 재검사 |
 | 실제 브라우저 미리보기 | Chromium 화면·현재 URL·진행 단계를 접이식 패널에서 확인 |
 | 탐색 경로와 진행 기록 | 방문·대기 주소, HTTP 응답, 링크 발견, 처리 단계와 오류 확인 |
@@ -76,15 +77,15 @@
 | 저장과 복원 | JSON·CSV·보고서, 마지막 검사 화면과 최근 30개 실행 기록 보관 |
 | 빠른 조작 | 앱 드롭다운, 키보드 메뉴 이동, 빠른 명령, 설정·노드 위치 기억 |
 
-기본 검사는 외부 API 키나 GPU 없이 규칙 기반으로 동작합니다.
+기본 검사와 이미지 OCR은 외부 API 키나 GPU 없이 동작합니다.
 
-### 검사 분석 · 0.9.0
+### 검사 분석 · 0.10.0
 
 - **탐색 그래프**: 실제 관찰한 페이지, 스크롤·읽기 동작과 iframe 탐색을 확인합니다.
 - **AI 검토**: 전체 수집 영역을 순서대로 분석하고, 근거 부족 시 같은 사이트의 관측 링크를 최대 2개 추가 탐색해 재판정합니다. 사용자가 분석을 시작해야 실행하며, 기존 누적 6회/24,000토큰 한도를 유지합니다. 원본 탐지 결과와 사람의 검토 상태는 변경하지 않습니다.
 - **근거 화면**: 탐지 당시 화면을 촬영해 근거 패널·검사 기록에서 확대하며 원본 JPEG도 결과 폴더의 `evidence/`에 저장합니다. 이미지는 Grok에 전송하지 않습니다.
 
-광고 문맥 검토와 검사 브라우저의 사이트 밖 이동 제한을 제공합니다. 피싱 확정 판별이나 PC 전체의 접속 차단 기능은 아닙니다. [범위와 사용법](docs/inspection-agent.md)을 확인하세요.
+[검사 분석과 AI 검토 사용법](docs/inspection-agent.md)
 
 외부로 전달되는 근거와 마스킹 범위, 설정 방법은 [검사 분석 안내](docs/inspection-agent.md)를 확인하세요.
 
@@ -109,7 +110,7 @@
 - 사용자 Chrome 프로필·탭을 사용하지 않고, 검사 대상 HTML을 Electron 표시 창에 직접 삽입하지 않습니다.
 - 탐지 규칙과 사이트 설정은 JSON으로 교체합니다. 설정 파일의 코드를 실행하지 않습니다.
 
-[탐색 성능과 한계](docs/performance.md) · [실제 테스트 결과](examples/test-site-2026-10-20/)
+[탐색 처리 방식](docs/performance.md) · [실제 테스트 결과](examples/test-site-2026-10-20/)
 
 </details>
 
@@ -135,6 +136,7 @@ Python 3.12와 Node.js 24를 기준으로 합니다. 아래는 **소스 개발�
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe scripts/prepare_ocr_models.py
 $env:PLAYWRIGHT_BROWSERS_PATH = '0'
 .\.venv\Scripts\python.exe -m playwright install chromium --only-shell
 cd desktop
@@ -143,7 +145,7 @@ npm run build
 npm start
 ```
 
-Windows 앱·검사 엔진 패키징은 저장소 루트의 `scripts/build-desktop.ps1`을 사용합니다. 출력은 `artifacts/electron-0.9.0/win-unpacked/Chickadee.exe`이며 폴더 전체를 배포합니다.
+Windows 앱·검사 엔진 패키징은 저장소 루트의 `scripts/build-desktop.ps1`을 사용합니다. 출력은 `artifacts/electron-0.10.0/win-unpacked/Chickadee.exe`이며 폴더 전체를 배포합니다.
 
 </details>
 
@@ -153,6 +155,7 @@ Windows 앱·검사 엔진 패키징은 저장소 루트의 `scripts/build-deskt
 ```sh
 python3.12 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python scripts/prepare_ocr_models.py
 PLAYWRIGHT_BROWSERS_PATH=0 .venv/bin/python -m playwright install chromium --only-shell
 cd desktop
 npm ci
@@ -190,7 +193,7 @@ macOS에서는 Python 실행 경로를 `.venv/bin/python`으로 바꿉니다. �
 | [Windows 빠른 실행](docs/quickstart-windows.md) | [데스크톱 개발·배포](docs/desktop.md) | [조사 자료 원본](research/README.md) |
 | [사용 매뉴얼](docs/manual.md) | [아키텍처](docs/architecture.md) | [Dots 자료 반영](docs/research-integration.md) |
 | [결과 파일 형식](docs/result-format.md) | [검증 기록](docs/validation.md) | [v4 조사 정리](docs/research-v4.md) |
-| [릴리스 노트](docs/releases/0.9.0.md) | [디자인 기준](DESIGN.md) | [ML·에이전트 설계](docs/ml-agent-generalization.md) |
+| [릴리스 노트](docs/releases/0.10.0.md) | [디자인 기준](DESIGN.md) | [ML·에이전트 설계](docs/ml-agent-generalization.md) |
 | [개발 계획](docs/development-plan.md) | [에이전트 규격](docs/agent-extension.md) | [ML 오프라인 대조](research/ml-review/2026-10-21/) |
 | [요구사항](docs/requirements.md) | [외부 구성요소](docs/third-party-notices.md) | [모의 웹 명세](examples/mock-site-spec.json) |
 | [제출 체크리스트](docs/submission-checklist.md) | [결과 예시](examples/result.sample.json) | [모의 웹 내용](examples/mock-site-content.json) |
@@ -203,14 +206,3 @@ macOS에서는 Python 실행 경로를 `.venv/bin/python`으로 바꿉니다. �
 [편집 가능한 원본](docs/assets/architecture.drawio)
 
 </details>
-
-## 현재 범위와 한계
-
-2026 공공 웹사이트 불법광고 탐지 도구 개발 공모전을 목표로 개발 중입니다. 규칙 기반 도구이므로 오탐·누락이 있고, 탐지 결과가 불법 여부의 판단을 대신하지 않습니다.
-
-- 로그인, 이미지 OCR, POST 기반 댓글 API, Shadow DOM, 무한 스크롤 전체 수집은 지원하지 않습니다.
-- 내장 데모의 필수 탐지 14건은 실제 사이트나 비공개 평가셋 정확도를 뜻하지 않습니다.
-- 조사 v4는 광고 의심 55건·정상 23건입니다. 정적 HTML 관찰과 실제 렌더링 검증을 구분하며, 새 자료의 추가가 모든 패턴의 검출 성공을 뜻하지는 않습니다.
-- Windows 배포 인증서 서명은 포함하지 않았습니다. 사용자 PC의 보안 정책에 따라 실행이 제한될 수 있습니다.
-
-검증 범위와 남은 항목은 [검증 기록](docs/validation.md), 제출 조건은 [요구사항](docs/requirements.md)에서 확인하세요.

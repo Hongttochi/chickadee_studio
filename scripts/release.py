@@ -74,6 +74,18 @@ def verify(value, directory):
         browser_names = ("/headless_shell.exe", "/chrome-headless-shell.exe")
         if not any("/.local-browsers/" in name and name.endswith(browser_names) for name in files):
             raise ValueError("ZIP is missing bundled Chromium headless shell")
+        if tuple(map(int, value.split('.'))) >= (0, 10, 0):
+            engine = prefix + 'resources/engine/_internal/'
+            if engine + 'paddle/base/libpaddle.pyd' not in files:
+                raise ValueError('ZIP is missing Paddle CPU runtime')
+            manifest = json.loads((ROOT / 'chickadee/data/ocr-models.json').read_text(encoding='utf-8'))
+            for model in manifest['files']:
+                name = engine + 'ocr-models/' + model['path']
+                if name not in files or archive.getinfo(name).file_size != model['bytes']:
+                    raise ValueError('ZIP is missing official OCR model: ' + model['path'])
+                with archive.open(name) as stream:
+                    if file_digest(stream, 'sha256').hexdigest() != model['sha256']:
+                        raise ValueError('ZIP OCR model SHA256 mismatch: ' + model['path'])
         bad = archive.testzip()
         if bad:
             raise ValueError(f"ZIP CRC check failed: {bad}")

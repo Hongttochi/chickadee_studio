@@ -9,6 +9,8 @@
 | Chromium Headless Shell | 렌더링 엔진 | https://www.chromium.org/chromium-projects/ |
 | PyInstaller | Windows 패키징 | https://pyinstaller.org/en/stable/license.html |
 | jsonschema | 출력·불러오기 형식 검증 | https://github.com/python-jsonschema/jsonschema |
+| PaddleOCR / PaddlePaddle | PP-OCRv5 모바일 탐지·한국어 인식 모델, 로컬 CPU 추론 | https://github.com/PaddlePaddle/PaddleOCR / https://github.com/PaddlePaddle/Paddle |
+| OpenCV / NumPy / Pillow / pyclipper / PyYAML | OCR 전처리·좌표·이미지 처리·모델 설정 | 배포본의 licenses/OCR-Third-Party.txt |
 | Electron | Windows 앱 셸 | https://github.com/electron/electron/blob/main/LICENSE |
 | React | 화면 구성 | https://github.com/facebook/react/blob/main/LICENSE |
 | React Flow | 노드·포트·연결 편집 | https://github.com/xyflow/xyflow/blob/main/LICENSE |
@@ -16,7 +18,9 @@
 | Pretendard | 로컬 글꼴, SIL Open Font License | https://github.com/orioncactus/pretendard/blob/main/LICENSE |
 | Unicode confusables | 제한된 닮은꼴 문자 매핑, Unicode License V3 | https://www.unicode.org/reports/tr39/ |
 
-Unicode 데이터는 `chickadee/data/confusables-ascii.json`에 버전·원본 SHA-256·필터와 함께 고정하며, 원문 라이선스는 `chickadee/data/LICENSE-UNICODE.txt`에 보존합니다. 이 폴더도 검사 엔진 패키지에 포함합니다. 외부 참고 프로젝트의 실행 코드·모델은 가져오지 않았습니다.
+Unicode 데이터는 `chickadee/data/confusables-ascii.json`에 버전·원본 SHA-256·필터와 함께 고정하며, 원문 라이선스는 `chickadee/data/LICENSE-UNICODE.txt`에 보존합니다. 이 폴더도 검사 엔진 패키지에 포함합니다.
+
+PaddleOCR 공식 모델은 [PP-OCRv5 모바일 탐지](https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det)와 [한국어 인식](https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec)을 사용합니다. Apache-2.0 모델의 revision·파일별 SHA-256은 `chickadee/data/ocr-models.json`에 고정합니다. DB 탐지·CTC 인식 전후처리를 연결한 자체 어댑터에서 PaddlePaddle CPU 추론을 수행하며 PaddleX 파이프라인의 자동 다운로드를 사용하지 않습니다. 원문 라이선스와 패키지 고지는 `desktop/licenses/OCR-Third-Party.txt`에 보관합니다.
 
 Playwright가 동봉하는 Node.js·브라우저 및 의존성의 라이선스·고지 파일도 배포본 내부에 유지해야 합니다. Electron 배포본의 `resources`, Chromium 라이선스 파일과 검사 프로그램의 `_internal`을 유지합니다. Pretendard 라이선스는 `desktop/licenses/Pretendard-OFL.txt`에 보관합니다. 이 목록은 최종 제출 시 필요한 전체 의존성·라이선스 검토를 대신하지 않습니다.
 

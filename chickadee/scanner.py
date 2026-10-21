@@ -15,10 +15,12 @@ import tempfile
 from threading import Event
 import time
 from urllib.parse import parse_qsl, urljoin, urlsplit, urlunsplit
+from urllib.error import HTTPError
 
 from . import __version__
 from .detection import Rules, analyze, classify_elements
-from .candidates import classify_candidates, CATEGORY_LABELS
+from .candidates import classify_candidates, analyze_candidate, CATEGORY_LABELS
+from .image_ocr import OCRSession, fetch_image, inline_image
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write
 from .profiles import SiteProfile
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots
@@ -137,11 +139,14 @@ class ScanConfig:
 class ScanOutcome:
     result: dict
     report: dict
+    image_assets: dict = field(default_factory=dict, repr=False)
 
     def save(self, folder: Path) -> Path:
         validate_result(self.result)
         folder = Path(folder).resolve()
         folder.mkdir(parents=True, exist_ok=True)
+        for name, data in self.image_assets.items():
+            atomic_write(folder / name, data)
         validate_screenshots(self.report.get('screenshots', {}))
         for image in self.report.get('screenshots', {}).values():
             relative = 'evidence/' + image['sha256'] + '.jpg'
@@ -223,6 +228,19 @@ class _State:
     screenshots: dict = field(default_factory=dict)
     screenshot_bytes: int = 0
     pending_redirects: dict = field(default_factory=dict)
+    ocr: OCRSession = field(default_factory=OCRSession)
+    image_cache: dict = field(default_factory=dict)
+    image_requests: int = 0
+    image_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    image_bytes: int = 0
+    ocr_images: list = field(default_factory=list)
+    ocr_seen: set = field(default_factory=set)
+    ocr_cache: dict = field(default_factory=dict)
+    image_assets: dict = field(default_factory=dict)
+    ocr_previews_bytes: int = 0
+    ocr_disabled: bool = False
+    image_origins: set = field(default_factory=set)
+    image_allow_network: bool = False
 
 
 async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control=None) -> ScanOutcome:
@@ -260,6 +278,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
         if not worker.done():
             worker.cancel()
             await asyncio.gather(worker, return_exceptions=True)
+        await state.ocr.close()
     for url, target in state.pending_redirects.items():
         state.errors.append({'url': url, 'message': '동적 HTTP 이동은 자동 추적하지 않았습니다: ' + target})
     if status == "completed" and (state.errors or state.remaining):
@@ -274,6 +293,10 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     report = {"status": status, "pages_scanned": state.pages, "pages_remaining": state.remaining,
               "exploration": state.trace.export(), "evidence_packets": list(state.trace.packets.values()),
               "screenshots": state.screenshots,
+              "ocr_images": state.ocr_images,
+              "ocr_summary": {"engine": "PaddleOCR", "images": len(state.ocr_images),
+                              "completed": sum(i['status'] == 'completed' for i in state.ocr_images),
+                              "failed": sum(i['status'] != 'completed' for i in state.ocr_images)},
               "page_diagnostics": state.page_diagnostics,
               "pending_urls": list(state.pending_urls.values()),
               "crawl_summary": {"discovered_urls": state.discovered_urls, "pages_scanned": len(state.pages),
@@ -295,7 +318,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     report['paused_sec'] = round(control.paused_seconds if control else 0, 3)
     report['active_elapsed_sec'] = round(time.monotonic() - clock - report['paused_sec'], 3)
     report["csv_schema_version"] = "1.0"
-    return ScanOutcome(result, report)
+    return ScanOutcome(result, report, state.image_assets)
 
 
 def _final_candidates(state):
@@ -337,6 +360,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
             context = await browser.new_context(viewport={"width": 1366, "height": 900},
                                                 accept_downloads=False, service_workers="block")
             allowed = {origin(config.entry_url), *(origin(url) for url in profile.allowed_resource_origins)}
+            state.image_origins = allowed
+            state.image_allow_network = config.allow_network
             async def guard(route):
                 request = route.request
                 reason = None
@@ -344,7 +369,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                 if request.method not in ("GET", "HEAD"):
                     reason = "GET/HEAD 외 요청 차단"
                     essential = False
-                elif request.resource_type in ("image", "media", "font"):
+                elif request.resource_type in ("media", "font"):
                     await route.abort()
                     return
                 else:
@@ -369,6 +394,14 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         state.errors.append({"url": request.url, "message": reason + ": 콘텐츠가 누락될 수 있습니다."})
                     await route.abort()
                 else:
+                    if request.resource_type == 'image':
+                        try:
+                            data, mime = await _fetch_image_bounded(request.url, state)
+                            await route.fulfill(status=200, body=data, content_type=mime)
+                        except Exception as error:
+                            emit({'kind': 'image_skipped', 'url': request.url[:2000], 'message': str(error)[:160]})
+                            await route.abort()
+                        return
                     # Inspect each redirect response before Chromium can follow it.
                     # route.continue_ alone may follow an HTTP redirect without a
                     # second routing callback, bypassing an origin-only guard.
@@ -666,6 +699,10 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
                          detect_techniques=True, detect_candidates=True):
     data = await frame.evaluate(script, {"contentSelector": content_selector})
     state.trace.capture(data['elements'], page_url, prefix, emit, inherited)
+    if detect_candidates:
+        await _inspect_images(frame, data.get('images', []), prefix, page_url, state, emit, rules)
+        if data.get('images_truncated'):
+            state.errors.append({'url': page_url, 'message': '이미지 수집 한도 도달: 일부 이미지를 처리하지 못했습니다.'})
     if state.page_diagnostics:
         diagnostic = state.page_diagnostics[-1]
         diagnostic["elements_examined"] += len(data["elements"])
@@ -747,6 +784,94 @@ async def _screen_region(frame, selector):
         return await frame.locator(selector).first.bounding_box(timeout=300)
     except Exception:
         return None
+
+
+async def _fetch_image_bounded(url, state):
+    url = normalize_url(url)
+    if origin(url) not in state.image_origins or not state.image_allow_network and not is_loopback(url):
+        raise ValueError('허용되지 않은 이미지 origin')
+    async with state.image_lock:
+        if origin(url) in state.stopped_origins:
+            raise ValueError('HTTP 429 수신으로 이미지 요청 중단')
+        if url in state.image_cache:
+            return state.image_cache[url]
+        if state.image_requests >= 50 or state.image_bytes >= 20_000_000:
+            raise ValueError('이미지 수집 한도 도달')
+        state.image_requests += 1
+        try:
+            data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, 20_000_000 - state.image_bytes))
+        except HTTPError as error:
+            if error.code == 429:
+                parts = urlsplit(url)
+                state.stopped_origins[origin(url)] = {'origin': urlunsplit((parts.scheme, parts.netloc, '', '', '')),
+                    'status': 429, 'url': url, 'retry_after': error.headers.get('Retry-After'), 'policy': 'stop-origin'}
+                state.errors.append({'url': url, 'message': 'HTTP 429: 이미지 요청과 같은 origin의 추가 요청 중단'})
+            raise
+        state.image_bytes += len(data)
+        state.image_cache[url] = data, mime
+        return data, mime
+
+
+async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
+    for image in images:
+        if len(state.ocr_images) >= 50 or state.ocr_disabled:
+            if not state.ocr_disabled:
+                state.errors.append({'url': page_url, 'message': 'OCR 이미지 50개 처리 한도 도달'})
+            break
+        location = prefix + image['location']
+        source = image['source_url']
+        source_key = page_url, location, hashlib.sha256(source.encode()).hexdigest()
+        if source_key in state.ocr_seen:
+            continue
+        state.ocr_seen.add(source_key)
+        record = {'id': 'im_' + str(len(state.ocr_images) + 1), 'url': page_url, 'location': location,
+                  'source_url': '(inline)' if source.startswith('data:') else source[:2000],
+                  'source_type': image['source_type'], 'status': 'failed', 'lines': []}
+        state.ocr_images.append(record)
+        try:
+            data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
+            digest = hashlib.sha256(data).hexdigest()
+            emit({'kind': 'phase', 'stage': 'collector', 'action': 'image_ocr', 'url': page_url,
+                  'message': 'PaddleOCR로 이미지 속 글자를 읽습니다.', 'location': location})
+            if digest not in state.ocr_cache:
+                state.ocr_cache[digest] = await state.ocr.recognize(data)
+            result = state.ocr_cache[digest]
+            if result['status'] != 'completed':
+                state.ocr_disabled = result.get('fatal', False)
+                raise ValueError(result.get('message', 'OCR 실행 실패'))
+            record.update(result, image_sha256=digest)
+            preview_bytes = len(record['preview_data_url'])
+            if state.ocr_previews_bytes + preview_bytes > 3_000_000:
+                record.pop('preview_data_url', None)
+            else:
+                state.ocr_previews_bytes += preview_bytes
+            extension = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp', 'GIF': 'gif'}[result['image_format']]
+            relative = 'evidence/images/' + digest + '.' + extension
+            record['relative_path'] = relative
+            state.image_assets[relative] = data
+            text = '\n'.join(line['text'] for line in record['lines'] if line['confidence'] >= .55)[:4000]
+            record['text'] = text
+            if not text:
+                continue
+            element = {**image, 'text': text, 'direct_text': text, 'text_breaks': [],
+                       'source_kind': 'image_ocr', 'image_id': record['id']}
+            state.trace.capture([element], page_url, prefix, emit)
+            for hit in analyze_candidate(text, rules):
+                candidate = {'id': f'c_{len(state.ad_candidates) + 1:05d}', 'url': page_url,
+                    'location': location, 'scope_location': location, 'evidence_text': text,
+                    'category': hit['category'], 'review_required': True, 'matched_keywords': hit['matched_keywords'],
+                    'reasons': ['이미지 OCR 문구에서 광고 권유 문맥 확인', *hit['reasons']],
+                    'analysis': hit.get('analysis', {}), 'source_kind': 'image_ocr', 'image_id': record['id'],
+                    'observed_at': datetime.now().astimezone().isoformat(),
+                    'screenshot_id': await _evidence_screenshot(frame.page, state, emit)}
+                state.ad_candidates.append(candidate)
+                emit({'kind': 'candidate', 'candidate': candidate})
+            emit({'kind': 'image_ocr', 'image_id': record['id'], 'status': 'completed',
+                  'line_count': len(record['lines']), 'url': page_url})
+        except Exception as error:
+            record.update(status='failed', message=str(error)[:300])
+            state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + str(error)[:160]})
+            emit({'kind': 'image_ocr', 'image_id': record['id'], 'status': 'failed', 'message': str(error)[:160]})
 
 
 async def _evidence_screenshot(page, state, emit):

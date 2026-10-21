@@ -267,6 +267,9 @@ class EvidenceAgent:
             if name == 'evidence_read':
                 value = {'text': redact(packet['text'][:1600]), 'truncated': packet.get('truncated') or len(packet['text']) > 1600,
                          'text_breaks': packet.get('text_breaks', [])[:100], 'scope_quality': packet.get('scope_quality')}
+                value['source_kind'] = packet.get('source_kind', 'dom_text')
+                if value['source_kind'] == 'image_ocr':
+                    value['source_note'] = 'Local OCR transcription of an image; original Unicode code points cannot be inferred from pixels.'
             elif name == 'style_read':
                 style = packet.get('computed_style')
                 value = {'computed_style': {k: style.get(k) for k in ('color', 'background', 'effective_opacity',

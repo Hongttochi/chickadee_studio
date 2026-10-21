@@ -1,16 +1,19 @@
 # PyInstaller desktop worker. The scanner only launches Chromium headless shell.
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_all
 
 root = Path(SPECPATH).parent
+paddle_datas, paddle_binaries, paddle_hidden = collect_all('paddle')
 a = Analysis(
-    [str(root / 'run_bridge.py')], pathex=[str(root)], binaries=[],
+    [str(root / 'run_bridge.py')], pathex=[str(root)], binaries=paddle_binaries,
     datas=[(str(root / 'chickadee/extract.js'), 'chickadee'),
            (str(root / 'chickadee/rules.json'), 'chickadee'),
            (str(root / 'chickadee/data'), 'chickadee/data'),
            (str(root / 'schemas/result.schema.json'), 'schemas'),
            (str(root / 'chickadee/demo_site'), 'chickadee/demo_site'),
-           (str(root / 'profiles'), 'profiles')],
-    hiddenimports=[], hookspath=[], hooksconfig={}, runtime_hooks=[],
+           (str(root / 'profiles'), 'profiles'),
+           (str(root / 'artifacts/ocr-models'), 'ocr-models')] + paddle_datas,
+    hiddenimports=paddle_hidden, hookspath=[], hooksconfig={}, runtime_hooks=[],
     excludes=['tkinter'], noarchive=False, optimize=0,
 )
 # Do not ship the second, unused headed browser. Keep headless shell, ffmpeg,

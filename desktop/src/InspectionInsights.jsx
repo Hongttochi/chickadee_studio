@@ -4,6 +4,7 @@ import { ReactFlow, ReactFlowProvider, Controls, Background, Handle, Position, u
 import { explorationFlow, withRunMarkers } from "./inspection-model.mjs";
 import "./inspection.css";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
+import ImageOCR from "./ImageOCR.jsx";
 import { RefreshCw, GitBranch, Sparkles, FileText, Download, Info, X } from "lucide-react";
 
 import pageIcon from "../assets/browser.png";
@@ -154,7 +155,7 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
       </footer>}
       {selected && <div className="inspection-detail"><strong>{selected.label}</strong><p>{selected.url}</p>
         <p>{selected.kind === "state" ? `${selected.packet_ids?.length || 0}개 영역 관측` : selected.status}</p>
-        {packet && <><pre>{packet.text}</pre><EvidenceScreenshot screenshot={data.screenshots?.[selected.screenshot_id || packet.snapshot_id]} hidden={packet.transparent || packet.offscreen} /></>}</div>}
+        {packet && <><pre>{packet.text}</pre>{!packet.supplemental && <ImageOCR image={data.ocr_images?.find(image => image.id === packet.image_id)} />}<EvidenceScreenshot screenshot={data.screenshots?.[selected.screenshot_id || packet.snapshot_id]} hidden={packet.transparent || packet.offscreen} /></>}</div>}
     </>}
     {tab === "agent" && <>
       <div className="review-workspace">

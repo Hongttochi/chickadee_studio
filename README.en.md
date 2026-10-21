@@ -11,13 +11,13 @@
 A desktop tool for finding suspected advertising on public-sector websites.<br />
 Enter a URL, inspect pages in a browser, review findings, and export JSON or CSV.
 
-[![Release](https://img.shields.io/github/v/release/orqan137/chickadee_Bot?include_prereleases&style=flat&color=506b83&label=release)](https://github.com/orqan137/chickadee_Bot/releases)
-[![Release workflow](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_Bot/release.yml?branch=main&style=flat&label=build)](https://github.com/orqan137/chickadee_Bot/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/orqan137/chickadee_studio?include_prereleases&style=flat&color=506b83&label=release)](https://github.com/orqan137/chickadee_studio/releases)
+[![Release workflow](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_studio/release.yml?branch=main&style=flat&label=build)](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)
 [![Windows x64](https://img.shields.io/badge/Windows-x64-506b83?style=flat)](docs/quickstart-windows.md)
 [![Electron](https://img.shields.io/badge/Electron-44-47848f?style=flat&logo=electron&logoColor=white)](desktop/package.json)
 [![Python](https://img.shields.io/badge/Python-3.12-47779e?style=flat&logo=python&logoColor=white)](requirements.txt)
 
-[**Download for Windows**](https://github.com/orqan137/chickadee_Bot/releases/tag/v0.9.0) · [Quick start](docs/quickstart-windows.md) · [User manual](docs/manual.md) · [Release notes](docs/releases/0.9.0.md)
+[**Download for Windows**](https://github.com/orqan137/chickadee_studio/releases/tag/v0.10.0) · [Quick start](docs/quickstart-windows.md) · [User manual](docs/manual.md) · [Release notes](docs/releases/0.10.0.md)
 
 </div>
 
@@ -33,8 +33,8 @@ Enter a URL, inspect pages in a browser, review findings, and export JSON or CSV
 
 **The Windows download includes the app, Python scan engine, and Chromium.** You do not need to install Python, Node.js, or Docker separately.
 
-1. Download the [**0.9.0 Windows ZIP**](https://github.com/orqan137/chickadee_Bot/releases/download/v0.9.0/Chickadee-Studio-0.9.0-win-x64.zip) and extract the entire archive.
-2. Run `Chickadee-0.9.0/Chickadee.exe`.
+1. Download the [**0.10.0 Windows ZIP**](https://github.com/orqan137/chickadee_studio/releases/download/v0.10.0/Chickadee-Studio-0.10.0-win-x64.zip) and extract the entire archive.
+2. Run `Chickadee-0.10.0/Chickadee.exe`.
 3. Select the **Scan target (검사 대상)** node and enter an address in the URL field on the right.
 4. Click **Run scan (검사 실행)** in the top bar. To try the app first, open the adjacent dropdown and select **Demo scan (데모 검사)**.
 
@@ -71,6 +71,7 @@ These screenshots show the current UI running locally. The findings and history 
 | Feature | What it does |
 | --- | --- |
 | Node-based scan configuration | Target → browser → content collection → required detections and ad classification → output. Connections and sublink settings affect execution |
+| Korean image OCR | Read post and background images; review advertising context, image regions and confidence |
 | Scan controls | Pause and resume between pages, save partial results after stopping, and rescan individual pages |
 | Live browser preview | View Chromium, the current URL, and processing stages in a collapsible panel |
 | Navigation and progress logs | Inspect visited and queued URLs, HTTP responses, discovered links, processing stages, and errors |
@@ -80,13 +81,13 @@ These screenshots show the current UI running locally. The findings and history 
 
 Core detection is rule-based and requires no external API key or GPU.
 
-### Inspection analysis · 0.9.0
+### Inspection analysis · 0.10.0
 
 - **Exploration graph**: inspect observed pages, scroll and read actions, and iframe exploration.
 - **AI review**: reviews all collected regions in sequence and exports completed assessments as Markdown. After a user starts an analysis, insufficient evidence can trigger follow-up collection of up to two observed same-origin pages and a new assessment. The existing cumulative limit of 6 calls / 24,000 tokens remains. Original findings and human reviews stay unchanged.
 - **Evidence screenshots**: view and enlarge the captured viewport in the evidence panel and saved history. Original JPEGs are saved in the result folder's `evidence/` directory and are never sent to Grok.
 
-Advertising review and out-of-site navigation restrictions in the inspection browser are separate from phishing classification or system-wide blocking. A phishing classifier is not included.
+See the [inspection and AI review guide](docs/inspection-agent.md).
 
 See the [inspection analysis guide](docs/inspection-agent.md) for configuration, transmitted evidence, and masking limits.
 
@@ -111,7 +112,7 @@ Chickadee inspects the DOM and computed CSS in Chromium. Gambling, loan, investm
 - Does not use your personal Chrome profile or tabs, or insert target-site HTML directly into the Electron display window.
 - Detection rules and site settings are replaceable JSON files. Code inside configuration files is not executed.
 
-[Crawling performance and limitations](docs/performance.md) · [Real-site test results](examples/test-site-2026-10-20/)
+[Crawling behavior](docs/performance.md) · [Real-site test results](examples/test-site-2026-10-20/)
 
 </details>
 
@@ -137,6 +138,7 @@ The development baseline is Python 3.12 and Node.js 24. These steps are for **ru
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe scripts/prepare_ocr_models.py
 $env:PLAYWRIGHT_BROWSERS_PATH = '0'
 .\.venv\Scripts\python.exe -m playwright install chromium --only-shell
 cd desktop
@@ -145,7 +147,7 @@ npm run build
 npm start
 ```
 
-To package the Windows app and scan engine, use `scripts/build-desktop.ps1` from the repository root. The output executable is `artifacts/electron-0.9.0/win-unpacked/Chickadee.exe`. Distribute the entire output folder.
+To package the Windows app and scan engine, use `scripts/build-desktop.ps1` from the repository root. The output executable is `artifacts/electron-0.10.0/win-unpacked/Chickadee.exe`. Distribute the entire output folder.
 
 </details>
 
@@ -155,6 +157,7 @@ To package the Windows app and scan engine, use `scripts/build-desktop.ps1` from
 ```sh
 python3.12 -m venv .venv
 .venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python scripts/prepare_ocr_models.py
 PLAYWRIGHT_BROWSERS_PATH=0 .venv/bin/python -m playwright install chromium --only-shell
 cd desktop
 npm ci
@@ -194,7 +197,7 @@ The linked documents are primarily in Korean.
 | [Windows quick start](docs/quickstart-windows.md) | [Desktop development and packaging](docs/desktop.md) | [Research sources](research/README.md) |
 | [User manual](docs/manual.md) | [Architecture](docs/architecture.md) | [Dots research integration](docs/research-integration.md) |
 | [Output formats](docs/result-format.md) | [Validation log](docs/validation.md) | [Research v4 summary](docs/research-v4.md) |
-| [Release notes](docs/releases/0.9.0.md) | [Design guidelines](DESIGN.md) | [ML and agent design](docs/ml-agent-generalization.md) |
+| [Release notes](docs/releases/0.10.0.md) | [Design guidelines](DESIGN.md) | [ML and agent design](docs/ml-agent-generalization.md) |
 | [Development plan](docs/development-plan.md) | [Agent specification](docs/agent-extension.md) | [Offline ML comparison](research/ml-review/2026-10-21/) |
 | [Requirements](docs/requirements.md) | [Third-party notices](docs/third-party-notices.md) | [Mock site specification](examples/mock-site-spec.json) |
 | [Submission checklist](docs/submission-checklist.md) | [Sample results](examples/result.sample.json) | [Mock site content](examples/mock-site-content.json) |
@@ -207,14 +210,3 @@ The linked documents are primarily in Korean.
 [Editable source](docs/assets/architecture.drawio)
 
 </details>
-
-## Scope and limitations
-
-Chickadee is being developed for the 2026 public-sector website illegal-advertising detection tool competition. As a rule-based tool, it can produce false positives and miss relevant content. Findings do not constitute a determination of illegality.
-
-- Authentication, image OCR, POST-based comment APIs, Shadow DOM, and exhaustive infinite-scroll collection are not supported.
-- The 14 required-category findings in the built-in demo do not represent accuracy on real websites or a private evaluation dataset.
-- Research v4 contains 55 suspected advertising cases and 23 benign cases. Static HTML observations are distinguished from rendered-page validation; adding research material does not mean every pattern is successfully detected.
-- Windows distribution binaries are not certificate-signed. Local security policies may restrict execution.
-
-See the [validation log](docs/validation.md) for tested scope and outstanding work, and the [requirements](docs/requirements.md) for submission criteria.

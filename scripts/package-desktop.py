@@ -53,9 +53,8 @@ def main():
         '기본 저장: 문서/Chickadee/results/실행별 폴더\n'
         '검사 구성의 포트를 연결하면 실제 실행 단계가 변경됩니다.\n'
         '사용 안내: docs/quickstart-windows.md, docs/desktop.md\n'
-        '이 프리릴리스는 인증서 서명이 없습니다. 0.6.0 재빌드본이 개발 PC의 Device Guard에 차단됐습니다.\n'
-        'Windows CI 실행 검증 결과와 사용자 PC별 검증 한계는 docs/validation.md를 확인하세요.\n'
-        'https://github.com/orqan137/chickadee_Bot\n', encoding='utf-8-sig')
+        '이미지 속 한국어 문구도 자동 검사합니다. OCR 모델은 동봉되어 별도 설치가 필요하지 않습니다.\n'
+        'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
     output = ROOT / 'artifacts' / f'Chickadee-Studio-{VERSION}-win-x64.zip'
     temporary = output.with_suffix('.zip.tmp')
     with zipfile.ZipFile(temporary, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as archive:

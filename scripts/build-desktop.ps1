@@ -8,6 +8,8 @@ try {
     if (-not (Test-Path -LiteralPath $taskPython)) { throw 'Install requirements-dev.txt into .venv first.' }
     $env:PLAYWRIGHT_BROWSERS_PATH = '0'
     if (-not $SkipEngine) {
+        & $taskPython scripts/prepare_ocr_models.py
+        if ($LASTEXITCODE -ne 0) { throw 'OCR model preparation failed.' }
         & $taskPython -m playwright install chromium --only-shell
         if ($LASTEXITCODE -ne 0) { throw 'Browser installation failed.' }
         & $taskPython -m PyInstaller --noconfirm --clean --distpath "artifacts/engine-$taskVersion" --workpath "artifacts/engine-build-$taskVersion" scripts/engine.spec

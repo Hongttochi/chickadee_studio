@@ -46,6 +46,8 @@ CSV는 UTF-8 BOM, 쉼표 구분, CRLF 줄바꿈입니다. 쉼표·따옴표·여
 
 ## 탐색 진단
 
+이미지 인식 결과는 `ocr_images`에 저장합니다. 각 이미지의 `id`, 원본 `image_sha256`, `relative_path`, `width`·`height`, `lines`(문구·0~1 신뢰도·네 꼭짓점 좌표), JPEG 미리보기와 처리 상태를 포함합니다. 좌표는 리사이즈 전 원본 픽셀 기준입니다. `ocr_summary`는 처리·실패 건수를 요약합니다. 이미지 광고 후보는 `source_kind=image_ocr`와 `image_id`로 해당 근거에 연결됩니다. 필수 4종 결과와 17칼럼 CSV 구조는 유지합니다.
+
 `scan-report.json`의 `crawl_summary`는 발견한 유효 URL 수·방문 수·남은 대기 수를, `page_diagnostics`는 각 요청 URL·최종 URL·HTTP 상태·수집 링크 수·새 대기 수·요소 관측 수·소요 시간을 담습니다. `elements_examined`는 동적 스냅샷을 포함한 누적 관측 수이며 고유 DOM 요소 수가 아닙니다. `content_roots_matched=0`이면 지정한 본문 선택자가 일치하지 않은 상태입니다. 이때도 링크 탐색은 계속합니다.
 
 목록 링크에서 발견한 후보는 `related_content_url`로 상세 주소를 보관합니다. 같은 분류의 상세 후보가 발견되면 목록 후보를 합치고 `summary_observations`에 목록 원문·위치를 보존합니다. 내용이 같아도 서로 다른 상세 게시글은 별개로 유지합니다.

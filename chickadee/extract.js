@@ -188,6 +188,26 @@
     const literal = handler.match(/^\s*(?:(?:window\.|document\.)?location(?:\.href)?\s*=\s*(['"])([^'"\\\r\n]+)\1|(?:window\.)?location\.(?:assign|replace)\(\s*(['"])([^'"\\\r\n]+)\3\s*\))\s*;?\s*(?:return\s+false\s*;?)?\s*$/);
     if (literal) addLink(literal[2] || literal[4]);
   }
-  return {elements, truncated, links: [...links], links_truncated: linksTruncated,
+  const images = [];
+  let imageReferenceBytes = 0;
+  let imagesTruncated = false;
+  const imageElements = all.slice(0, 5000).sort((a, b) =>
+    Number(!!b.closest('article, [role="article"], [data-post-id], [data-comment-id]')) -
+    Number(!!a.closest('article, [role="article"], [data-post-id], [data-comment-id]')));
+  for (const el of imageElements) {
+    if (contentRoots && !contentRoots.some(root => root === el || root.contains(el))) continue;
+    const sources = el.tagName === 'IMG' ? [el.currentSrc || el.src || el.getAttribute('data-src')] : [];
+    for (const match of style(el).backgroundImage.matchAll(/url\(["']?([^"')]+)["']?\)/g)) sources.push(match[1]);
+    for (const src of sources) {
+      if (!src) continue;
+      if (src.length > 2800000 || images.length >= 12 || imageReferenceBytes + src.length > 6000000) { imagesTruncated = true; continue; }
+      imageReferenceBytes += src.length;
+      images.push({source_url: src, location: selector(el), computed_style: appearance(el).style,
+        transparent: appearance(el).transparent, offscreen: appearance(el).offscreen,
+        link_targets: el.closest('a[href]') ? [el.closest('a[href]').href] : [],
+        source_type: el.tagName === 'IMG' ? 'img' : 'background'});
+    }
+  }
+  return {elements, images, images_truncated: imagesTruncated, truncated, links: [...links], links_truncated: linksTruncated,
     content_roots_matched: contentRoots ? contentRoots.length : null};
 }

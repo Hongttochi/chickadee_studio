@@ -1,4 +1,17 @@
 /* Flush analysis workspace, aligned with the navigation and progress views. */
+.image-ocr-evidence { margin: 20px 0; }
+.image-ocr-evidence > label { display: block; font-weight: 600; margin-bottom: 10px; }
+.image-ocr-preview { position: relative; border: 1px solid var(--border, #dce0e5); }
+.image-ocr-preview img { display: block; width: 100%; height: auto; }
+.image-ocr-preview svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.image-ocr-preview polygon { fill: transparent; stroke: #3970ad; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.image-ocr-preview polygon.selected { fill: #3970ad22; stroke-width: 3; }
+.image-ocr-lines { margin: 10px 0; }
+.image-ocr-lines button { width: 100%; display: flex; align-items: start; gap: 10px; padding: 8px 0; text-align: left; background: transparent; color: inherit; border: 0; border-bottom: 1px solid var(--border, #dce0e5); cursor: pointer; font: inherit; }
+.image-ocr-lines button span { flex: 1; }
+.image-ocr-lines button small { opacity: .65; }
+.image-ocr-lines button[aria-pressed="true"] { font-weight: 600; }
+.image-ocr-evidence details p { overflow-wrap: anywhere; font-size: 11px; }
 .inspection-extension { min-width: 0; min-height: 0; padding: 0; overflow: auto; flex: 1; display: flex; flex-direction: column; color: #303b47; background: #fff; }
 .inspection-extension button:not(.react-flow__controls-button), .inspection-extension input, .inspection-extension select { font: inherit; color: inherit; border: 1px solid #d4d9df; border-radius: 4px; padding: 7px 10px; min-height: 34px; background: #fff; }
 .inspection-extension button { cursor: pointer; }

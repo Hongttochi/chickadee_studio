@@ -51,7 +51,7 @@ Electron Windows 앱과 Python 검사 프로그램을 함께 배포합니다. �
 
 ## 개발과 배포
 
-루트의 Python 3.12 가상환경에 requirements-dev.txt를 설치하고 Chromium headless shell을 준비합니다. desktop에서 Node.js 24로 npm ci, npm run build, npm start를 실행합니다. scripts/build-desktop.ps1은 Python 프로그램과 Electron 앱을 함께 빌드합니다.
+루트의 Python 3.12 가상환경에 requirements-dev.txt를 설치하고 Chromium headless shell을 준비합니다. desktop에서 Node.js 24로 npm ci, npm run build, npm start를 실행합니다. scripts/prepare_ocr_models.py로 공식 OCR 모델을 준비합니다. scripts/build-desktop.ps1은 모델 SHA-256 확인 후 Python 프로그램과 Electron 앱을 함께 빌드합니다.
 
 scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복된 headed Chromium은 제외합니다. artifacts/electron-0.8.0/win-unpacked 전체를 배포합니다. exe 한 파일만 배포하면 안 됩니다.
 
@@ -59,7 +59,7 @@ scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복
 
 ### GitHub 자동 릴리스
 
-`.github/workflows/release.yml`은 main·master push 또는 수동 실행으로 Windows x64 프리릴리스를 만듭니다. 현재 앱은 Windows 경로와 실행 파일을 사용하므로 macOS 패키지는 생성하지 않습니다.
+`.github/workflows/release.yml`은 main·master push 또는 수동 실행으로 Windows x64 릴리스를 만듭니다. 현재 앱은 Windows 경로와 실행 파일을 사용하므로 macOS 패키지는 생성하지 않습니다.
 
 새 버전은 `desktop/package.json`과 `desktop/package-lock.json`의 앱 버전, `chickadee/__init__.py`, package.json의 Electron·엔진 출력 경로에 함께 반영합니다. `docs/releases/<버전>.md`에 변경 사항을 작성하고 다운로드 문서도 갱신합니다. Python 3.12에서 `python scripts/release.py version`으로 일치를 확인할 수 있습니다.
 
@@ -69,4 +69,4 @@ scripts/engine.spec은 실제 사용하는 headless shell을 포함하고 중복
 
 소스 컴포넌트 통합 검사는 desktop에서 `CHICKADEE_SERVICE_UI=1`과 `CHICKADEE_PREVIEW_CHROMIUM`의 Chromium 실행 경로를 지정하고 `node tests/smoke.cjs`로 실행합니다. 로컬 UI를 Chromium에 표시하고 Python 브리지를 실제 실행합니다. 결과 파일과 JPEG·기록은 실제 생성되며 OS 파일 선택·클립보드·Windows 창 동작은 검증 범위에 포함하지 않습니다. 실행 파일 테스트를 대신한 것으로 표시하지 않습니다.
 
-향후 에이전트는 [로컬 도구 규격](agent-extension.md)을 사용합니다. 검사 제어·페이지 조회·검토 서비스와 AI 제공자 계층을 분리했으며 현재 AI 제공자는 연결하지 않았습니다.
+에이전트는 [로컬 도구 규격](agent-extension.md)을 사용합니다. 설정된 AI 제공자와 누적 요청·토큰 한도를 유지하며 이미지 OCR은 로컬 CPU에서 별도로 실행합니다.
