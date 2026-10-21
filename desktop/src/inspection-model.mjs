@@ -30,12 +30,32 @@ export function explorationFlow(graph, limit = 240) {
       rows.set(column, row + 1);
       let page = node.url || "";
       try { page = new URL(page).pathname; } catch {}
-      return { id: node.id, position: { x: column * 270, y: row * 100 },
-        data: { label: node.kind === "page" ? `${page.slice(0, 45)} · ${node.status}` : `${node.label} · ${node.packet_ids?.length || 0}영역` } };
+      return { id: node.id, type: "observed", position: { x: column * 270, y: row * 160 },
+        data: { kind: node.kind, title: node.kind === "page" ? page : node.label, status: node.status, count: node.packet_ids?.length || 0, label: node.kind === "page" ? `${page.slice(0, 45)} · ${node.status}` : `${node.label} · ${node.packet_ids?.length || 0}영역` } };
     }),
-    edges: edges.map((edge) => ({ ...edge, type: "smoothstep" })),
+    edges: edges.map((edge) => ({ ...edge, type: "default", style: { stroke: "#62666b", strokeWidth: 1.5 }, labelStyle: { fill: "#b4b8bf", fontSize: 10 }, labelBgStyle: { fill: "#202123" }, labelBgPadding: [5, 3], labelBgBorderRadius: 3 })),
     omitted: Math.max(0, (graph?.nodes?.length || 0) - source.length),
   };
 }
 
-export const CHANGE_LABELS = { newly_observed: "신규 관측", changed: "변경", not_observed: "미관측", unchanged: "동일" };
+
+// Display-only run markers; never persisted as observations or navigation edges.
+export function withRunMarkers(flow, status = "idle") {
+  const used = new Set(flow.nodes.map((node) => node.id));
+  const markerId = (name) => { let id = `ui:${name}`; while (used.has(id)) id += ":"; used.add(id); return id; };
+  const start = markerId("start"), end = markerId("end");
+  const roots = flow.nodes.filter((node) => !flow.edges.some((edge) => edge.target === node.id));
+  const leaves = flow.nodes.filter((node) => !flow.edges.some((edge) => edge.source === node.id));
+  const maxX = Math.max(0, ...flow.nodes.map((node) => node.position.x));
+  const centerY = (Math.min(0, ...flow.nodes.map((node) => node.position.y)) + Math.max(0, ...flow.nodes.map((node) => node.position.y))) / 2;
+  const captions = { idle: "검사 대기", running: "검사 진행 중", paused: "일시정지", pausing: "일시정지 요청", stopping: "중단 중", completed: "검사 완료", stopped: "검사 중단", cancelled: "검사 중단", failed: "검사 실패", partial: "일부 결과" };
+  const markers = [
+    { id: start, type: "boundary", position: { x: -270, y: centerY }, data: { title: "START", caption: status === "idle" ? "검사 대기" : "검사 시작", boundary: "start" } },
+    { id: end, type: "boundary", position: { x: maxX + 270, y: centerY }, data: { title: "END", caption: captions[status] || "검사 종료", boundary: "end", status } },
+  ];
+  const connectors = [
+    ...roots.map((node) => ({ source: start, target: node.id })),
+    ...leaves.map((node) => ({ source: node.id, target: end })),
+  ].map((edge, index) => ({ ...edge, id: `${start}:connector:${index}`, type: "default", selectable: false, data: { displayOnly: true }, style: { stroke: "#666c75", strokeWidth: 1.5, strokeDasharray: "4 5" } }));
+  return { ...flow, nodes: [...markers, ...flow.nodes], edges: [...flow.edges, ...connectors] };
+}

@@ -30,13 +30,33 @@ const http = require("node:http");
     await page.locator('.react-flow__node[data-id="target"]').click();
     await page.getByRole("textbox", { name: "검사 대상 URL" }).fill(`http://127.0.0.1:${server.address().port}/`);
     await page.getByRole("button", { name: "검사 분석", exact: true }).click();
+    async function assertStartCentered() {
+      await page.waitForFunction(() => {
+        const graph = document.querySelector('.inspection-graph');
+        const start = document.querySelector('.inspection-graph .boundary-start');
+        if (!graph || !start) return false;
+        const viewport = graph.getBoundingClientRect(), node = start.getBoundingClientRect();
+        return node.left >= viewport.left && node.right <= viewport.right &&
+          node.top >= viewport.top && node.bottom <= viewport.bottom &&
+          Math.abs((node.left + node.right - viewport.left - viewport.right) / 2) < 80;
+      });
+    }
+    await assertStartCentered();
+    await page.getByRole('button', { name: '진행 기록', exact: true }).click();
+    await page.getByRole('button', { name: '검사 분석', exact: true }).click();
+    await assertStartCentered();
     async function wait(count) {
-      await page.waitForFunction(async (n) => {
-        const state = await window.chickadee.state();
-        return !state.running && state.history.length === n;
-      }, count);
+      const deadline = Date.now() + 30000;
+      let state;
+      do {
+        state = await page.evaluate(() => window.chickadee.state());
+        if (!state.running && state.history.length === count) break;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } while (Date.now() < deadline);
+      assert.equal(state.history.length, count);
+      assert.equal(state.running, false);
       await page.waitForFunction(() => document.querySelectorAll('.inspection-graph .react-flow__node').length >= 4);
-      return page.evaluate(() => window.chickadee.state());
+      return state;
     }
     await page.locator(".header-run-controls button.primary").click();
     await wait(1);
@@ -44,7 +64,7 @@ const http = require("node:http");
     assert.ok(firstGraph >= 4);
     await page.getByRole('button', { name: /^탐지 내역/ }).click();
     await page.locator('tbody tr').first().click();
-    const evidence = page.getByAltText('검사 브라우저에서 촬영한 탐지 당시 화면', { exact: true });
+    const evidence = page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true });
     await evidence.waitFor({ state: 'attached' });
     await page.waitForFunction(() => document.querySelector('.evidence-capture img')?.naturalWidth === 1366);
     // Completion loads the persisted outcome asynchronously after live rows;
@@ -58,32 +78,69 @@ const http = require("node:http");
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
     revision = 1;
     await page.locator(".header-run-controls button.primary").click();
-    let current = await wait(2);
-    await page.getByRole('tab', { name: '변경 비교', exact: true }).click();
-    await page.locator('.inspection-changes article').first().waitFor();
-    assert.ok((await page.locator('.inspection-changes').innerText()).includes('카지노 가입 보너스 0'));
-    assert.ok((await page.locator('.inspection-changes').innerText()).includes('카지노 가입 보너스 1'));
-    current = await page.evaluate(() => window.chickadee.state());
+    const current = await wait(2);
+    assert.equal(await page.getByRole('tab', { name: '변경 비교', exact: true }).count(), 0);
     assert.equal(current.history.length, 2);
-    await page.getByLabel('비교 기준', { exact: true }).selectOption(current.history[1].id);
-    await page.getByRole('button', { name: '비교', exact: true }).click();
     const result = current.history[0].path;
     const raw = await fs.readFile(result);
-    const comparison = JSON.parse(await fs.readFile(path.join(path.dirname(result), 'comparison.json'), 'utf8'));
-    assert.ok(comparison.counts.changed >= 1);
-    await page.screenshot({ path: path.join(root, 'artifacts/inspection-comparison.png') });
-    await page.getByRole('tab', { name: 'Groq 검토', exact: true }).click();
-    await page.getByLabel('Groq API 키', { exact: true }).fill('test_key_not_real');
-    await page.getByLabel('Groq 토큰 한도', { exact: true }).fill('1000');
+    await assert.rejects(fs.access(path.join(path.dirname(result), 'comparison.json')), { code: 'ENOENT' });
+    assert.equal(await page.evaluate(() => typeof window.chickadee.compare), 'undefined');
+    await page.getByRole('tab', { name: 'AI 검토', exact: true }).click();
+    await page.getByText('검토 안내 및 사용량', { exact: true }).click();
+    await page.getByRole('button', { name: 'AI 설정', exact: true }).click();
+    await page.getByRole('button', { name: 'API 키 등록', exact: true }).click();
+    await page.getByLabel('Grok API 키', { exact: true }).fill('test_key_not_real');
+    await page.getByRole('button', { name: '모델 및 사용 한도', exact: true }).click();
+    await page.getByLabel('Grok 토큰 한도', { exact: true }).fill('1000');
     await page.getByRole('button', { name: '설정 적용', exact: true }).click();
-    await page.waitForFunction(() => document.querySelector('input[aria-label="Groq API 키"]').value === '');
+    await page.waitForFunction(() => !document.querySelector('input[aria-label="Grok API 키"]'));
+    await page.getByRole('button', { name: '알림', exact: true }).click();
+    await page.getByLabel('Slack 웹훅 URL', { exact: true }).waitFor();
+    await page.getByRole('button', { name: '알림 설정 저장', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: '알림 설정을 저장했습니다.' }).waitFor();
+    await page.screenshot({ path: path.join(root, 'artifacts/notification-settings.png') });
+    await page.getByRole('button', { name: '일반', exact: true }).click();
+    await page.getByRole('button', { name: '천천히 다른 작업과 함께', exact: true }).click();
+    await page.waitForFunction(async () => (await window.chickadee.state()).preferences.scanInterval === 5);
+    assert.equal(await page.getByLabel('페이지 사이 대기 시간', { exact: true }).inputValue(), '5');
+    await page.screenshot({ path: path.join(root, 'artifacts/scan-pace-settings.png') });
+    await page.getByRole('button', { name: '업데이트', exact: true }).click();
+    await page.getByRole('button', { name: '업데이트 확인', exact: true }).waitFor();
+    if (!packaged) {
+      await page.getByRole('button', { name: '업데이트 확인', exact: true }).click();
+      await page.getByRole('status').filter({ hasText: '새로운 릴리스가 없습니다.' }).waitFor();
+    }
+    await page.screenshot({ path: path.join(root, 'artifacts/update-settings.png') });
+    await page.getByRole('button', { name: '예약 검사', exact: true }).click();
+    await page.getByRole('button', { name: '예약 추가', exact: true }).click();
+    await page.getByLabel('예약 이름', { exact: true }).fill('매일 아침 점검');
+    await page.getByRole('button', { name: '예약 저장', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: '예약을 저장했습니다.' }).waitFor();
+    assert.equal((await page.evaluate(() => window.chickadee.scheduleState())).items[0].time, '09:00');
+    assert.equal((await page.evaluate(() => window.chickadee.scheduleState())).items[0].options.interval_sec, 5);
+    await page.getByLabel('매일 아침 점검 예약 활성화', { exact: true }).click();
+    await page.waitForFunction(async () => !(await window.chickadee.scheduleState()).items[0].enabled);
+    await page.screenshot({ path: path.join(root, 'artifacts/schedule-settings.png') });
+    await page.getByRole('button', { name: '매일 아침 점검 수정', exact: true }).click();
+    await page.getByLabel('실행 시간', { exact: true }).fill('10:00');
+    await page.getByRole('button', { name: '예약 저장', exact: true }).click();
+    await page.waitForFunction(async () => (await window.chickadee.scheduleState()).items[0].time === '10:00');
+    await page.getByRole('button', { name: '매일 아침 점검 삭제', exact: true }).click();
+    await page.waitForFunction(async () => (await window.chickadee.scheduleState()).items.length === 0);
+    await page.getByRole('button', { name: '일반', exact: true }).click();
+    await page.getByLabel('최대 페이지', { exact: true }).waitFor();
+    assert.equal(await page.getByLabel('Slack 웹훅 URL', { exact: true }).count(), 0);
+    await page.getByRole('button', { name: '앱으로 돌아가기', exact: true }).click();
     const insight = await page.evaluate(async () => {
       const state = await window.chickadee.state();
       return window.chickadee.inspection({ run_id: state.run_id });
     });
-    await page.getByLabel('검토 영역', { exact: true }).selectOption(insight.packets.find((p) => p.text.includes('카지노')).id);
-    await page.getByRole('button', { name: 'Groq 분석', exact: true }).click();
+    assert.equal(await page.getByLabel('검토 영역', { exact: true }).count(), 0);
+    await page.getByRole('button', { name: '전체 검토 시작', exact: true }).click();
     await page.getByRole('status').filter({ hasText: '한도' }).waitFor();
+    await page.getByText('검토 안내 및 사용량', { exact: true }).click();
+    await page.getByRole('progressbar', { name: '요청 횟수', exact: true }).waitFor();
+    await page.screenshot({ path: path.join(root, 'artifacts/ai-review-usage.png') });
     const stored = await fs.readFile(path.join(path.dirname(result), 'agent.json'), 'utf8');
     assert.ok(!stored.includes('test_key_not_real'));
     assert.equal(JSON.parse(stored).ledger.calls, 0);
@@ -91,14 +148,15 @@ const http = require("node:http");
     await page.getByRole('button', { name: '검사 기록', exact: true }).click();
     await page.locator('tbody tr').first().click();
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
-    await page.getByRole('tab', { name: '변경 비교', exact: true }).click();
-    await page.locator('.inspection-changes article').first().waitFor();
+    await page.getByRole('tab', { name: '탐색 그래프', exact: true }).click();
+    await page.getByTestId('exploration-graph').waitFor();
+    assert.equal(await page.getByRole('tab', { name: '변경 비교', exact: true }).count(), 0);
     await page.getByRole('button', { name: /^탐지 내역/ }).click();
     await page.locator('tbody tr').first().click();
-    await page.getByAltText('검사 브라우저에서 촬영한 탐지 당시 화면', { exact: true }).waitFor();
+    await page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true }).waitFor();
     assert.equal(errors.length, 0, errors.join('\n'));
     console.log(JSON.stringify({ status: 'passed', mode: packaged ? 'electron-packaged' : 'source-ui-real-python', explorationGraph: true,
-      textStyleLinkComparison: true, comparisonReload: true, groqConfiguration: true,
+      comparisonRemoved: true, grokConfiguration: true,
       evidenceScreenshot: true, screenshotReload: true,
       budgetBlockedBeforeNetwork: true, immutableResult: true, secretNotPersisted: true, data }));
   } finally {

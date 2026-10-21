@@ -1,3 +1,4 @@
+import UpdateSettings from "./UpdateSettings.jsx";
 import React, {
   useState,
   useEffect,
@@ -8,6 +9,12 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
+import ShortcutSettings from "./ShortcutSettings.jsx";
+import { defaults as defaultShortcuts, validateShortcuts, fromEvent } from "./shortcuts.mjs";
+import SettingsNav from "./SettingsNav.jsx";
+import ScheduleSettings from "./ScheduleSettings.jsx";
+import NotificationSettings from "./NotificationSettings.jsx";
+import GrokSettings from "./GrokSettings.jsx";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -70,6 +77,10 @@ import {
   Search,
   ShieldX,
   SlidersHorizontal,
+  Settings,
+  Bell,
+  Sparkles,
+  ArrowLeft,
   Square,
   TextSearch,
   Unplug,
@@ -101,7 +112,6 @@ import profitsImage from "../assets/profits.png";
 import creditCardImage from "../assets/3d-credit-card.png";
 import shoppingCartImage from "../assets/shopping-cart.png";
 import demoImage from "../assets/poison.png";
-import settingsImage from "../assets/settings.png";
 import checkImage from "../assets/check.png";
 import deleteImage from "../assets/delete.png";
 import saveImage from "../assets/save.png";
@@ -186,6 +196,10 @@ const Icons = {
   Search,
   ShieldX,
   SlidersHorizontal,
+  Settings,
+  Bell,
+  Sparkles,
+  ArrowLeft,
   Square,
   TextSearch,
   Unplug,
@@ -552,10 +566,16 @@ function App() {
     [eventFilter, setEventFilter] = useState("all"),
     [notice, setNotice] = useState(null);
   const [reviewNotice, setReviewNotice] = useState(null);
-  const [settings, setSettings] = useState(false),
-    [profile, setProfile] = useState("default"),
+  const [agentConfig, setAgentConfig] = useState({ model: "grok-4.7", token_limit: 24000, call_limit: 6 });
+  const [inspectionTab, setInspectionTab] = useState("graph");
+  const [shortcuts, setShortcuts] = useState(defaultShortcuts);
+  const [settingsTab, setSettingsTab] = useState("general");
+  const settingsReturnView = useRef("workflow");
+  const openSettings = (section = "general") => { setSettingsTab(typeof section === "string" ? section : "general"); settingsReturnView.current = view === "settings" ? settingsReturnView.current : view; setView("settings"); };
+  const [profile, setProfile] = useState("default"),
     [maxPages, setMaxPages] = useState(100),
     [timeout, setTimeoutValue] = useState(300);
+  const [scanInterval, setScanInterval] = useState(0.5);
   const [livePreview, setLivePreview] = useState(true),
     [outputRoot, setOutputRoot] = useState(""),
     [outcome, setOutcome] = useState(null),
@@ -724,7 +744,9 @@ function App() {
         setOutputRoot(state.outputRoot);
         setVisualPreview(Boolean(state.preview_only));
         const prefs = state.preferences || {};
+        try { if (prefs.shortcuts) setShortcuts(validateShortcuts(prefs.shortcuts)); } catch {}
         if (typeof prefs.url === "string") setUrl(prefs.url);
+        if (Number.isFinite(prefs.scanInterval) && prefs.scanInterval >= 0 && prefs.scanInterval <= 30) setScanInterval(prefs.scanInterval);
         if (Number.isInteger(prefs.maxPages)) setMaxPages(prefs.maxPages);
         if (Number.isFinite(prefs.timeout)) setTimeoutValue(prefs.timeout);
         if (["default", "test", "public"].includes(prefs.profile))
@@ -765,6 +787,9 @@ function App() {
       )
         setCurrentUrl(event.url);
       if (event.kind === "started") {
+        setRecords([]); setPages([]); setPending([]); setEvents([{ ...event, key: crypto.randomUUID() }]); setPreview(null); setOutcome(null);
+        setReviewData({ revision: 0, items: {} }); setSelectedIds(new Set()); setSelectedRecord(null);
+        setDiscovered(0); setQueue(0); setElapsed(0); setSearch(""); setFilter("all"); setReviewFilter("all");
         setRunTarget(event.url);
         setStartTime(Date.now());
         setStatus("running");
@@ -823,24 +848,20 @@ function App() {
             timeout: Number(timeout),
             profile,
             livePreview,
+            scanInterval,
           })
           .catch((error) => tell(error.message, "error")),
       450,
     );
     return () => window.clearTimeout(id);
-  }, [booted, url, maxPages, timeout, profile, livePreview]);
+  }, [booted, url, maxPages, timeout, profile, livePreview, scanInterval]);
   useEffect(() => {
     setSelectedIds(new Set());
   }, [filter, reviewFilter, search]);
   useEffect(() => {
     const keydown = (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setPalette((value) => !value);
-      }
       if (event.key === "Escape") {
         setPalette(false);
-        setSettings(false);
         setSelectedEvent(null);
         setZoomPreview(false);
       }
@@ -1055,6 +1076,7 @@ function App() {
         timeout_sec: Number(timeout),
         profile,
         preview: livePreview,
+        interval_sec: scanInterval,
         demo,
         workflow: nextFlow,
       });
@@ -1169,9 +1191,9 @@ function App() {
         }),
     },
     {
-      label: "검사 설정",
-      icon: "SlidersHorizontal",
-      action: () => setSettings(true),
+      label: "설정",
+      icon: "Settings",
+      action: () => openSettings(),
     },
     {
       label: "사용 가이드",
@@ -1180,6 +1202,23 @@ function App() {
       action: () => setTutorial(true),
     },
   ];
+  useEffect(() => {
+    const handle = event => {
+      if (event.defaultPrevented || event.repeat || event.isComposing || event.target.closest?.('[data-shortcut-recorder]')) return;
+      const key = fromEvent(event);
+      const id = key && Object.keys(shortcuts).find(id => shortcuts[id] === key);
+      if (!id) return;
+      if (event.target.closest?.('input, textarea, [contenteditable="true"], [role="dialog"]') && id !== 'palette') return;
+      event.preventDefault();
+      if (id === 'palette') setPalette(previous => !previous);
+      else if (id === 'settings') openSettings();
+      else if (id === 'guide') setTutorial(true);
+      else if (id === 'load') { if (!running) load(); }
+      else setView(id);
+    };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, [shortcuts, running, load, openSettings]);
   const filteredRecords = records.filter(
     (record) =>
       (reviewFilter === "all" ||
@@ -1221,15 +1260,16 @@ function App() {
     : currentUrl || url;
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">
-            <img src={brandMark} alt="돋보기를 든 박새 로고" />
-          </span>
-          <span>
-            chickadee<span className="brand-dot">.</span>
-          </span>
-        </div>
+      <div className="window-titlebar" aria-hidden="true" />
+      <aside className={`sidebar ${view === "settings" ? "settings-sidebar" : ""}`}>
+        {view === "settings" ? <>
+          <SettingsNav selected={settingsTab} onSelect={setSettingsTab} onBack={() => setView(settingsReturnView.current)} onGuide={() => setTutorial(true)} />
+        </> : <>
+
+          <div className="brand sidebar-brand">
+            <span className="brand-mark"><img src={brandMark} alt="Chickadee 로고" /></span>
+            <span>chickadee<span className="brand-dot">.</span></span>
+          </div>
 
         <nav>
           {[
@@ -1254,25 +1294,20 @@ function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => setTutorial(true)}>
-            <Icon name="MousePointer2" />
-            <span>사용 가이드</span>
+        <div className="sidebar-bottom sidebar-tools">
+          <button className="sidebar-tool" aria-label="설정" title="설정" onClick={openSettings}>
+            <Icon name="Settings" />
           </button>
-          <button className="nav-item" disabled={running} onClick={load}>
+          <button className="sidebar-tool" aria-label="결과 불러오기" title="결과 불러오기" disabled={running} onClick={load}>
             <Icon name="FolderOpen" />
-            <span>결과 불러오기</span>
-          </button>
-          <button className="nav-item" onClick={() => setSettings(true)}>
-            <Icon name="SlidersHorizontal" />
-            <span>검사 설정</span>
           </button>
         </div>
+        </>}
       </aside>
       <main className="main">
         <header className="topbar">
             <h1>
-              {view === "inspection" ? "검사 분석" : view === "history"
+              {view === "settings" ? "설정" : view === "inspection" ? "검사 분석" : view === "history"
                 ? "검사 기록"
                 : view === "results"
                   ? "탐지 내역"
@@ -1329,22 +1364,19 @@ function App() {
                     {
                       label: "데모 검사",
                       icon: "FlaskConical",
-                      image: demoImage,
                       disabled: !booted,
                       action: () => start(true),
                     },
                     {
                       label: "이 페이지만 검사",
                       icon: "ScanLine",
-                      image: searchImage,
                       disabled: !booted,
                       action: () => start(false, { singlePage: true }),
                     },
                     {
-                      label: "검사 설정",
-                      icon: "SlidersHorizontal",
-                      image: settingsImage,
-                      action: () => setSettings(true),
+                      label: "설정",
+                      icon: "Settings",
+                      action: () => openSettings(),
                     },
                   ]}
                 />
@@ -1360,15 +1392,6 @@ function App() {
             >
               결과 폴더
             </Button>
-            <button
-              className="command-launcher"
-              onClick={() => setPalette(true)}
-              aria-label="빠른 명령"
-            >
-              <Icon name="Search" size={14} />
-              <span>빠른 명령</span>
-              <kbd>Ctrl K</kbd>
-            </button>
             {visualPreview && (
               <span className="local-label">디자인 미리보기 · 저장된 데모</span>
             )}
@@ -1376,7 +1399,7 @@ function App() {
         </header>
         <section
           className="summary-strip"
-          hidden={!running && !outcome && status !== "failed"}
+          hidden={view === "settings" || (!running && !outcome && status !== "failed")}
         >
           <div className="scan-status">
             <span
@@ -1392,16 +1415,6 @@ function App() {
             />
             <strong>{phaseTitle}</strong>
             {elapsed > 0 && <span>{formatElapsed(elapsed)}</span>}
-            {outcome && (
-              <span
-                className="outcome-target"
-                title={outcome.result.meta.entry_url}
-              >
-                {outcome.report.desktop_options?.demo
-                  ? "로컬 데모 결과"
-                  : shortUrl(outcome.result.meta.entry_url)}
-              </span>
-            )}
           </div>
           <div className="summary-numbers">
             <button
@@ -1463,7 +1476,118 @@ function App() {
           </div>
         </section>
         <div className="content-area" data-view={view} key={view}>
-          {view === "inspection" && <InspectionInsights />}
+          {view === "settings" && <div className="settings-page" key={settingsTab}>
+            <section className="settings-modal settings-page-content" aria-label="설정">
+              <div className="settings-page-heading">
+                <div><h2>{{ general: "일반", ai: "AI 연결", notifications: "알림", schedules: "예약 검사", shortcuts: "단축키", updates: "업데이트" }[settingsTab]}</h2><p>{{ general: "검사 방식과 결과 저장 위치를 관리합니다.", ai: "근거 검토에 사용할 AI 제공자와 사용 한도를 설정합니다.", notifications: "검사 완료 알림과 채널별 리포트를 설정합니다.", schedules: "정해진 시간에 저장된 구성으로 검사를 실행합니다.", shortcuts: "자주 쓰는 명령의 키보드 단축키를 설정합니다.", updates: "최신 릴리스를 확인하고 새 버전을 다운로드합니다." }[settingsTab]}</p></div>
+              </div>
+            {settingsTab === "general" && <>
+            <div className="settings-field">
+              <span>사이트 탐색 설정</span>
+              <ActionMenu
+                className="profile-menu"
+                label="사이트 탐색 설정"
+                disabled={running}
+                triggerText={{
+                  default: "기본 탐색 · 같은 사이트 전체",
+                  test: "사용자 모의 게시판 · .post-detail 본문",
+                  public: "공공 사이트 기본 설정",
+                }[profile]}
+                items={[
+                  ["default", "기본 탐색 · 같은 사이트 전체"],
+                  ["test", "사용자 모의 게시판 · .post-detail 본문"],
+                  ["public", "공공 사이트 기본 설정"],
+                ].map(([id, label]) => ({
+                  label, selected: profile === id, disabled: running,
+                  action: () => setProfile(id),
+                }))}
+              />
+            </div>
+            <div className="form-row">
+              <label>
+                최대 페이지
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={maxPages}
+                  disabled={running}
+                  onChange={(event) => setMaxPages(event.target.value)}
+                />
+              </label>
+              <label>
+                전체 제한시간 (초)
+                <input
+                  type="number"
+                  min="1"
+                  max="1800"
+                  value={timeout}
+                  disabled={running}
+                  onChange={(event) => setTimeoutValue(event.target.value)}
+                />
+              </label>
+            </div>
+            <div className="scan-pace">
+              <div className="scan-pace-heading"><strong>탐색 속도</strong><span>{scanInterval}초 간격</span></div>
+              <div className="scan-pace-options" role="group" aria-label="탐색 속도">{[[0, "빠르게", "대기 없이 탐색"], [0.5, "보통", "기본 속도"], [5, "천천히", "다른 작업과 함께"]].map(([value, label, hint]) => <button key={value} type="button" disabled={running} aria-pressed={scanInterval === value} onClick={() => setScanInterval(value)}><strong>{label}</strong><small>{hint}</small></button>)}</div>
+              <label>페이지 사이 대기 시간<input aria-label="페이지 사이 대기 시간" type="range" min="0" max="30" step="0.5" value={scanInterval} disabled={running} onChange={event => setScanInterval(Number(event.target.value))} /></label>
+              <p>다음 페이지로 이동하기 전 기다리는 시간입니다. 천천히 검사할 때는 전체 제한시간도 늘려 주세요. 검사 중인 페이지의 처리 속도는 유지됩니다.</p>
+            </div>
+            <label className="toggle-label">
+              <div>
+                <strong>실시간 브라우저 화면</strong>
+                <small>검사 중인 페이지를 미리보기로 표시합니다.</small>
+              </div>
+              <input
+                type="checkbox"
+                checked={livePreview}
+                disabled={running}
+                onChange={(event) => setLivePreview(event.target.checked)}
+              />
+            </label>
+            <label>
+              결과 저장 위치
+              <div className="folder-input">
+                <span title={outputRoot}>{outputRoot}</span>
+                <button
+                  type="button"
+                  className="folder-change-icon"
+                  aria-label="결과 저장 위치 변경"
+                  title="결과 저장 위치 변경"
+                  disabled={running}
+                  onClick={() =>
+                    action(async () => setOutputRoot(await api.chooseFolder()))
+                  }
+                >
+                  <Icon name="FolderOpen" size={18} />
+                </button>
+              </div>
+            </label>
+            <p className="settings-folder-hint">각 검사는 별도 폴더에 저장됩니다.</p>
+            </>}
+            {settingsTab === "ai" && <>
+            <GrokSettings config={agentConfig} onConfigured={setAgentConfig} />
+            <details className="automation-info">
+              <summary>에이전트 확장 규격</summary>
+              <p>
+                로컬 도구 {capabilities?.tools?.length || 0}개 · 규격 v
+                {capabilities?.protocol_version || 1}. 실행 ID와 입력 형식을
+                검증하며, 검사 제어·근거 조회·검토 기록에 같은 기능을
+                사용합니다.
+              </p>
+              <small>
+                AI 검토는 사용자가 실행할 때만 호출합니다. 페이지 본문과 광고 문구는
+                분석 대상 데이터로 취급합니다.
+              </small>
+            </details>
+            </>}
+            {settingsTab === "shortcuts" && <ShortcutSettings value={shortcuts} onChange={async value => { await api.preferences({ shortcuts: value }); setShortcuts(value); }} />}
+            {settingsTab === "notifications" && <NotificationSettings />}
+            {settingsTab === "updates" && <UpdateSettings />}
+            {settingsTab === "schedules" && <ScheduleSettings options={{ url, max_pages: Number(maxPages), timeout_sec: Number(timeout), profile, preview: livePreview, interval_sec: scanInterval, workflow: flow }} />}
+            </section>
+          </div>}
+          {view === "inspection" && <InspectionInsights onOpenHistory={() => setView("history")} tab={inspectionTab} setTab={setInspectionTab} runStatus={status} onOpenSettings={() => openSettings("ai")} agentConfig={agentConfig} />}
           {view === "workflow" && (
             <div className={`studio ${selectedNode || monitorOpen ? "panel-open" : "panel-closed"}`}>
               <section className="canvas-shell">
@@ -1618,7 +1742,7 @@ function App() {
                           <span>
                             {livePreview
                               ? running ? "캡처가 도착하면 표시됩니다." : "실행하면 방문한 페이지가 표시됩니다."
-                              : "검사 설정에서 미리보기를 켤 수 있습니다."}
+                              : "설정에서 미리보기를 켤 수 있습니다."}
                           </span>
                         </div>
                       )}
@@ -1729,16 +1853,17 @@ function App() {
                 <div className="list-toolbar">
                   <AnimatedTabs value={filter}>
                     {[
-                      ["all", "전체"],
-                      ["required", "필수 탐지"],
-                      ["candidates", "광고 의심"],
-                    ].map(([id, label]) => (
+                      ["all", "전체", "ListFilter"],
+                      ["required", "필수 탐지", "ScanSearch"],
+                      ["candidates", "광고 의심", "ShieldAlert"],
+                    ].map(([id, label, icon]) => (
                       <button
                         className={filter === id ? "active" : ""}
                         aria-pressed={filter === id}
                         key={id}
                         onClick={() => setFilter(id)}
                       >
+                        <Icon name={icon} size={15} aria-hidden="true" />
                         {label}
                       </button>
                     ))}
@@ -1920,6 +2045,7 @@ function App() {
                     <Empty
                       icon="ScanSearch"
                       image={running ? searchImage : noFileImage}
+                      compactImage={running}
                       title={running ? "분석 진행" : "탐지 내역 없음"}
                       text="검사를 시작하거나 저장된 result.json을 불러오세요."
                     />
@@ -1965,6 +2091,7 @@ function App() {
                     aria-pressed={pageFilter === "visited"}
                     onClick={() => setPageFilter("visited")}
                   >
+                    <Icon name="Globe2" size={15} aria-hidden="true" />
                     방문 <span className="path-tab-count">{pages.length}</span>
                   </button>
                   <button
@@ -1972,6 +2099,7 @@ function App() {
                     aria-pressed={pageFilter === "pending"}
                     onClick={() => setPageFilter("pending")}
                   >
+                    <Icon name="History" size={15} aria-hidden="true" />
                     대기 <span className="path-tab-count">{queue}</span>
                   </button>
                 </AnimatedTabs>
@@ -2066,17 +2194,18 @@ function App() {
               <div className="list-toolbar">
                 <AnimatedTabs value={eventFilter}>
                   {[
-                    ["all", "전체"],
-                    ["phase", "진행 단계"],
-                    ["network", "HTTP 통신"],
-                    ["findings", "탐지·오류"],
-                  ].map(([id, label]) => (
+                    ["all", "전체", "ListFilter"],
+                    ["phase", "진행 단계", "Workflow"],
+                    ["network", "HTTP 통신", "Network"],
+                    ["findings", "탐지·오류", "CircleAlert"],
+                  ].map(([id, label, icon]) => (
                     <button
                       key={id}
                       className={eventFilter === id ? "active" : ""}
                       aria-pressed={eventFilter === id}
                       onClick={() => setEventFilter(id)}
                     >
+                      <Icon name={icon} size={15} aria-hidden="true" />
                       {label}
                     </button>
                   ))}
@@ -2205,117 +2334,6 @@ function App() {
           }}
         />
       )}
-      {settings && (
-        <div className="modal-backdrop" onClick={() => setSettings(false)}>
-          <section
-            className="modal settings-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="settings-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="modal-heading">
-              <div>
-                <h2 id="settings-title">검사 설정</h2>
-              </div>
-              <button aria-label="검사 설정 닫기" onClick={() => setSettings(false)}>
-                <Icon name="X" />
-              </button>
-            </div>
-            <div className="settings-field">
-              <span>사이트 탐색 설정</span>
-              <ActionMenu
-                className="profile-menu"
-                label="사이트 탐색 설정"
-                disabled={running}
-                triggerText={{
-                  default: "기본 탐색 · 같은 사이트 전체",
-                  test: "사용자 모의 게시판 · .post-detail 본문",
-                  public: "공공 사이트 기본 설정",
-                }[profile]}
-                items={[
-                  ["default", "기본 탐색 · 같은 사이트 전체"],
-                  ["test", "사용자 모의 게시판 · .post-detail 본문"],
-                  ["public", "공공 사이트 기본 설정"],
-                ].map(([id, label]) => ({
-                  label, selected: profile === id, disabled: running,
-                  action: () => setProfile(id),
-                }))}
-              />
-            </div>
-            <div className="form-row">
-              <label>
-                최대 페이지
-                <input
-                  type="number"
-                  min="1"
-                  max="10000"
-                  value={maxPages}
-                  disabled={running}
-                  onChange={(event) => setMaxPages(event.target.value)}
-                />
-              </label>
-              <label>
-                전체 제한시간 (초)
-                <input
-                  type="number"
-                  min="1"
-                  max="1800"
-                  value={timeout}
-                  disabled={running}
-                  onChange={(event) => setTimeoutValue(event.target.value)}
-                />
-              </label>
-            </div>
-            <label className="toggle-label">
-              <div>
-                <strong>실시간 브라우저 화면</strong>
-                <small>검사 중인 페이지를 미리보기로 표시합니다.</small>
-              </div>
-              <input
-                type="checkbox"
-                checked={livePreview}
-                disabled={running}
-                onChange={(event) => setLivePreview(event.target.checked)}
-              />
-            </label>
-            <label>
-              결과 저장 위치
-              <div className="folder-input">
-                <span title={outputRoot}>{outputRoot}</span>
-                <Button
-                  icon="FolderOpen"
-                  disabled={running}
-                  onClick={() =>
-                    action(async () => setOutputRoot(await api.chooseFolder()))
-                  }
-                >
-                  변경
-                </Button>
-              </div>
-            </label>
-            <p className="settings-folder-hint">각 검사는 별도 폴더에 저장됩니다.</p>
-            <details className="automation-info">
-              <summary>에이전트 확장 규격</summary>
-              <p>
-                로컬 도구 {capabilities?.tools?.length || 0}개 · 규격 v
-                {capabilities?.protocol_version || 1}. 실행 ID와 입력 형식을
-                검증하며, 검사 제어·근거 조회·검토 기록에 같은 기능을
-                사용합니다.
-              </p>
-              <small>
-                현재 AI 제공자는 연결하지 않았습니다. 페이지 본문과 광고 문구는
-                분석 대상 데이터로 취급합니다.
-              </small>
-            </details>
-            <div className="modal-footer">
-              <Button className="primary" onClick={() => setSettings(false)}>
-                완료
-              </Button>
-            </div>
-          </section>
-        </div>
-      )}
       {selectedEvent && (
         <div className="modal-backdrop" onClick={() => setSelectedEvent(null)}>
           <section
@@ -2426,9 +2444,9 @@ function ScanNotice({ onClose }) {
   );
 }
 
-function Empty({ icon, image, title, text }) {
+function Empty({ icon, image, title, text, compactImage = false }) {
   return (
-    <div className="empty-state">
+    <div className={`empty-state${compactImage ? " empty-state-compact" : ""}`}>
       <span aria-hidden="true">
         {image ? <img src={image} alt="" width={32} height={32} /> : <Icon name={icon} size={24} />}
       </span>
@@ -2447,7 +2465,7 @@ function NodeSettings({ id, flow, setFlow, url, setUrl, running, onClose }) {
         </button>
       </div>
       <div className={`node-config tone-${def.tone}`}>
-        <span className="config-icon">
+        <span className={`config-icon config-icon-${id}`}>
           <img src={nodeImages[id]} alt="" width={28} height={28} draggable={false} />
         </span>
         <small>{def.subtitle}</small>

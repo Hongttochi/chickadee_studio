@@ -161,7 +161,7 @@ export default function Tutorial({ onClose, onDemo, onInspect, canDemo }) {
           )}
         </div>
       </footer>
-      <p className="tutorial-reopen">닫아도 왼쪽 메뉴의 <strong>사용 가이드</strong>에서 다시 볼 수 있습니다.</p>
+      <p className="tutorial-reopen">닫아도 <strong>설정 → 사용 가이드</strong>에서 다시 볼 수 있습니다.</p>
       {zoomed && <ScreenPreview image={current.image} caption={current.caption} onClose={() => setZoomed(false)} />}
     </dialog>
   );

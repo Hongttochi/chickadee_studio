@@ -9,6 +9,9 @@ const http = require("node:http");
 exports.launch = async ({ env }) => {
   const root = path.resolve(__dirname, "../..");
   const data = env.CHICKADEE_TEST_DATA;
+  const { Notifications } = require('../electron/notifications.cjs');
+  const notifications = new Notifications({ directory: data, safeStorage: { isEncryptionAvailable: () => false }, supported: () => false });
+  await notifications.load();
   const dist = path.join(root, "desktop/dist");
   await fs.mkdir(data, { recursive: true });
   let preferences = await fs
@@ -37,6 +40,9 @@ exports.launch = async ({ env }) => {
           .catch(() => {});
     },
   );
+  const { Schedules } = require('../electron/schedules.cjs');
+  const schedules = new Schedules({ directory: data, start: value => backend.request('start', { ...value, output_root: outputRoot }), busy: async () => (await backend.request('state')).running });
+  await schedules.load();
   const server = http.createServer(async (request, response) => {
     try {
       const pathname = decodeURIComponent(
@@ -65,8 +71,18 @@ exports.launch = async ({ env }) => {
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
+  let updateStatus = 'idle';
   async function invoke(method, value) {
-    const extensions = { inspection: "inspection", compare: "compare", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop" };
+    if (method === 'checkUpdates') updateStatus = 'current';
+    if (['checkUpdates', 'updateState'].includes(method)) return { current: require('../package.json').version, status: updateStatus };
+
+    if (method === "scheduleState") return schedules.state();
+    if (method === "saveSchedule") return schedules.save(value);
+    if (method === "removeSchedule") return schedules.remove(value);
+    if (method === "notificationState") return notifications.state();
+    if (method === "saveNotifications") return notifications.save(value);
+    if (method === "testNotification") return notifications.testDesktop();
+    const extensions = { inspection: "inspection", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop" };
     if (extensions[method]) return backend.request(extensions[method], value || {});
     if (method === "state")
       return {
@@ -153,7 +169,8 @@ exports.launch = async ({ env }) => {
           "resume",
           "stop",
           "capabilities",
-          "inspection", "compare", "configureAgent", "runAgent", "stopAgent",
+          "inspection", "configureAgent", "runAgent", "stopAgent", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
+          "updateState", "checkUpdates", "downloadUpdate", "showUpdateFile", "openReleaseNotes",
           "preferences",
           "history",
           "load",

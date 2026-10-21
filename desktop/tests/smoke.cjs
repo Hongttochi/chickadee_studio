@@ -70,7 +70,7 @@ async function waitForHistory(page, count) {
     await page.getByRole("textbox", { name: "명령 검색" }).fill("설정");
     await page.keyboard.press("Enter");
     await page.getByLabel("최대 페이지", { exact: true }).fill("20");
-    await page.getByRole("button", { name: "완료", exact: true }).click();
+    await page.getByRole("button", { name: "앱으로 돌아가기", exact: true }).click();
     await page.getByRole("button", { name: "검사 옵션", exact: true }).click();
     await page
       .getByRole("menuitem", { name: "데모 검사", exact: true })
@@ -264,9 +264,9 @@ async function waitForHistory(page, count) {
     assert.equal(preferences.maxPages, 20);
     assert.equal(preferences.url, fixtureUrl);
     // A run without preview must not inherit the preceding run's image.
-    await page.getByRole("button", { name: "검사 설정", exact: true }).click();
+    await page.getByRole("button", { name: "설정", exact: true }).click();
     await page.getByLabel("실시간 브라우저 화면", { exact: false }).uncheck();
-    await page.getByRole("button", { name: "완료", exact: true }).click();
+    await page.getByRole("button", { name: "앱으로 돌아가기", exact: true }).click();
     await page.getByRole("button", { name: "검사 옵션", exact: true }).click();
     await page
       .getByRole("menuitem", { name: "데모 검사", exact: true })

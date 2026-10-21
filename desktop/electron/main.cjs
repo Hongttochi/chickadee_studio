@@ -6,10 +6,17 @@ const {
   shell,
   clipboard,
   screen,
+  Notification,
+  safeStorage,
 } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const { fileURLToPath } = require("node:url");
+const { createNotifier } = require("./native-notification.cjs");
+const { Notifications } = require("./notifications.cjs");
+const { Updates } = require("./updates.cjs");
+const { Schedules } = require("./schedules.cjs");
+let notifications, activeNotificationRun, schedules;
 const { Backend } = require("./backend.cjs");
 let window,
   backend,
@@ -34,10 +41,14 @@ function savePreferences(value, folder) {
 }
 async function writePreferences(value, folder) {
   const next = { ...preferences };
+  if (value && Object.hasOwn(value, "shortcuts")) {
+    const { validateShortcuts } = await import("../src/shortcuts.mjs");
+    next.shortcuts = validateShortcuts(value.shortcuts);
+  }
   if (folder !== undefined) next.outputRoot = folder;
   if (!value || typeof value !== "object")
     throw new Error("설정 형식이 올바르지 않습니다.");
-  for (const key of ["url", "maxPages", "timeout", "profile", "livePreview"]) {
+  for (const key of ["url", "maxPages", "timeout", "profile", "livePreview", "scanInterval"]) {
     if (!Object.hasOwn(value, key)) continue;
     const entry = value[key];
     const valid =
@@ -47,6 +58,8 @@ async function writePreferences(value, folder) {
           ? Number.isInteger(entry) && entry >= 1 && entry <= 10000
           : key === "timeout"
             ? Number.isFinite(entry) && entry > 0 && entry <= 1800
+            : key === "scanInterval"
+              ? Number.isFinite(entry) && entry >= 0 && entry <= 30
             : key === "profile"
               ? ["default", "test", "public"].includes(entry)
               : typeof entry === "boolean";
@@ -78,6 +91,19 @@ function handler(name, callback) {
   });
 }
 async function initialize() {
+  notifications = new Notifications({ directory: app.getPath("userData"), safeStorage,
+    supported: () => Notification.isSupported(), focused: () => Boolean(window?.isFocused()),
+    notify: createNotifier(Notification, () => window),
+  });
+  await notifications.load();
+  handler("notification-state", () => notifications.state());
+  handler("notification-save", (value) => notifications.save(value));
+  handler("notification-test", () => notifications.testDesktop());
+  handler("notification-system-settings", async () => {
+    const target = process.platform === "darwin" ? "x-apple.systempreferences:com.apple.Notifications-Settings.extension" : process.platform === "win32" ? "ms-settings:notifications" : null;
+    if (!target) throw new Error("운영체제 설정에서 알림을 확인하세요.");
+    await shell.openExternal(target);
+  });
   preferences = await fs
     .readFile(preferencesPath(), "utf8")
     .then(JSON.parse)
@@ -105,7 +131,7 @@ async function initialize() {
     title: "Chickadee",
     icon: path.join(__dirname, "../assets/app.ico"),
     titleBarStyle: "hidden",
-    titleBarOverlay: { color: "#e9eef5", symbolColor: "#4b5563", height: 40 },
+    titleBarOverlay: { color: "#242426", symbolColor: "#c9c9cf", height: 40 },
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       nodeIntegration: false,
@@ -145,11 +171,23 @@ async function initialize() {
       env: { ...process.env, PYTHONIOENCODING: "utf-8" },
     },
     (event) => {
+      if (event.kind === "started") activeNotificationRun = event.run_id;
       if (event.kind === "done") currentPath = event.path;
+      if (event.kind === "done" || (event.kind === "error" && activeNotificationRun)) {
+        const reportEvent = event.kind === "done" ? event : { run_id: activeNotificationRun, report: { status: "failed" } };
+        activeNotificationRun = null;
+        notifications.completed(reportEvent).catch(() => {});
+      }
       if (window && !window.isDestroyed())
         window.webContents.send("desktop:event", event);
     },
   );
+  const updates = new Updates({ current: require("../package.json").version, directory: path.join(app.getPath("userData"), "updates"), reveal: file => shell.showItemInFolder(file) });
+  handler("update-state", () => updates.getState());
+  handler("update-check", () => updates.check());
+  handler("update-download", () => updates.download());
+  handler("update-show", () => updates.showFile());
+  handler("update-notes", () => shell.openExternal(updates.notesURL()));
   handler("state", async () => ({
     ...(await backend.request("state")),
     outputRoot,
@@ -159,7 +197,7 @@ async function initialize() {
       .then(JSON.parse)
       .catch(() => null),
   }));
-  handler("start", async (options) => {
+  const startScan = async (options) => {
     if (!options || typeof options !== "object")
       throw new Error("검사 설정이 필요합니다.");
     const keys = [
@@ -180,12 +218,18 @@ async function initialize() {
     );
     currentPath = null;
     return backend.request("start", { ...clean, output_root: outputRoot });
-  });
+  };
+  schedules = new Schedules({ directory: app.getPath("userData"), start: startScan, busy: async () => { const state = await backend.request("state"); return state.running || (await backend.request("agent-status")).running; } });
+  await schedules.load();
+  handler("schedule-state", () => schedules.state());
+  handler("schedule-save", (value) => schedules.save(value));
+  handler("schedule-remove", (id) => schedules.remove(id));
+  handler("start", startScan);
   handler("stop", () => backend.request("stop"));
   handler("pause", () => backend.request("pause"));
   handler("resume", () => backend.request("resume"));
   handler("capabilities", () => backend.request("capabilities"));
-  for (const name of ["inspection", "compare", "agent-configure", "agent-run", "agent-stop"]) {
+  for (const name of ["inspection", "agent-configure", "agent-run", "agent-stop"]) {
     handler(name, (value) => backend.request(name, value || {}));
   }
   handler("preferences", (value) => savePreferences(value));
@@ -301,6 +345,7 @@ async function initialize() {
     }
   });
   await window.loadFile(page);
+  schedules.activate();
 }
 const single = app.requestSingleInstanceLock();
 if (!single) app.quit();
@@ -328,6 +373,7 @@ else {
     if (backend && !closing) {
       event.preventDefault();
       closing = true;
+      schedules?.close();
       backend.close().finally(() => app.quit());
     }
   });
