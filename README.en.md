@@ -17,7 +17,7 @@ Enter a URL, inspect pages in a browser, review findings, and export JSON or CSV
 [![Electron](https://img.shields.io/badge/Electron-44-47848f?style=flat&logo=electron&logoColor=white)](desktop/package.json)
 [![Python](https://img.shields.io/badge/Python-3.12-47779e?style=flat&logo=python&logoColor=white)](requirements.txt)
 
-[**Download for Windows**](https://github.com/orqan137/chickadee_studio/releases/tag/v0.10.0) · [Quick start](docs/quickstart-windows.md) · [User manual](docs/manual.md) · [Release notes](docs/releases/0.10.0.md)
+[**Download for Windows**](https://github.com/orqan137/chickadee_studio/releases/tag/v0.10.3) · [Quick start](docs/quickstart-windows.md) · [User manual](docs/manual.md) · [Release notes](docs/releases/0.10.3.md)
 
 </div>
 
@@ -33,8 +33,8 @@ Enter a URL, inspect pages in a browser, review findings, and export JSON or CSV
 
 **The Windows download includes the app, Python scan engine, and Chromium.** You do not need to install Python, Node.js, or Docker separately.
 
-1. Download the [**0.10.0 Windows ZIP**](https://github.com/orqan137/chickadee_studio/releases/download/v0.10.0/Chickadee-Studio-0.10.0-win-x64.zip) and extract the entire archive.
-2. Run `Chickadee-0.10.0/Chickadee.exe`.
+1. Download the [**0.10.3 Windows ZIP**](https://github.com/orqan137/chickadee_studio/releases/download/v0.10.3/Chickadee-Studio-0.10.3-win-x64.zip) and extract the entire archive.
+2. Run `Chickadee-0.10.3/Chickadee.exe`.
 3. Select the **Scan target (검사 대상)** node and enter an address in the URL field on the right.
 4. Click **Run scan (검사 실행)** in the top bar. To try the app first, open the adjacent dropdown and select **Demo scan (데모 검사)**.
 
@@ -197,7 +197,7 @@ The linked documents are primarily in Korean.
 | [Windows quick start](docs/quickstart-windows.md) | [Desktop development and packaging](docs/desktop.md) | [Research sources](research/README.md) |
 | [User manual](docs/manual.md) | [Architecture](docs/architecture.md) | [Dots research integration](docs/research-integration.md) |
 | [Output formats](docs/result-format.md) | [Validation log](docs/validation.md) | [Research v4 summary](docs/research-v4.md) |
-| [Release notes](docs/releases/0.10.0.md) | [Design guidelines](DESIGN.md) | [ML and agent design](docs/ml-agent-generalization.md) |
+| [Release notes](docs/releases/0.10.3.md) | [Design guidelines](DESIGN.md) | [ML and agent design](docs/ml-agent-generalization.md) |
 | [Development plan](docs/development-plan.md) | [Agent specification](docs/agent-extension.md) | [Offline ML comparison](research/ml-review/2026-10-21/) |
 | [Requirements](docs/requirements.md) | [Third-party notices](docs/third-party-notices.md) | [Mock site specification](examples/mock-site-spec.json) |
 | [Submission checklist](docs/submission-checklist.md) | [Sample results](examples/result.sample.json) | [Mock site content](examples/mock-site-content.json) |

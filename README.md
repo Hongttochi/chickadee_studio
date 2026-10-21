@@ -17,7 +17,7 @@
 [![Electron](https://img.shields.io/badge/Electron-44-47848f?style=flat&logo=electron&logoColor=white)](desktop/package.json)
 [![Python](https://img.shields.io/badge/Python-3.12-47779e?style=flat&logo=python&logoColor=white)](requirements.txt)
 
-[**Windows 다운로드**](https://github.com/orqan137/chickadee_studio/releases/tag/v0.10.0) · [빠른 시작](docs/quickstart-windows.md) · [사용 설명서](docs/manual.md) · [릴리스 노트](docs/releases/0.10.0.md)
+[**Windows 다운로드**](https://github.com/orqan137/chickadee_studio/releases/tag/v0.10.3) · [빠른 시작](docs/quickstart-windows.md) · [사용 설명서](docs/manual.md) · [릴리스 노트](docs/releases/0.10.3.md)
 
 </div>
 
@@ -31,8 +31,8 @@
 
 **Windows 배포 파일에는 앱·Python 검사 엔진·Chromium이 모두 포함됩니다.** Python, Node.js, Docker를 따로 설치할 필요가 없습니다.
 
-1. [**0.10.0 Windows ZIP**](https://github.com/orqan137/chickadee_studio/releases/download/v0.10.0/Chickadee-Studio-0.10.0-win-x64.zip)을 내려받아 전체 압축을 풉니다.
-2. `Chickadee-0.10.0/Chickadee.exe`를 실행합니다.
+1. [**0.10.3 Windows ZIP**](https://github.com/orqan137/chickadee_studio/releases/download/v0.10.3/Chickadee-Studio-0.10.3-win-x64.zip)을 내려받아 전체 압축을 풉니다.
+2. `Chickadee-0.10.3/Chickadee.exe`를 실행합니다.
 3. **검사 대상** 노드를 누르고 오른쪽 URL 입력란에 주소를 입력합니다.
 4. 상단 **검사 실행**을 누릅니다. 먼저 둘러보려면 옆의 펼침 메뉴에서 **데모 검사**를 선택하세요.
 
@@ -195,7 +195,7 @@ macOS에서는 Python 실행 경로를 `.venv/bin/python`으로 바꿉니다. �
 | [Windows 빠른 실행](docs/quickstart-windows.md) | [데스크톱 개발·배포](docs/desktop.md) | [조사 자료 원본](research/README.md) |
 | [사용 매뉴얼](docs/manual.md) | [아키텍처](docs/architecture.md) | [Dots 자료 반영](docs/research-integration.md) |
 | [결과 파일 형식](docs/result-format.md) | [검증 기록](docs/validation.md) | [v4 조사 정리](docs/research-v4.md) |
-| [릴리스 노트](docs/releases/0.10.0.md) | [디자인 기준](DESIGN.md) | [ML·에이전트 설계](docs/ml-agent-generalization.md) |
+| [릴리스 노트](docs/releases/0.10.3.md) | [디자인 기준](DESIGN.md) | [ML·에이전트 설계](docs/ml-agent-generalization.md) |
 | [개발 계획](docs/development-plan.md) | [에이전트 규격](docs/agent-extension.md) | [ML 오프라인 대조](research/ml-review/2026-10-21/) |
 | [요구사항](docs/requirements.md) | [외부 구성요소](docs/third-party-notices.md) | [모의 웹 명세](examples/mock-site-spec.json) |
 | [제출 체크리스트](docs/submission-checklist.md) | [결과 예시](examples/result.sample.json) | [모의 웹 내용](examples/mock-site-content.json) |
