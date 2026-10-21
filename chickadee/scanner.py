@@ -775,6 +775,8 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
         if data.get('images_truncated'):
             state.ocr_skipped += 1
             state.errors.append({'url': page_url, 'message': '이미지 수집 한도 도달: 일부 이미지를 처리하지 못했습니다.'})
+    elif not ocr_enabled:
+        _record_skipped_images(data.get('images', []), prefix, page_url, state)
     if state.page_diagnostics:
         diagnostic = state.page_diagnostics[-1]
         diagnostic["elements_examined"] += len(data["elements"])
@@ -904,12 +906,18 @@ async def _fetch_image_bounded(url, state):
         return data, mime
 
 
+def _record_skipped_images(images, prefix, page_url, state):
+    for image in images:
+        key = page_url, prefix + image['location'], hashlib.sha256(image['source_url'].encode()).hexdigest()
+        if key not in state.ocr_seen:
+            state.ocr_seen.add(key)
+            state.ocr_skipped += 1
+
+
 async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
     elements = []
     if not state.ocr_enabled:
-        for image in images:
-            key = page_url, prefix + image['location'], hashlib.sha256(image['source_url'].encode()).hexdigest()
-            if key not in state.ocr_seen: state.ocr_seen.add(key); state.ocr_skipped += 1
+        _record_skipped_images(images, prefix, page_url, state)
         return elements
     for index, image in enumerate(images):
         if len(state.ocr_images) >= state.ocr_max_images or state.ocr_disabled:

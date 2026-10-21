@@ -2,20 +2,26 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 from chickadee.workflow import compile_workflow
-from chickadee.scanner import _inspect_frame
+from chickadee.scanner import _inspect_frame, _State
 
 
 class OCRWorkflowTests(unittest.IsolatedAsyncioTestCase):
     async def test_disabled_ocr_does_not_invoke_reader(self):
         frame = SimpleNamespace(evaluate=AsyncMock(return_value={
-            'elements': [], 'images': [{'source_url': 'https://example.org/image.png'}],
+            'elements': [], 'images': [{'source_url': 'https://example.org/image.png', 'location': 'img'}],
             'links': [], 'truncated': False, 'links_truncated': False,
         }), child_frames=[])
-        state = SimpleNamespace(trace=SimpleNamespace(capture=Mock()), page_diagnostics=[])
+        state = _State()
+        state.trace.capture = Mock()
         with patch('chickadee.scanner._inspect_images', new_callable=AsyncMock) as reader:
             await _inspect_frame(frame, '', {}, 'https://example.org', '', state, Mock(),
                                  detect_techniques=False, ocr_enabled=False)
             reader.assert_not_awaited()
+            self.assertEqual(state.ocr_skipped, 1)
+            await _inspect_frame(frame, '', {}, 'https://example.org', '', state, Mock(),
+                                 detect_techniques=False, ocr_enabled=False)
+            reader.assert_not_awaited()
+            self.assertEqual(state.ocr_skipped, 1)
 
     async def test_workflow_ocr_switch_independent_of_old_connections(self):
         pairs = [('target', 'browser'), ('browser', 'collector'), ('collector', 'candidates'),
