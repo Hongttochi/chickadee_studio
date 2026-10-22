@@ -53,6 +53,22 @@ def csv_bytes(result, report):
     return output.getvalue().encode("utf-8-sig")
 
 
+def extra_result(result, report):
+    """Additional observations only; never turn a review candidate into a legal finding."""
+    findings, seen = [], set()
+    for item in report.get('ad_candidates', []):
+        key = item['url'], item['location'], item['category']
+        if key in seen:
+            continue
+        seen.add(key)
+        findings.append({'id': 'extra_' + str(len(findings) + 1).zfill(5),
+            'url': item['url'], 'location': item['location'],
+            'evidence_text': item['evidence_text'], 'technique': 'ETC',
+            'extra_finding': '광고 문맥 검토: ' + CATEGORY_LABELS.get(item['category'], item['category']),
+            'is_violation': False})
+    return {'meta': dict(result['meta']), 'findings': findings}
+
+
 def atomic_write(path, payload):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -24,7 +24,7 @@ from .candidates import classify_candidates, CATEGORY_LABELS
 from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text
 from .local_ai import enrich_report, visual_analysis, prepare_models
 from .laya_review import enrich_laya
-from .exports import CSV_COLUMNS, csv_bytes, atomic_write
+from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots
 
@@ -170,7 +170,10 @@ class ScanOutcome:
                   "csv_sha256": hashlib.sha256(csv_payload).hexdigest(), "csv_columns": list(CSV_COLUMNS), "csv_schema_version": "1.0"}
         # Each file replaces atomically. A matching SHA-256 in the sidecar lets
         # consumers detect an interrupted write between the two replacements.
+        extra_payload = (json.dumps(extra_result(self.result, self.report), ensure_ascii=False,
+                                   indent=2, allow_nan=False) + '\n').encode('utf-8')
         for name, content in (("result.json", payload), ("result.csv", csv_payload),
+                              ("result_extra.json", extra_payload),
                               ("scan-report.json", (json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8"))):
             atomic_write(folder / name, content)
         self.report.update(report)

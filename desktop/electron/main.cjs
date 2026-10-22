@@ -380,6 +380,15 @@ async function initialize() {
     }
   });
   await window.loadFile(page);
+  try {
+    const { startupGroqConfig } = require('./groq-env.cjs');
+    const config = await startupGroqConfig(process.argv);
+    if (config) await backend.request('agent-configure', config);
+  } catch {
+    // Invalid optional configuration must never block the core app window.
+    dialog.showMessageBox(window, {type:'warning', title:'Groq 설정 파일',
+      message:'지정한 파일의 GROQ_API_KEY를 확인하세요. 기본 OCR·ML 검사는 계속 사용할 수 있습니다.'}).catch(() => {});
+  }
   schedules.activate();
 }
 const single = app.requestSingleInstanceLock();

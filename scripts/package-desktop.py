@@ -48,6 +48,7 @@ def main():
     shutil.copy2(ROOT / 'DESIGN.md', APP / 'DESIGN.md')
     for name in ('LICENSE', 'NOTICE'):
         shutil.copy2(ROOT / name, APP / name)
+    shutil.copy2(ROOT / '.env.example', APP / '.env.example')
     (APP / 'README_FIRST.txt').write_text(
         f'Chickadee Studio {VERSION} / Windows x64\n\n'
         'ZIP 전체를 압축 해제한 다음 Chickadee.exe를 실행하세요.\n'
@@ -55,6 +56,7 @@ def main():
         'URL 입력 → 검사 실행. 로컬 예제는 실행 옆 화살표 메뉴 → 데모 검사.\n'
         '일시정지·재개, 검토 상태·메모·일괄 처리, Ctrl K 빠른 명령을 지원합니다.\n'
         '기본 저장: 문서/Chickadee/results/실행별 폴더\n'
+        '심사용 result.json 및 추가 관측 result_extra.json은 위 실행별 폴더에 생성합니다.\n'
         '검사 구성은 고정 순서로 실행하며 이미지 OCR 사용 여부는 노드 설정에서 선택합니다.\n'
         '사용 안내: docs/quickstart-windows.md, docs/desktop.md\n'
         '이미지 속 한국어 문구도 자동 검사합니다. OCR 모델은 동봉되어 별도 설치가 필요하지 않습니다.\n'
@@ -63,6 +65,7 @@ def main():
         'OCR 기능 확인 버튼은 인터넷 접속 없이 동봉된 한국어 모델을 시험합니다. GPU는 필수가 아닙니다.\n'
         'Groq 추가 검토는 AI 설정에서 키를 등록한 뒤 실행합니다. 기본 누적 한도: 검사당 6회 / 24,000토큰.\n'
         'API 키는 현재 앱 세션에서만 사용하며, 환경 변수나 다른 프로젝트의 키를 자동 사용하지 않습니다.\n'
+        '심사용 외부 키 파일: Chickadee.exe --groq-env-file "설정파일의 전체 경로". docs/quickstart-windows.md 참고.\n'
         '서명 서비스 가입 없이 제공되는 미서명 패키지입니다.\n'
         'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
     output = ROOT / 'artifacts' / f'Chickadee-Studio-{VERSION}-win-x64.zip'

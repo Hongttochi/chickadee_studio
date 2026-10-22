@@ -1,0 +1,33 @@
+// Native packaged startup reads an explicitly supplied inert fixture key. Never runs an agent.
+const {launch}=require('./native-app.cjs');
+const fs=require('node:fs/promises');
+const path=require('node:path');
+const assert=require('node:assert/strict');
+(async()=>{
+ const root=path.resolve(__dirname,'../..');
+ const data=path.join(root,'artifacts','groq-env-'+Date.now());await fs.mkdir(data,{recursive:true});
+ const file=path.join(data,'.env');const key='gsk_test_fixture_0123456789';
+ await fs.writeFile(file,'GROQ_API_KEY='+key+'\n','utf8');
+ const app=await launch({executablePath:process.env.CHICKADEE_PACKAGED_EXE||require('electron'),
+  args:[...(process.env.CHICKADEE_PACKAGED_EXE?[]:[path.join(root,'desktop')]),'--groq-env-file',file],
+  env:{...process.env,CHICKADEE_TEST_DATA:data}});
+ try{
+  const page=await app.firstWindow();page.setDefaultTimeout(30000);
+  await page.getByRole('button',{name:'사용 가이드 닫기',exact:true}).click();
+  await page.locator('.header-run-controls button.primary:not(:disabled)').waitFor();
+  let state;const deadline=Date.now()+30000;
+  do{
+   state=await page.evaluate(async()=>{
+    const current=await window.chickadee.state();
+    return window.chickadee.inspection({run_id:current.run_id});
+   });
+   if(state.agent.configured)break;
+   await new Promise(resolve=>setTimeout(resolve,100));
+  }while(Date.now()<deadline);
+  assert.equal(state.agent.configured,true);
+  assert.equal(state.agent.running,false);
+  assert.equal(state.agent.assessments.length,0);
+  assert.ok(!JSON.stringify(state).includes(key));
+  console.log(JSON.stringify({status:'passed',external_file_read:true,key_not_in_renderer:true,paid_calls:0}));
+ }finally{await app.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

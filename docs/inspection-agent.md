@@ -65,6 +65,8 @@ Groq에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전�
 | `agent-status` | 없음 | 설정 여부·실행 상태·누적 사용량·의견 |
 | `agent-stop` | 없음 | 에이전트 취소 요청 |
 
+Windows 앱은 `Chickadee.exe --groq-env-file 'C:\설정\.env'`로 명시적으로 선택한 파일의 `GROQ_API_KEY`만 읽어 같은 세션 설정을 할 수 있습니다. 파일을 실행하거나 다른 변수를 확장하지 않습니다. 키를 읽는 것만으로 API를 호출하지 않으며 기존 한도를 유지합니다. 기본 모델은 Groq의 `openai/gpt-oss-20b`입니다. 상세 실행 방법과 출력 경로는 [빠른 실행](quickstart-windows.md) 첫 장에 있습니다.
+
 `inspection.read`, `agent.status`는 기존 로컬 tool-call 계약에도 등록했다. 비용 발생 명령과 인증 설정은 근거 조사 모델에 노출하지 않는다. `agent_connected`는 세션 설정 여부이며 `agent_available=true`, `providers=["groq"]`로 구현 가용성을 표시한다.
 
 ## 검증과 재실행

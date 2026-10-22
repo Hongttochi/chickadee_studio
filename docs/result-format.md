@@ -1,10 +1,11 @@
 # 저장 형식과 고정 칼럼
 
-0.6.0 데스크톱 앱은 기본 `문서/Chickadee/results` 아래 실행별 폴더에 세 파일을 저장합니다. Python CLI의 기본 경로는 `results`입니다. 실행 완료·일부 결과·중단·실패 여부는 `scan-report.json` 또는 화면에서 확인합니다. 실패한 실행의 빈 CSV를 광고가 없다는 의미로 해석하지 않습니다.
+데스크톱 앱은 기본 `문서/Chickadee/results` 아래 실행별 폴더에 결과 파일을 저장합니다. Python CLI의 기본 경로는 `results`입니다. 실행 완료·일부 결과·중단·실패 여부는 `scan-report.json` 또는 화면에서 확인합니다. 실패한 실행의 빈 CSV를 광고가 없다는 의미로 해석하지 않습니다.
 
 | 파일 | 용도 |
 | --- | --- |
 | `result.json` | 기존 필수 4종 평가 형식. 원문은 변경하지 않음 |
+| `result_extra.json` | 추가 광고 문맥 검토 관측값. `ETC`·`extra_finding` 사용. 검토 후보의 불법성을 확정하지 않으므로 `is_violation:false` |
 | `scan-report.json` | 상태·오류·수집 범위·계산 CSS·광고 의심 후보·파일 해시 |
 | `result.csv` | 필수 탐지와 일반 광고 후보를 고정된 17개 칼럼으로 함께 검토 |
 

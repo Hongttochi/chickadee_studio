@@ -58,8 +58,12 @@ class LoginTests(unittest.IsolatedAsyncioTestCase):
         try:
             with patch('chickadee.scanner.prepare_models'), patch('chickadee.scanner.enrich_report',side_effect=lambda report,**kwargs:report.update(local_ai={})):
                 outcome=await scan(ScanConfig(f'http://127.0.0.1:{server.server_port}/private',interactive_login=True,
-                    timeout_sec=2,page_timeout_sec=1,settle_ms=0,ocr_enabled=False,capture_previews=False),emit=emit,control=control)
+                    timeout_sec=10,page_timeout_sec=3,settle_ms=0,ocr_enabled=False,capture_previews=False),emit=emit,control=control)
             self.assertGreaterEqual(outcome.report['paused_sec'],2)
+            # Assert the accounting directly; a two-second total budget can
+            # expire during a cold Chromium startup before any login is seen.
+            self.assertAlmostEqual(outcome.result['meta']['elapsed_sec'] - outcome.report['paused_sec'],
+                                   outcome.report['active_elapsed_sec'], delta=.15)
             if skip:
                 self.assertNotEqual(outcome.report['status'],'completed')
                 self.assertEqual(outcome.report['page_diagnostics'][0]['status'],'authentication_required')

@@ -46,7 +46,15 @@ async function launch({executablePath = require('electron'), args = [], env = pr
     const context = browser.contexts()[0];
     return {
       process: () => child,
-      firstWindow: async () => context.pages()[0] || await context.waitForEvent('page', {timeout}),
+      firstWindow: async () => {
+        const deadline=Date.now()+timeout;
+        while(Date.now()<deadline){
+          const page=browser.contexts().flatMap(c=>c.pages())[0];
+          if(page)return page;
+          await new Promise(resolve=>setTimeout(resolve,100));
+        }
+        throw new Error('Native window did not appear: '+output);
+      },
       waitForEvent: () => context.waitForEvent('page', {timeout}),
       evaluate,
       close: async () => {
