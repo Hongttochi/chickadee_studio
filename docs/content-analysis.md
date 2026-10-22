@@ -39,6 +39,7 @@ const state = await window.chickadee.analyzeContent({ analysis_id: job.analysis_
 | `sources[].unicode_analysis` | 문자 변형 탐지 결과 |
 | `sources[].ad_candidates` | 광고 문맥 규칙의 검토 항목 |
 | `sources[].local_ai.text` | 무료 문자 분류 모델의 관측값 |
+| `sources[].local_ai.laya` | 독립 검증을 통과해 설치한 Laya의 로컬 문맥 검토. 미설치·검증 대기는 `unavailable` |
 | `sources[].original_unicode_observed` | 입력 텍스트는 true, 이미지 OCR은 false |
 | `image.local_ai.visual` | 제출한 이미지 자체의 분류 관측값 |
 | `image.ocr` | 인식 상태·문구·좌표·인식 신뢰도 |
@@ -53,6 +54,14 @@ const state = await window.chickadee.analyzeContent({ analysis_id: job.analysis_
 분석은 백그라운드에서 하나씩 실행합니다. 사이트 검사·에이전트·OCR 환경 검사와 동시 시작하지 않으며 일반 상태 조회는 계속 응답합니다. 마지막 작업의 결과만 메모리에 유지하고 새 작업은 이를 교체합니다. 직접 입력 원본·결과를 검사 기록에 자동 저장하지 않습니다.
 
 ## 웹 검사와 공통 처리
+
+이미지는 `OCR → ML → Laya` 순서로 처리하며 직접 입력한 문자는 OCR을 거치지 않습니다. 입력 인자·결과 조회 방식·`result.json`과 CSV 칼럼은 유지합니다. Laya 신호는 근거의 `local_ai.laya`에 추가하고 원문·기존 규칙 탐지·사람의 검토 결과를 덮어쓰지 않습니다. Groq와 별개이며 키·API·인터넷 접속을 사용하지 않습니다.
+
+Laya는 원문이 같은 영역을 중복 추론하지 않고, 사이트 검사당 최대 12개 문맥을 검토합니다. ML에서 판단 경계에 가까운 문맥을 먼저 검토합니다. 생략·미설치·실행 오류·취소는 정상 판정으로 간주하지 않습니다. 노드 캔버스에는 기존 OCR·ML 단계와 Laya 노드 하나를 사용하며 기존 사용자 배치는 유지합니다. 불러온 과거 결과에 Laya 관측값을 소급해 붙이지 않습니다.
+
+전체 미세조정 모델의 독립 평가가 끝나기 전에는 Laya를 활성화하지 않습니다. 추론용 묶음은 `manifest.json`, `base/`(고정한 기본 모델·토크나이저), `best.safetensors`로 구성합니다. 매니페스트의 파일 크기·SHA-256, 전체 인코더 학습 여부, 독립 평가 통과 여부, 평가한 가중치 해시·보정 온도를 확인하고 파일 경로 이탈과 목록에 없는 모델 파일을 거부합니다. 가중치는 safetensors만 사용합니다.
+
+검증한 묶음을 설치한 환경에서 `CHICKADEE_LAYA_MODEL_DIR`에 해당 폴더를 지정합니다. 별도 로컬 Python 런타임을 사용할 경우 `CHICKADEE_LAYA_PYTHON`에 그 실행 파일의 절대 경로를 지정합니다. 런타임과 가중치를 자동으로 다운로드하거나 설치하지 않습니다. 미설치 시 기존 OCR·ML 검사는 계속되고 Laya는 `미적용`으로 표시됩니다. 현재 기본 앱 모델은 이 설정만으로 교체되지 않습니다.
 
 기존 사이트 검사와 직접 분석 모두 OCR 신뢰도 0.55 이상인 줄을 사용하며 4,000자에서 잘렸는지 기록합니다. 사이트 검사 근거에는 이미지 SHA-256과 OCR 엔진·모델·신뢰도 정보를 보존합니다.
 

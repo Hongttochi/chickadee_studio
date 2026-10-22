@@ -102,6 +102,25 @@ class ImageOCRTests(unittest.TestCase):
             next(i for i in altered if i['status'] == 'completed')['lines'][0]['box'] = replacement
             with self.assertRaises(ValueError): validate_ocr_images(altered)
 
+    def test_cancelled_reply_cannot_become_next_images_evidence(self):
+        async def scenario():
+            session = OCRSession()
+            try:
+                await session.recognize((FIXTURES/'benign.png').read_bytes())
+                pending = asyncio.create_task(session.recognize(self.ad))
+                await asyncio.sleep(.02)
+                pending.cancel()
+                with self.assertRaises(asyncio.CancelledError): await pending
+                self.assertIsNone(session.process)
+                result = await session.recognize((FIXTURES/'benign.png').read_bytes())
+                text = '\n'.join(line['text'] for line in result['lines'])
+                self.assertEqual(result['status'], 'completed')
+                self.assertNotIn('카지노', text)
+                self.assertIn('도서관', text)
+            finally:
+                await session.close()
+        asyncio.run(scenario())
+
     def test_worker_rejects_nonimages_recovers_and_closes(self):
         async def check():
             worker = OCRSession()

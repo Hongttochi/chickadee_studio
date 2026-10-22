@@ -27,8 +27,8 @@ export const DEFINITIONS = {
     output: "right",
   },
   ocr: {
-    title: "이미지 OCR", subtitle: "이미지 속 글자", icon: "ScanLine", tone: "teal",
-    detail: "PaddleOCR로 이미지 속 글자를 읽어 필수 탐지와 광고 분류에 전달합니다.", input: "left", output: "right",
+    title: "이미지 OCR", subtitle: "이미지 있을 때만", icon: "ScanLine", tone: "teal",
+    detail: "이미지가 있을 때만 글자를 추출해 ML에 전달합니다. 본문 텍스트는 OCR을 거치지 않습니다.", input: "left", output: "right",
   },
   techniques: {
     title: "필수 탐지",
@@ -40,13 +40,18 @@ export const DEFINITIONS = {
     output: "right",
   },
   candidates: {
-    title: "광고 분류",
-    subtitle: "5개 분류",
+    title: "ML",
+    subtitle: "광고 문맥",
     icon: "TextSearch",
     tone: "amber",
-    detail: "권유 문맥과 일반 광고 후보 검토",
+    detail: "본문과 OCR 문자를 규칙·Random Forest로 분석합니다.",
     input: "left",
     output: "right",
+  },
+  laya: {
+    title: "Laya", subtitle: "문맥 검토", icon: "Sparkles", tone: "teal",
+    detail: "독립 검증을 통과한 로컬 모델로 문맥을 추가 검토합니다. 미적용·생략은 완료로 표시하지 않습니다.",
+    input: "left", output: "right",
   },
   dedup: {
     title: "중복 정리", subtitle: "본문 · 이미지 근거", icon: "Copy", tone: "teal",
@@ -71,7 +76,8 @@ export const PAIRS = [
   ["ocr", "candidates"],
   ["ocr", "techniques"],
   ["techniques", "dedup"],
-  ["candidates", "dedup"],
+  ["candidates", "laya"],
+  ["laya", "dedup"],
   ["dedup", "report"],
 ];
 export const edgeFor = (source, target) => ({
@@ -81,9 +87,23 @@ export const edgeFor = (source, target) => ({
   type: "default",
   sourceHandle: "out",
   targetHandle: "in",
+  ...({"collector-ocr":"이미지", "collector-candidates":"본문", "ocr-candidates":"추출 문자"}[source+"-"+target] ? {
+    label: {"collector-ocr":"이미지", "collector-candidates":"본문", "ocr-candidates":"추출 문자"}[source+"-"+target],
+    labelShowBg: false, labelStyle: { fill: "#a8afb7", fontSize: 11 },
+  } : {}),
 });
+export function ocrPresentation(summary) {
+  if (!summary) return null;
+  if (summary.enabled === false) return {state:"disabled",caption:"사용 안 함"};
+  if (summary.status === "no_images") return {state:"skipped",caption:"이미지 없음"};
+  if (!["completed","partial"].includes(summary.status)) return null;
+  const missing=(summary.failed||0)+(summary.unreadable||0)+(summary.skipped||0);
+  if (missing) return {state: summary.failed || summary.unreadable ? "error" : "skipped",
+    caption:`문자 추출 ${Math.max(0,(summary.completed||0)-(summary.unreadable||0))}장 · 미확인 ${missing}장`};
+  return {state:"done",caption:`문자 추출 ${summary.completed||0}장`};
+}
 export const defaultWorkflow = () => ({
-  version: 2,
+  version: 3,
   follow_links: true,
   ocr_enabled: true,
   nodes: [
@@ -93,8 +113,9 @@ export const defaultWorkflow = () => ({
     { id: "techniques", position: { x: 880, y: 0 } },
     { id: "ocr", position: { x: 660, y: 400 } },
     { id: "candidates", position: { x: 880, y: 200 } },
-    { id: "dedup", position: { x: 1100, y: 200 } },
-    { id: "report", position: { x: 1320, y: 200 } },
+    { id: "laya", position: { x: 1100, y: 200 } },
+    { id: "dedup", position: { x: 1320, y: 200 } },
+    { id: "report", position: { x: 1540, y: 200 } },
   ],
   edges: PAIRS.map(([a, b]) => edgeFor(a, b)),
 });
@@ -103,15 +124,31 @@ export function validConnection(connection) {
     ([a, b]) => a === connection.source && b === connection.target,
   );
 }
+function layaPosition(nodes) {
+  const a = nodes.find(n => n.id === "candidates"), b = nodes.find(n => n.id === "dedup");
+  if (!a || !b) throw new Error("필수 노드가 없습니다.");
+  const from = a.position;
+  const to = b.position;
+  return { x: (from.x + to.x) / 2, y: Math.min(9800, Math.max(from.y, to.y) + 220) };
+}
+export function restoreWorkflowLayout(nodes, saved) {
+  const valid = p => p && [p.x, p.y].every(n => Number.isFinite(n) && Math.abs(n) < 10000);
+  const restored = nodes.map(node => ({ ...node, position: valid(saved?.[node.id]) ? { ...saved[node.id] } : { ...node.position } }));
+  const laya = restored.find(n => n.id === "laya");
+  if (laya && !valid(saved?.laya) && restored.some(n => n.id !== "laya" && Math.abs(n.position.x-laya.position.x)<160 && Math.abs(n.position.y-laya.position.y)<160)) {
+    laya.position = layaPosition(restored);
+  }
+  return restored;
+}
 export function normalizeWorkflow(value) {
   if (
     !value ||
-    ![1, 2].includes(value.version) ||
+    ![1, 2, 3].includes(value.version) ||
     !Array.isArray(value.nodes) ||
-    !(value.version === 2 ? value.nodes.length === 8 : [6, 7].includes(value.nodes.length)) ||
+    !(value.version === 3 ? value.nodes.length === 9 : value.version === 2 ? value.nodes.length === 8 : [6, 7].includes(value.nodes.length)) ||
     (value.ocr_enabled !== undefined && typeof value.ocr_enabled !== "boolean") ||
     !Array.isArray(value.edges) ||
-    value.edges.length > 10
+    value.edges.length > 12
   )
     throw new Error("지원하는 워크플로 JSON이 아닙니다.");
   const ids = new Set();
@@ -129,7 +166,7 @@ export function normalizeWorkflow(value) {
   });
   const keys = new Set();
   value.edges.forEach((edge) => {
-    if (!(validConnection(edge) || (value.version === 1 && ["techniques", "candidates"].includes(edge.source) && edge.target === "report")) || keys.has(edge.source + "-" + edge.target))
+    if (!(validConnection(edge) || (value.version < 3 && edge.source === "candidates" && edge.target === "dedup") || (value.version === 1 && ["techniques", "candidates"].includes(edge.source) && edge.target === "report")) || keys.has(edge.source + "-" + edge.target))
       throw new Error("지원하지 않거나 중복된 연결입니다.");
     keys.add(edge.source + "-" + edge.target);
   });
@@ -140,9 +177,13 @@ export function normalizeWorkflow(value) {
     if (!ids.has("dedup")) nodes.push(defaultWorkflow().nodes.find(node => node.id === "dedup"));
 
   }
+  if (!ids.has("laya")) {
+    // Existing user positions are never moved during migration.
+    nodes.push({ id: "laya", position: layaPosition(nodes) });
+  }
   if (Object.keys(DEFINITIONS).some(id => !nodes.some(node => node.id === id))) throw new Error("필수 노드가 없습니다.");
   return {
-    version: 2,
+    version: 3,
     ocr_enabled: value.ocr_enabled !== false,
     nodes,
     edges: defaultWorkflow().edges,

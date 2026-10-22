@@ -185,7 +185,7 @@ def validate_inspection(report):
 
 def validate_local_ai(value):
     if value is None: return
-    if not isinstance(value, dict) or set(value) - {'text', 'visual'}: raise ValueError('AI 분석 형식 오류')
+    if not isinstance(value, dict) or set(value) - {'text', 'visual', 'laya'}: raise ValueError('AI 분석 형식 오류')
     for signal in value.values():
         if not isinstance(signal, dict) or signal.get('status') not in ('completed', 'unavailable'):
             raise ValueError('AI 분석 상태 오류')

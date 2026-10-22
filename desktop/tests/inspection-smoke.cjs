@@ -28,7 +28,7 @@ const http = require("node:http");
     await page.getByRole("dialog", { name: "사용 가이드" }).getByRole("button", { name: "사용 가이드 닫기", exact: true }).click();
     await page.locator(".header-run-controls button.primary:not(:disabled)").waitFor();
     const fixedEdgeCount = await page.locator('.react-flow__edge').count();
-    assert.equal(fixedEdgeCount, 10);
+    assert.equal(fixedEdgeCount, 11);
     await page.locator('[data-testid="rf__edge-techniques-dedup"]').dispatchEvent('click');
     await page.keyboard.press('Delete');
     assert.equal(await page.locator('.react-flow__edge').count(), fixedEdgeCount);

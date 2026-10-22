@@ -5,16 +5,16 @@ export default function LocalAIAnalysis({ analysis }) {
   if (!analysis) return null;
   return <section className="local-ai-analysis" aria-label="로컬 AI 분석">
     <label>AI 분석</label>
-    <dl>{[["text", "문자 문맥"], ["visual", "피싱 화면"]].map(([kind, title]) => {
+    <dl>{[["text", "ML 문자 문맥"], ["laya", "Laya 문맥"], ["visual", "피싱 화면"]].map(([kind, title]) => {
       const item = analysis[kind];
       if (!item) return null;
       return <React.Fragment key={kind}><dt>{title}</dt><dd>
-        <strong>{item.status === "completed" ? labels[item.label] || "분석 완료" : "분석 미완료"}</strong>
-        {Number.isFinite(item.score) && <span title="보정되지 않은 학습 모델의 분류 점수입니다. 확률이나 안전 점수가 아닙니다.">모델 점수 {item.score.toFixed(3)}</span>}
+        <strong>{item.status === "completed" ? labels[item.label] || "분석 완료" : kind === "laya" ? "미적용" : "분석 미완료"}</strong>
+        {Number.isFinite(item.score) && <span title={item.score_kind === "calibrated_promotion_score" ? "별도 검증 자료로 보정한 광고 문맥 점수입니다. 위법·안전 확률이 아닙니다." : "보정되지 않은 학습 모델의 분류 점수입니다. 확률이나 안전 점수가 아닙니다."}>모델 점수 {item.score.toFixed(3)}</span>}
       </dd></React.Fragment>;
     })}</dl>
     <details><summary>분석 정보</summary>
-      {Object.values(analysis).map((item, i) => <p key={i}>{item.model || item.message} · {item.version}</p>)}
+      {Object.values(analysis).map((item, i) => <p key={i}>{item.model || item.message}{item.version ? ` · ${item.version}` : ""}{item.model && item.status !== "completed" && item.message ? ` · ${item.message}` : ""}</p>)}
       {analysis.text?.matched_features?.length > 0 && <p>일치 특징: {analysis.text.matched_features.join(" · ")}</p>}
       <p>로컬 처리 · API 사용 없음</p>
     </details>

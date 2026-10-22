@@ -56,7 +56,7 @@ async function waitForHistory(page, count) {
         .count(),
       0,
     );
-    assert.equal(await page.locator(".react-flow__node").count(), 8);
+    assert.equal(await page.locator(".react-flow__node").count(), 9);
     assert.ok(
       await page.evaluate(() => document.fonts.check("600 14px Pretendard")),
     );

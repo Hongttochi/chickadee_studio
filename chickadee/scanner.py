@@ -23,6 +23,7 @@ from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
 from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text
 from .local_ai import enrich_report, visual_analysis, prepare_models
+from .laya_review import enrich_laya
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write
 from .profiles import SiteProfile
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots
@@ -300,8 +301,6 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
         state.errors.append({'url': url, 'message': '동적 HTTP 이동은 자동 추적하지 않았습니다: ' + target})
     if status == "completed" and (state.errors or state.remaining):
         status = "partial" if state.pages else "failed"
-    emit({'kind': 'phase', 'stage': 'dedup', 'action': 'merge',
-          'message': f'동일 문구의 본문·OCR 근거 {state.merged_observations}건을 합쳤습니다.'})
     finished = datetime.now().astimezone()
     result = {
         "meta": {"topic": "TOPIC", "entry_url": config.entry_url,
@@ -334,8 +333,14 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
               "enabled_stages": {"follow_links": config.follow_links, "techniques": config.detect_techniques,
                                  "candidates": config.detect_candidates, "ocr": config.ocr_enabled,
                                  "ocr_techniques": config.ocr_techniques, "ocr_candidates": config.ocr_candidates, "live_preview": config.capture_previews}}
-    emit({'kind': 'phase', 'stage': 'classifier', 'action': 'local_ai', 'message': '학습한 로컬 AI로 문자 문맥과 화면 특징을 분석합니다.'})
+    emit({'kind': 'phase', 'stage': 'candidates', 'action': 'local_ai', 'message': 'ML로 본문과 OCR 문자 문맥을 분석합니다.'})
     await asyncio.to_thread(enrich_report, report, candidates=config.detect_candidates)
+    await enrich_laya(report, stop=stop, emit=emit,
+        timeout_seconds=max(0, config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0))))
+    emit({'kind': 'phase', 'stage': 'dedup', 'action': 'merge',
+          'message': f'동일 문구의 본문·OCR 근거 {state.merged_observations}건을 합쳤습니다.'})
+    result['meta'].update(finished_at=datetime.now().astimezone().isoformat(),
+                          elapsed_sec=round(time.monotonic()-clock, 3))
 
     report["candidate_count"] = len(report["ad_candidates"])
     emit({'kind': 'local_ai', **report['local_ai']})
@@ -405,7 +410,7 @@ def _final_candidates(state):
 async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile: SiteProfile, control=None):
     from playwright.async_api import async_playwright
 
-    emit({'kind': 'phase', 'stage': 'classifier', 'action': 'model_load', 'message': '로컬 AI 모델을 준비합니다.'})
+    emit({'kind': 'phase', 'stage': 'collector', 'action': 'model_load', 'message': '로컬 AI 모델을 준비합니다.'})
     try:
         await asyncio.to_thread(prepare_models)
     except Exception:

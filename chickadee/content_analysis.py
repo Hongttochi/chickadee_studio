@@ -2,11 +2,13 @@
 import asyncio
 from datetime import datetime
 import hashlib
+import time
 
 from .candidates import analyze_candidate
 from .detection import analyze
 from .image_ocr import OCRSession, inline_image, recognized_text
 from .local_ai import prepare_models, text_analysis, visual_analysis
+from .laya_review import review_sources
 
 
 def inputs(params):
@@ -32,12 +34,15 @@ def text_result(text, kind):
 async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
     """Keep typed text and OCR observations separate, even when submitted together."""
     worker = OCRSession()
+    started = time.monotonic()
     async def work():
         sources, errors = [], []
         progress('models')
         try: await asyncio.to_thread(prepare_models)
         except Exception: errors.append('로컬 AI 모델 준비 실패')
-        if text.strip(): sources.append(await asyncio.to_thread(text_result, text, 'provided_text'))
+        if text.strip():
+            progress('ml')
+            sources.append(await asyncio.to_thread(text_result, text, 'provided_text'))
         image = None
         if pixels is not None:
             progress('image')
@@ -59,6 +64,7 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
                     image['ocr'].update(observation)
                     image['ocr']['recognition_status'] = 'readable' if observation['text'].strip() else 'unreadable'
                     if image['ocr']['recognition_status'] == 'unreadable': errors.append('이미지에서 신뢰할 수 있는 문구를 읽지 못했습니다.')
+                    progress('ml')
                     source = await asyncio.to_thread(text_result, observation['text'], 'image_ocr')
                     source['truncated'] = observation['text_truncated']
                     source['ocr'] = {'engine': result.get('engine'), 'model': result.get('model'),
@@ -68,6 +74,8 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
                     sources.append(source)
                 else: errors.append('PaddleOCR 이미지 문자 인식 실패')
         if any(source['local_ai']['text']['status'] != 'completed' for source in sources): errors.append('로컬 문자 모델 분석 미완료')
+        await review_sources(sources, stop=stop, emit=lambda event: progress(event['stage']),
+                             timeout_seconds=max(0, 58-(time.monotonic()-started)))
         return {'status': 'partial' if errors or image and image['ocr']['status'] != 'completed' else 'completed',
                 'sources': sources, 'image': image, 'errors': errors, 'runtime_environment': runtime,
                 'finished_at': datetime.now().astimezone().isoformat(), 'paid_requests': 0,

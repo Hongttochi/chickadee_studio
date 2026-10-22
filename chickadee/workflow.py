@@ -1,11 +1,11 @@
 """Validate the visual pipeline against stages supported by the real engine."""
 
 CONNECTIONS = {('target', 'browser'), ('browser', 'collector'), ('collector', 'techniques'),
-               ('collector', 'candidates'), ('techniques', 'report'), ('candidates', 'report'), ('collector', 'ocr'), ('ocr', 'candidates'), ('ocr', 'techniques'), ('techniques', 'dedup'), ('candidates', 'dedup'), ('dedup', 'report')}
+               ('collector', 'candidates'), ('techniques', 'report'), ('candidates', 'report'), ('collector', 'ocr'), ('ocr', 'candidates'), ('ocr', 'techniques'), ('techniques', 'dedup'), ('candidates', 'dedup'), ('dedup', 'report'), ('candidates', 'laya'), ('laya', 'dedup')}
 
 
 def compile_workflow(workflow):
-    if not isinstance(workflow, dict) or not isinstance(workflow.get('edges'), list) or len(workflow['edges']) > 12:
+    if not isinstance(workflow, dict) or not isinstance(workflow.get('edges'), list) or len(workflow['edges']) > 16:
         raise ValueError('워크플로 연결 형식이 올바르지 않습니다.')
     edges = set()
     for edge in workflow['edges']:

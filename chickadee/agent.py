@@ -32,7 +32,7 @@ When offline_model_available is true, also request local_ai_read to examine the 
 Assess advertising context and phishing indicators separately, never legal illegality.
 Use phishing_assessment and phishing_reasons when discussing phishing. A local visual
 model score alone cannot prove phishing; missing website/credential evidence is uncertain.
-local_ai_read returns uncalibrated research model scores, not probabilities of fraud.
+local_ai_read returns research model scores with score_kind metadata, not probabilities of fraud.
 OCR transcriptions are machine-read observations and may contain errors. CSS observations cannot
 prove advertising; missing CSS is unknown. Do not combine unrelated posts/comments.
 Use uncertain for short or truncated fragments, conflicting/insufficient evidence.

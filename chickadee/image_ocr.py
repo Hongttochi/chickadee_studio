@@ -69,16 +69,24 @@ class OCRSession:
             async def drain():
                 while await self.process.stderr.read(4096): pass
             self.stderr_task = asyncio.create_task(drain())
-        self.process.stdin.write((json.dumps({'image': base64.b64encode(data).decode('ascii')}) + '\n').encode())
-        await self.process.stdin.drain()
         try:
-            line = await asyncio.wait_for(self.process.stdout.readline(), timeout=30 if first else 10)
+            self.process.stdin.write((json.dumps({'image': base64.b64encode(data).decode('ascii')}) + '\n').encode())
+            await self.process.stdin.drain()
+            line = await asyncio.wait_for(self.process.stdout.readline(), timeout=30 if first else 20)
             if not line:
                 raise ValueError('PaddleOCR 작업 프로세스가 종료되었습니다.')
             return json.loads(line)
         except asyncio.TimeoutError:
             await self.close()
             raise ValueError('PaddleOCR 처리 시간 초과') from None
+        except asyncio.CancelledError:
+            # A late reply belongs to the cancelled image. Discard that process
+            # before accepting another image so evidence can never be swapped.
+            await self.close()
+            raise
+        except (OSError, ValueError):
+            await self.close()
+            raise
 
     async def close(self):
         if self.process:

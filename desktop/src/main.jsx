@@ -96,6 +96,8 @@ import {
   defaultWorkflow,
   normalizeWorkflow,
   branchEnabled,
+  restoreWorkflowLayout,
+  ocrPresentation,
 } from "./workflow.mjs";
 import "./style.css";
 import "./theme.css";
@@ -147,13 +149,7 @@ function restoreNodeLayout(nodes) {
   try {
     saved = JSON.parse(localStorage.getItem(NODE_LAYOUT_KEY));
   } catch {}
-  const defaults = defaultWorkflow().nodes;
-  return nodes.map(node => {
-    const position = saved?.[node.id];
-    const valid = position && [position.x, position.y].every(value =>
-      Number.isFinite(value) && Math.abs(value) < 10000);
-    return { ...node, position: valid ? position : defaults.find(item => item.id === node.id).position };
-  });
+  return restoreWorkflowLayout(nodes, saved);
 }
 const Icons = {
   Activity,
@@ -272,7 +268,10 @@ const STAGE_NAMES = {
   browser: "페이지 확인",
   collector: "콘텐츠 수집",
   techniques: "위장·은닉 분석",
-  candidates: "광고 문맥 분석",
+  candidates: "ML 문맥 분석",
+  ocr: "이미지 문자 추출",
+  laya: "Laya 문맥 검토",
+  dedup: "중복 정리",
   report: "결과 저장",
 };
 function Icon({ name, size = 18, ...props }) {
@@ -324,14 +323,14 @@ function Button({
 function FlowNode({ id, data, selected }) {
   const def = DEFINITIONS[id];
   const positions = { left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom };
-  const status = { active: "실행 중", paused: "일시정지", done: "실행됨", error: "오류", disabled: "사용 안 함" }[data.state] || "대기";
-  const statusIcon = { active: "LoaderCircle", paused: "Pause", done: "Check", error: "X", disabled: "Unplug" }[data.state];
+  const status = { active: "실행 중", paused: "일시정지", done: "실행됨", error: id === "ocr" ? "미확인" : "오류", disabled: "사용 안 함", skipped: "생략" }[data.state] || "대기";
+  const statusIcon = { active: "LoaderCircle", paused: "Pause", done: "Check", error: "X", disabled: "Unplug", skipped: "CornerDownRight" }[data.state];
   const caption = id === "target" ? shortUrl(data.url) : data.state && data.caption ? data.caption : def.subtitle;
   return (
     <div className={`flow-node tone-${def.tone} ${data.state || ""} ${selected ? "selected" : ""}`}>
       <div className="node-tile">
         {def.input && <Handle id="in" type="target" position={positions[def.input]} isConnectable={false} />}
-        <img src={nodeImages[id]} alt="" width={44} height={44} className={`node-symbol node-symbol-${id}`} draggable={false} />
+        {nodeImages[id] ? <img src={nodeImages[id]} alt="" width={44} height={44} className={`node-symbol node-symbol-${id}`} draggable={false} /> : <Icon name={def.icon} size={44} />}
         {statusIcon && (
           <span className="node-run-state" title={status} aria-label={status}>
             <Icon name={statusIcon} size={15} className={data.state === "active" ? "spin" : ""} />
@@ -341,7 +340,7 @@ function FlowNode({ id, data, selected }) {
       </div>
       <strong>{def.title}</strong>
       <p className="node-caption" title={caption}>{caption}</p>
-      {["active", "paused", "error", "disabled"].includes(data.state) && <span className="node-state-text">{status}</span>}
+      {["active", "paused", "error", "disabled", "skipped"].includes(data.state) && <span className="node-state-text">{status}</span>}
     </div>
   );
 }
@@ -698,7 +697,7 @@ function App() {
         value.report.pages_scanned.map((url) => ({ url, status: "scanned" })),
     );
     setPending(value.report.pending_urls || []);
-    if ([1, 2].includes(value.report.workflow?.version)) {
+    if ([1, 2, 3].includes(value.report.workflow?.version)) {
       try {
         const restored = normalizeWorkflow(value.report.workflow);
         setFlow(current => ({
@@ -909,9 +908,11 @@ function App() {
         const enabled =
           !["techniques", "candidates", "ocr", "dedup"].includes(node.id) ||
           branchEnabled(flow, node.id);
-        const state = !enabled
+        const layaSkipped = node.id === "laya" && (outcome?.report.local_ai?.laya?.status === "unavailable" || events.findLast(event => event.kind === "phase" && event.stage === "laya")?.action === "skipped");
+        const ocr = node.id === "ocr" ? ocrPresentation(outcome?.report.ocr_summary) : null;
+        const state = !enabled || layaSkipped
           ? "disabled"
-          : active === node.id
+          : ocr?.state || (active === node.id
             ? status === "failed"
               ? "error"
               : status === "paused"
@@ -919,7 +920,7 @@ function App() {
                 : "active"
             : visited.has(node.id)
               ? "done"
-              : "";
+              : "");
         let caption =
           node.id === "browser"
             ? `${pages.length}페이지 방문`
@@ -927,14 +928,17 @@ function App() {
               ? `${discovered}개 URL 발견`
               : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? "PaddleOCR · 이미지 문자 인식" : node.id === "techniques"
                 ? `${findings.length}건 발견`
+                : node.id === "laya"
+                  ? layaSkipped ? "미적용" : outcome?.report.local_ai?.laya ? `${outcome.report.local_ai.laya.analyzed}개 검토 · ${outcome.report.local_ai.laya.omitted}개 미확인` : "로컬 문맥 검토"
                 : node.id === "candidates"
-                  ? `${candidates.length}건 광고 의심`
+                  ? outcome?.report.local_ai ? `${outcome.report.local_ai.text_analyzed}개 문맥 · ${candidates.length}건 광고 의심` : `${candidates.length}건 광고 의심`
                   : node.id === "target"
                     ? ""
                     : outcome
                       ? "JSON · CSV 저장 완료"
                       : "실행 종료 후 저장";
         if (!enabled) caption = node.id === "ocr" && flow.ocr_enabled === false ? "사용 안 함" : "분석 경로 연결 안 됨";
+        if (ocr) caption = ocr.caption;
         return {
           ...node,
           type: "stage",
@@ -961,6 +965,7 @@ function App() {
       running,
       status,
       runTarget,
+      events,
     ],
   );
   const flowEdges = useMemo(
@@ -974,18 +979,21 @@ function App() {
         reconnectable: false,
         animated:
           status === "running" &&
+          !([edge.source,edge.target].includes("ocr") && ["disabled","skipped"].includes(flowNodes.find(n=>n.id==="ocr")?.data.state)) &&
           (edge.target === active || edge.source === active),
         style: {
           stroke:
-            edge.target === active
+            [edge.source,edge.target].includes("ocr") && ["disabled","skipped"].includes(flowNodes.find(n=>n.id==="ocr")?.data.state)
+              ? "#62666b" : edge.target === active
               ? "#2563a6"
               : visited.has(edge.source)
                 ? "#41765b"
                 : "#62666b",
           strokeWidth: edge.target === active ? 2.8 : 1.8,
+          strokeDasharray: [edge.source,edge.target].includes("ocr") && ["disabled","skipped"].includes(flowNodes.find(n=>n.id==="ocr")?.data.state) ? "4 4" : undefined,
         },
       })),
-    [flow.edges, status, active, visited],
+    [flow.edges, status, active, visited, flowNodes],
   );
   const onNodesChange = useCallback(
     (changes) =>
@@ -2478,7 +2486,7 @@ function NodeSettings({ id, flow, setFlow, url, setUrl, running, onClose }) {
       </div>
       <div className={`node-config tone-${def.tone}`}>
         <span className={`config-icon config-icon-${id}`}>
-          <img src={nodeImages[id]} alt="" width={28} height={28} draggable={false} />
+          {nodeImages[id] ? <img src={nodeImages[id]} alt="" width={28} height={28} draggable={false} /> : <Icon name={def.icon} size={28} />}
         </span>
         <small>{def.subtitle}</small>
         <h2>{def.title}</h2>
