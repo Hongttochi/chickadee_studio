@@ -119,12 +119,11 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
   const total = report?.total ?? data.packets.filter(item => !item.supplemental).length;
   const completed = report?.completed || 0;
   const assessmentLabel = value => ({ ad_suspected: "광고 의심", benign_context: "정상 문맥 제안", uncertain: "보류" }[value] || value);
-  function downloadReport() {
-    const content = data.review_report?.html;
-    if (!content) { setMessage("검사 리포트를 다시 불러와 주세요."); return; }
-    const url = URL.createObjectURL(new Blob([content], { type: "text/html;charset=utf-8" }));
-    const link = document.createElement("a"); link.href = url; link.download = "chickadee-review.html"; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  async function downloadReport() {
+    await action(async () => {
+      const result = await api.exportReport();
+      if (result?.saved) setMessage("리포트를 저장했습니다.");
+    });
   }
   return <section className="inspection-extension" data-tab={tab} aria-label="검사 분석">
     <div className="inspection-toolbar">

@@ -309,6 +309,19 @@ async function initialize() {
     if (selected.canceled) return null;
     return backend.request("export", { path: selected.filePath });
   });
+  handler("export-report", async () => {
+    const state = await backend.request("state");
+    if (state.running || !state.run_id) throw new Error("검사 완료 후 리포트를 저장하세요.");
+    const data = await backend.request("inspection", { run_id: state.run_id });
+    if (!data.review_report?.html) throw new Error("저장할 리포트가 없습니다.");
+    const selected = await dialog.showSaveDialog(window, {
+      defaultPath: "chickadee-review.html",
+      filters: [{ name: "HTML 리포트", extensions: ["html"] }],
+    });
+    if (selected.canceled) return null;
+    await fs.writeFile(selected.filePath, data.review_report.html, "utf8");
+    return { saved: true };
+  });
   handler("choose-folder", async () => {
     const selected = await dialog.showOpenDialog(window, {
       properties: ["openDirectory", "createDirectory"],

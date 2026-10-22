@@ -49,6 +49,7 @@ contextBridge.exposeInMainWorld(
     load: () => invoke("desktop:load"),
     history: (id) => invoke("desktop:history", id),
     exportCSV: () => invoke("desktop:export"),
+    exportReport: () => invoke("desktop:export-report"),
     chooseFolder: () => invoke("desktop:choose-folder"),
     openFolder: () => invoke("desktop:open-folder"),
     saveWorkflow: (value) => invoke("desktop:save-workflow", value),

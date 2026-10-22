@@ -1037,6 +1037,12 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
             digest = hashlib.sha256(data).hexdigest()
+            if digest in state.ocr_cache and not recognized_text(state.ocr_cache[digest]).get('text'):
+                # Repeated unreadable logos must not crowd later content images
+                # out of the bounded evidence list. The first observation remains.
+                state.ocr_images.pop()
+                state.ocr_skipped += 1
+                continue
             if digest not in state.ocr_cache and len(state.ocr_cache) >= state.ocr_max_images:
                 state.ocr_images.pop()
                 state.ocr_skipped += 1

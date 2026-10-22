@@ -88,6 +88,14 @@ class InspectionTrace:
             content_hash = fingerprint([text, comparable_style(style), link_targets, inherited] +
                                        ([element['ocr']] if element.get('ocr') else []))
             key = 'e_' + fingerprint([identity, content_hash])[:24]
+            # Keep capacity for later posts and OCR instead of spending every
+            # packet on repeated site navigation encountered at the beginning.
+            priority = bool(element.get('content_scope') or element.get('source_kind') == 'image_ocr')
+            if not priority and key not in self.packets and (
+                    len(self.packets) >= max(1, self.MAX_PACKETS * 4 // 5) or
+                    self.packet_bytes >= self.MAX_PACKET_BYTES * 4 // 5):
+                self.truncated = True
+                continue
             if key not in self.packets and len(self.packets) >= self.MAX_PACKETS:
                 self.truncated = True
                 continue

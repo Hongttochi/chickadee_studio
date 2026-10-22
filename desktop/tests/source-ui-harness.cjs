@@ -73,6 +73,14 @@ exports.launch = async ({ env }) => {
   const origin = `http://127.0.0.1:${server.address().port}`;
   let updateStatus = 'idle';
   async function invoke(method, value) {
+    if (method === 'exportReport') {
+      const selected = await dialog.showSaveDialog();
+      if (selected.canceled) return null;
+      const state = await backend.request('state');
+      const data = await backend.request('inspection', {run_id:state.run_id});
+      await fs.writeFile(selected.filePath, data.review_report.html, 'utf8');
+      return {saved:true};
+    }
     if (method === 'checkUpdates') updateStatus = 'current';
     if (['checkUpdates', 'updateState'].includes(method)) return { current: require('../package.json').version, status: updateStatus };
 

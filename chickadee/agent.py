@@ -47,6 +47,9 @@ misleading claims and illegal digital services as review topics, not automatic v
 Distinguish promotional intent (solicitation, contact, purchase, signup, rewards) from
 news, education, prevention notices and quotations. A keyword or unusual font alone is
 insufficient. OCR mistakes must not be silently corrected into incriminating words.
+Site ownership notices, competition participation notices, mock-site disclaimers,
+access-denied messages, navigation and login labels are not advertising solicitations.
+Calling a page a test environment for an ad detector is not evidence that it advertises.
 Write the Korean summary in two or three short sentences: observed promotional context,
 the specific supporting phrase, then what remains unconfirmed. Do not use headings,
 middle-dot separators, generic disclaimers or unsupported numerical confidence.
