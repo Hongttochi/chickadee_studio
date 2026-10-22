@@ -137,6 +137,8 @@ def enrich_report(report, *, candidates=True):
     analyzed, priority = 0, 0
     images = {image['id']: image for image in report.get('ocr_images', [])}
     screens = report.get('screenshots', {})
+    used_ids = {row['id'] for row in report.get('ad_candidates', [])}
+    candidate_number = max((int(value[2:]) for value in used_ids if value.startswith('c_') and value[2:].isdigit()), default=0) + 1
     for packet in packets:
         try: text = dict(text_analysis(packet['text']))
         except Exception:
@@ -154,12 +156,13 @@ def enrich_report(report, *, candidates=True):
             from .detection import is_editorial_context
             if not is_editorial_context(packet['text']):
                 report.setdefault('ad_candidates', []).append({
-                    'id': f"c_{len(report.get('ad_candidates', []))+1:05d}", 'url': packet['url'],
+                    'id': f"c_{candidate_number:05d}", 'url': packet['url'],
                     'location': packet['location'], 'scope_location': packet['location'], 'evidence_text': packet['text'],
                     'category': 'AI_CONTEXT', 'review_required': True, 'matched_keywords': [],
                     'reasons': ['학습한 문자 문맥 모델에서 광고 유사 문맥을 분류했습니다.'],
                     'source_kind': packet.get('source_kind', 'dom_text'), 'image_id': packet.get('image_id'),
                     'screenshot_id': snapshot, 'local_ai': packet['local_ai'], 'observed_at': packet.get('observed_at')})
+                candidate_number += 1
     for row in [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]:
         match = next((p for p in reversed(packets) if p['url'] == row.get('url') and
                       p['location'] == row.get('scope_location', row.get('location'))), None)

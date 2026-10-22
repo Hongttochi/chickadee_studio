@@ -15,6 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LocalAITests(unittest.TestCase):
+    def test_candidate_ids_remain_unique_after_summary_dedup_leaves_gaps(self):
+        item = packet()
+        report = {'evidence_packets': [item], 'ad_candidates': [
+            {'id': 'c_00001', 'url': 'https://example.invalid/other', 'location': 'a'},
+            {'id': 'c_00003', 'url': 'https://example.invalid/other', 'location': 'b'}]}
+        signal = {**local_ai.text_analysis(item['text']), 'review_priority': 'high'}
+        with patch.object(local_ai, 'text_analysis', return_value=signal): local_ai.enrich_report(report)
+        ids = [c['id'] for c in report['ad_candidates']]
+        self.assertEqual(ids, ['c_00001', 'c_00003', 'c_00004'])
+        self.assertEqual(len(ids), len(set(ids)))
     def test_exported_trees_match_original_sklearn_predictions(self):
         expected = json.loads((ROOT / 'tests/fixtures/local-ai-predictions.json').read_text(encoding='utf-8'))
         for item in expected['texts']:
