@@ -199,7 +199,7 @@ node desktop/tests/capture-docs.cjs
 | --- | --- |
 | [Windows quick start](docs/quickstart-windows.md) | [Contribution guide](CONTRIBUTING.md) |
 | [Desktop guide](docs/desktop.md) | [Architecture](docs/architecture.md) |
-| [Inspection and AI review](docs/inspection-agent.md) | [Validation record](docs/validation.md) |
+| [Inspection and AI review](docs/inspection-agent.md) | [Testing](docs/validation.md) |
 | [Output formats](docs/result-format.md) | [Third-party notices](docs/third-party-notices.md) |
 | [CLI and legacy UI](docs/manual.md) | [Research materials](research/README.md) |
 

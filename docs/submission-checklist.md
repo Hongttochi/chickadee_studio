@@ -2,6 +2,8 @@
 
 모집요강 2~4·8~9·15~18쪽 기준입니다. 이 문서는 제출 준비용이며 실제 접수나 서명을 대신하지 않습니다.
 
+[행정안전부 공식 공고](https://www.mois.go.kr/frt/bbs/type013/commonSelectBoardArticle.do?bbsId=BBSMSTR_000000000006&nttId=129458) 또는 [NIA 공식 공고](https://www.nia.or.kr/site/nia_kor/ex/bbs/View.do?bcIdx=29988&cbIdx=99835&parentSeq=29988)의 첨부 HWPX에 편집 가능한 서식 1~4가 있습니다.
+
 ## 접수
 
 - [ ] 2026년 10월 23일(금) **18:00 이전** 접수
@@ -33,7 +35,7 @@
 
 ## AI API 또는 외부 연산을 사용하는 경우
 
-현재 선택한 API는 없습니다. 도입할 경우 아래를 충족해야 합니다.
+기본 OCR·로컬 ML은 외부 API 없이 동작합니다. 선택 AI 검토는 Groq의 `openai/gpt-oss-20b`를 기본 모델로 사용합니다. 이 기능을 제출본에 포함할 경우 아래 설정·문서 요건을 확인합니다.
 
 - [ ] API 키 하드코딩 금지, `.env` 등 외부 설정 파일에서 실행 시 읽기
 - [ ] 주최 측 키로 교체해도 재빌드·재컴파일 없이 정상 동작

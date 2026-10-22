@@ -53,7 +53,7 @@ Groq에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전�
 
 근거 패널의 **탐지 당시 화면**에서 확대하고 기록을 다시 열어 확인한다. 결과 폴더 `evidence/<SHA-256>.jpg`에 원본 JPEG도 저장한다. 추가 탐색 화면은 `agent-<SHA-256>.jpg`다. 화면이 없는 이전 기록·촬영 실패·저장 한도에서는 원문·CSS 근거를 표시한다. 이미지 파일은 로컬 저장만 하며 Groq로 전송하지 않는다. 촬영은 [Playwright screenshot API](https://playwright.dev/python/docs/screenshots)를 사용한다.
 
-![실제 로컬 합성 게시판 검사 후 근거 패널](images/evidence-panel-0.8.0.png)
+![앱의 탐지 내역과 근거 패널](../desktop/assets/guide/review.png)
 
 기존 stdio bridge에 다음 명령을 추가했다. 별도 HTTP 포트는 열지 않는다.
 

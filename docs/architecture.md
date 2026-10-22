@@ -1,29 +1,24 @@
-# 구현 구조와 실행 경계
+# 구현 구조
 
-![GPT로 생성한 아키텍처](assets/architecture-gpt.png)
+Chickadee Studio는 Electron 화면과 Python 검사 엔진으로 구성됩니다. Chromium으로 수집한 DOM·CSS·이미지를 분석하고, 원문과 근거를 JSON·CSV 및 검사 기록에 저장합니다.
 
-현재 코드는 0.6.0이며, 그림은 이전 버전의 개념도입니다. Electron 화면 → 제한된 IPC → Python JSONL 브리지 → Playwright Chromium → 탐지·저장 순서로 실행합니다. 외부 사이트를 직접 검사하거나 저장된 결과를 불러올 수 있습니다. 그림의 VM은 사용자가 별도로 구성하는 실행 환경입니다. 프로그램에 VM 생성·자동 격리·원격 VM 접속 기능이 들어 있다는 뜻이 아닙니다.
-
-| 구성 | 구현 | 역할 |
+| 구성 | 위치 | 역할 |
 | --- | --- | --- |
-| Windows 화면 | `desktop/src`, `desktop/electron` | React Flow 구성, 실제 페이지 이미지·단계·진단, 제한된 IPC |
-| 검사 브리지 | `bridge.py`, `workflow.py` | JSONL 자식 프로세스, 그래프 검증, 단계 선택, 실행별 저장과 기록 |
-| 실행 제어 | `control.py` | 페이지 경계 일시정지·재개, 실제 정지 시간 집계와 제한시간 제외 |
-| 검토 저장 | `reviews.py` | 원본 해시와 별도 review.json, 검토 순번 충돌 방지·메모·작성 주체 |
-| 확장 도구 | `tools.py` | 입력 스키마·효과를 선언한 로컬 도구 9개, 향후 에이전트 어댑터 계약 |
-| 호환 화면 / CLI | `chickadee/gui.py`, `__main__.py` | Tkinter 입력, 중단, 결과 불러오기, 유형·원문·근거 조회 |
-| 탐색 제어 | `scanner.py` | 게시판·상세 글 우선순위 큐, 재시도, 한도, 지연 로딩·스크롤·읽기 동작, 페이지별 진단 |
-| 요청 정책 | `scanner.py` | 외부 URL 기본 허용·선택적 --local-only, origin 허용 목록, GET/HEAD, 자원·WebSocket 차단 |
-| DOM 수집 | `extract.js`, `_inspect_frame` | 원문, 선택자, CSS·좌표, 중첩 iframe 경로 |
-| 규칙 분석 | `detection.py`, `rules.json` | 키워드의 원문 문자 추적, 필수 기법 4종, 예방 안내 제외 |
-| 사이트 설정 | `profiles.py`, `profiles/` | 경로 범위·읽기 선택자·리소스 origin, 실행 코드 없는 JSON |
-| 후보 분석 | `candidates.py` | 일반 광고 검토 후보, 목록·상세 후보 통합 |
-| 결과 처리 | `ScanOutcome`, `exports.py` | 표준 JSON, 17개 칼럼 CSV, 원자적 교체, 보고서 해시·불러오기 |
+| 화면·앱 셸 | `desktop/src`, `desktop/electron` | 검사 구성, 근거 확인, 기록·검토·로그인 창 |
+| 브리지·실행 제어 | `chickadee/bridge.py`, `control.py` | JSONL 통신, 시작·중단·일시정지, 실행별 저장 |
+| 탐색·수집 | `scanner.py`, `extract.js`, `profiles.py` | 같은 사이트의 페이지·게시글·댓글·iframe 탐색, 원문·CSS·위치 수집 |
+| 로그인 | `authentication.py`, `desktop/electron/login.cjs` | 별도 로그인 창과 현재 검사 세션의 쿠키 전달 |
+| 필수 탐지 | `detection.py`, `rules.json` | 닮은꼴 문자·자모 분해·투명 텍스트·화면 밖 은닉 |
+| 이미지 문자 추출 | `image_ocr.py`, `ocr_worker.py` | 이미지에 한해 PaddleOCR 한국어 CPU 추론 |
+| 로컬 AI | `local_ai.py`, `chickadee/data` | 문자 문맥과 이미지 특징의 검토 신호 |
+| 선택 AI 검토 | `agent.py`, `exploration.py` | Groq의 근거 조회와 제한된 같은 사이트 추가 탐색 |
+| 결과·검토 | `exports.py`, `reviews.py`, `inspection.py` | 결과 저장, 근거·화면 보존, 검토 상태·메모 |
 
-GUI·CLI는 외부 URL을 기본 허용합니다. 로컬 전용으로 제한하려면 `--local-only`를 지정합니다. Python 내부 API의 `ScanConfig`는 명시적인 `allow_network=True`를 요구합니다. 결과 조회는 원본 URL을 열거나 HTML을 렌더링하지 않습니다. Windows 앱에 Docker나 VM은 필요하지 않습니다.
+텍스트는 직접 분석하고, 이미지는 OCR로 추출한 문구와 이미지 자체를 구분해 분석합니다. 근거에는 원문·URL·요소 위치·OCR 좌표를 보존합니다. OCR 문구는 원래 이미지의 유니코드 코드포인트를 입증하는 근거로 사용하지 않습니다.
 
-브라우저 내장 sandbox를 켜고 임시 컨텍스트를 사용하지만, 이 정책이 브라우저 취약점이나 모든 통신·부수 효과를 통제하는 OS 보안 경계는 아닙니다. 계정·개인 데이터·호스트 공유 자원을 검사 환경에 연결하지 않는 운영 구성이 별도로 필요합니다.
+화면과 엔진은 표준 입출력으로 통신합니다. 수집한 사이트의 HTML을 앱 화면에서 실행하지 않고, 결과 확인에는 저장한 텍스트와 이미지 자료를 사용합니다. 기본 검사는 외부 AI 키나 GPU 없이 실행됩니다. Groq 검토는 사용자가 키를 등록하고 시작할 때 실행하며 기존 탐지 결과와 사람의 검토를 덮어쓰지 않습니다.
 
-외부 AI API, 학습된 불법성 분류 모델, 원격 서버나 DB는 사용하지 않습니다. 규칙 기반 의심 항목이며 실제 사이트 정확도와 비공개 평가셋 성능은 별도 검증 대상입니다. 이번 검증은 사용자 제공 모의 게시판과 합성 fixture를 대상으로 했습니다.
-
-주 이미지에는 GPT 이미지 생성 도구를 사용했습니다. [생성 프롬프트](assets/architecture-prompt.txt)와 [편집 가능한 구조 원본](assets/architecture.drawio)을 함께 보관합니다. 그림보다 코드·이 문서의 동작 조건을 기준으로 판단합니다.
+- [앱 사용법](desktop.md)
+- [출력 형식](result-format.md)
+- [AI 검토·사용량](inspection-agent.md)
+- [로컬 도구 계약](agent-extension.md)

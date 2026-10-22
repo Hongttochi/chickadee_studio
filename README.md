@@ -204,7 +204,7 @@ npm start
 | --- | --- |
 | [Windows 빠른 시작](docs/quickstart-windows.md) | [기여 가이드](CONTRIBUTING.md) |
 | [데스크톱 사용 가이드](docs/desktop.md) | [아키텍처](docs/architecture.md) |
-| [검사 분석·AI 검토](docs/inspection-agent.md) | [검증 기록](docs/validation.md) |
+| [검사 분석·AI 검토](docs/inspection-agent.md) | [테스트 안내](docs/validation.md) |
 | [결과 파일 형식](docs/result-format.md) | [외부 구성요소](docs/third-party-notices.md) |
 | [CLI·호환 UI 매뉴얼](docs/manual.md) | [연구 자료](research/README.md) |
 
