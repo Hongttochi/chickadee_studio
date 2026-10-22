@@ -9,6 +9,7 @@
 | [실제 사이트 검사](assets/demos/site-scan.webm) | 100페이지 검사 과정. 페이지 및 수집 한도에 따른 부분 결과 |
 | [기능 전체 보기](assets/demos/features-details.webm) | 통계, Groq 의견, 저장, 근거 확대, 기록과 설정 |
 | [긴 탐색 그래프](assets/demos/graphs-original.webm) | 전체 보기와 60개 확대 구간 |
+| [미리보기와 검토 저장](assets/demos/actions-original.webm) | 화면 확대, 검토 메모, 일괄 선택, CSV 저장과 기록 복원 |
 | [한국어 OCR 검증](assets/demos/ocr-original.webm) | 로컬 검증 이미지에서 글자 추출과 줄 선택 |
 
 ![검토와 주요 기능](assets/demos/features.gif)
@@ -144,6 +145,21 @@ CPU와 메모리에 맞는 실행 모드, 검사 범위와 저장 위치를 설�
 네트워크 요청 없이 스크린샷을 포함한 HTML을 열었습니다. 브라우저 인쇄로 PDF를 저장할 수 있습니다.
 
 ![저장한 리포트](assets/demos/26-standalone-report.png)
+
+## 미리보기와 결과 관리
+
+![미리보기와 검토 저장](assets/demos/review-actions.gif)
+
+| 화면 | 기능 |
+| --- | --- |
+| [페이지 미리보기](assets/demos/27-preview.png) | 검사 브라우저가 보낸 실제 촬영 화면 |
+| [미리보기 확대](assets/demos/28-preview-zoom.png) | URL과 촬영 화면 확대 |
+| [검토 저장](assets/demos/29-review-saved.png) | 항목별 검토 상태와 메모 저장 |
+| [일괄 선택](assets/demos/30-bulk-selection.png) | 표시한 항목을 선택해 일괄 검토 |
+| [CSV 저장](assets/demos/31-csv-export.png) | 고정 17개 칼럼으로 내보내기 |
+| [검토 복원](assets/demos/32-review-reload.png) | 기록에서 검토 상태와 메모 다시 열기 |
+
+[CSV 예시](assets/demos/sample-results.csv)는 촬영용 검사 기록에서 내보낸 파일입니다.
 
 ## 긴 그래프의 전체 구간
 

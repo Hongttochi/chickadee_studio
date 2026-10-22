@@ -1,0 +1,2 @@
+﻿schema_version,record_kind,id,url,category,technique,technique_name,is_violation,review_required,evidence_text,location,matched_keywords,style_reasons,frame_depth,observed_at,rules_version,tool_version
+1.0,ad_candidate,c_00001,http://113.198.66.73:18244/parents/board/view.do?menu_idx=8&manage_idx=106&board_idx=35,GAMBLING,,도박 홍보 의심,,true,신규 회원 이벤트! 카지노 가입하고 충전 보너스 받으세요. 지금 https://casino.example.invalid 에서 참여하세요.,div.post-content,"[""카지노""]","[""광고 주제어와 근접한 권유 문맥""]",0,2026-10-23T02:27:12.194255+09:00,2026-10-20.1,0.10.9
