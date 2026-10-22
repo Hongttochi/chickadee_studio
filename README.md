@@ -15,7 +15,11 @@
 
 </div>
 
-![Chickadee Studio 검사 구성 화면](docs/assets/screenshots/workflow.png)
+![Chickadee Studio 검사 구성](docs/assets/demos/01-pipeline.png)
+
+[기능별 화면 전체 보기](docs/features.md) / [실제 사이트 검사 영상](docs/assets/demos/site-scan.webm) / [기능 시연 영상](docs/assets/demos/features-details.webm)
+
+![OCR과 근거 검토](docs/assets/demos/features.gif)
 
 ## 주요 탐지 기능
 

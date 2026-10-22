@@ -1,0 +1,23 @@
+{
+  "chapters": [
+    {
+      "title": "ML Laya OCR 처리 통계",
+      "video_seconds": 9.5
+    },
+    {
+      "title": "Groq 근거 검토와 리포트",
+      "video_seconds": 10
+    },
+    {
+      "title": "탐지 원문과 촬영 근거",
+      "video_seconds": 12.5
+    },
+    {
+      "title": "환경과 AI 연결 설정",
+      "video_seconds": 18
+    }
+  ],
+  "frames": 50,
+  "fps": 2,
+  "ffError": ""
+}
