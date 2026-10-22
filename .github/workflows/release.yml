@@ -79,10 +79,30 @@ jobs:
         run: |
           ./scripts/verify-windows-signatures.ps1 -AppDirectory "artifacts/electron-$env:APP_VERSION/win-unpacked"
           "Unsigned distribution. Signing enrollment is not requested or required. Windows security settings are unchanged." >> $env:GITHUB_STEP_SUMMARY
+      - name: Package ZIP and SHA256
+        run: .\.venv\Scripts\python.exe scripts/package-desktop.py
+      - name: Verify release files
+        run: python scripts/release.py verify --directory artifacts
+      - name: Test Windows ZIP extraction
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $taskDestination = Join-Path $env:RUNNER_TEMP "Downloads/Chickadee-Studio-$env:APP_VERSION-win-x64"
+          Expand-Archive -LiteralPath "artifacts/Chickadee-Studio-$env:APP_VERSION-win-x64.zip" -DestinationPath $taskDestination
+          $taskApp = Join-Path $taskDestination "Chickadee-$env:APP_VERSION"
+          $taskFiles = @(Get-ChildItem -LiteralPath $taskApp -Recurse -File)
+          if (@($taskFiles | Where-Object { $_.FullName.Length -gt 259 }).Count) { throw 'Extracted Windows path is too long.' }
+          $taskArchive = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "artifacts/Chickadee-Studio-$env:APP_VERSION-win-x64.zip"))
+          try {
+            if ($taskFiles.Count -ne $taskArchive.Entries.Count) { throw 'ZIP extraction omitted files.' }
+          } finally { $taskArchive.Dispose() }
+          $taskExe = Join-Path $taskApp 'Chickadee.exe'
+          if (-not (Test-Path -LiteralPath $taskExe)) { throw 'Extracted app is missing.' }
+          "CHICKADEE_PACKAGED_EXE=$taskExe" >> $env:GITHUB_ENV
+          $taskLongest = ($taskFiles | ForEach-Object { $_.FullName.Length } | Measure-Object -Maximum).Maximum
+          "Windows ZIP extraction passed: $($taskFiles.Count) files; longest path: $taskLongest characters." >> $env:GITHUB_STEP_SUMMARY
       - name: Test packaged Windows app
         working-directory: desktop
         run: |
-          $env:CHICKADEE_PACKAGED_EXE = Join-Path $env:GITHUB_WORKSPACE "artifacts/electron-$env:APP_VERSION/win-unpacked/Chickadee.exe"
           npm run smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/inspection-smoke.cjs
@@ -97,10 +117,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/runtime-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Package ZIP and SHA256
-        run: .\.venv\Scripts\python.exe scripts/package-desktop.py
-      - name: Verify release files
-        run: python scripts/release.py verify --directory artifacts
       - uses: actions/upload-artifact@v4
         with:
           name: windows-release-assets

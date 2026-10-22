@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import shutil
 import zipfile
+from release import validate_zip_paths
 
 ROOT = Path(__file__).resolve().parent.parent
 if __import__('os').name == 'nt' and not str(ROOT).startswith('\\\\?\\'):
@@ -51,7 +52,7 @@ def main():
     shutil.copy2(ROOT / '.env.example', APP / '.env.example')
     (APP / 'README_FIRST.txt').write_text(
         f'Chickadee Studio {VERSION} / Windows x64\n\n'
-        'ZIP 전체를 압축 해제한 다음 Chickadee.exe를 실행하세요.\n'
+        'ZIP 전체를 새 폴더에 압축 해제한 다음 Chickadee.exe를 실행하세요.\n'
         'resources 등 함께 있는 폴더를 유지하세요. Python/Node.js/Docker 설치는 필요하지 않습니다.\n'
         'URL 입력 → 검사 실행. 로컬 예제는 실행 옆 화살표 메뉴 → 데모 검사.\n'
         '일시정지·재개, 검토 상태·메모·일괄 처리, Ctrl K 빠른 명령을 지원합니다.\n'
@@ -70,10 +71,12 @@ def main():
         'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
     output = ROOT / 'artifacts' / f'Chickadee-Studio-{VERSION}-win-x64.zip'
     temporary = output.with_suffix('.zip.tmp')
+    entries = [(file, (Path(f'Chickadee-{VERSION}') / file.relative_to(APP)).as_posix())
+               for file in sorted(APP.rglob('*')) if file.is_file()]
+    validate_zip_paths(name for _, name in entries)
     with zipfile.ZipFile(temporary, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as archive:
-        for file in sorted(APP.rglob('*')):
-            if file.is_file():
-                archive.write(file, str(Path(f'Chickadee-{VERSION}') / file.relative_to(APP)))
+        for file, name in entries:
+            archive.write(file, name)
     with zipfile.ZipFile(temporary) as archive:
         invalid = archive.testzip()
         if invalid:

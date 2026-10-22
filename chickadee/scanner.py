@@ -28,10 +28,11 @@ from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots
 
-# A browser installed with PLAYWRIGHT_BROWSERS_PATH=0 travels with the package.
-# Honour an explicit developer setting; frozen builds always use their own copy.
+# Keep the frozen browser close to the engine to fit Windows ZIP path limits.
+# Source and older frozen builds keep Playwright's original directory layout.
 if getattr(sys, "frozen", False):
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+    bundled_browsers = Path(sys._MEIPASS) / "browsers"
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = str(bundled_browsers) if bundled_browsers.is_dir() else "0"
 else:
     os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "0")
 

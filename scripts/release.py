@@ -11,6 +11,16 @@ import zipfile
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def validate_zip_paths(names):
+    # MAX_PATH includes the terminating NUL. Reserve 80 UTF-16 units for a
+    # user's destination (including Explorer's default ZIP-named subfolder).
+    maximum = 259 - 80
+    for name in names:
+        units = len(name.encode('utf-16-le')) // 2
+        if units > maximum:
+            raise ValueError(f"Windows extraction path too long ({units} > {maximum}): {name}")
+
+
 def version():
     package = json.loads((ROOT / "desktop/package.json").read_text(encoding="utf-8"))
     value = package["version"]
@@ -63,6 +73,7 @@ def verify(value, directory):
         raise ValueError("Release SHA256 or checksum filename does not match")
     with zipfile.ZipFile(archive_path) as archive:
         files = set(archive.namelist())
+        validate_zip_paths(files)
         prefix = f"Chickadee-{value}/"
         required = [
             "Chickadee.exe", "resources/app.asar",
@@ -72,7 +83,10 @@ def verify(value, directory):
         if any(prefix + name not in files for name in required):
             raise ValueError("ZIP is missing required app, engine, documentation or licenses")
         browser_names = ("/headless_shell.exe", "/chrome-headless-shell.exe")
-        if not any("/.local-browsers/" in name and name.endswith(browser_names) for name in files):
+        browser_root = (prefix + 'resources/engine/_internal/browsers/'
+                        if tuple(map(int, value.split('.'))) >= (0, 10, 7) else None)
+        if not any((name.startswith(browser_root) if browser_root else '/.local-browsers/' in name)
+                   and name.endswith(browser_names) for name in files):
             raise ValueError("ZIP is missing bundled Chromium headless shell")
         if tuple(map(int, value.split('.'))) >= (0, 10, 0):
             engine = prefix + 'resources/engine/_internal/'

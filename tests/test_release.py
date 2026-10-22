@@ -13,6 +13,30 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_windows_extraction_rejects_the_reported_chromium_path(self):
+        name = ('Chickadee-0.10.6/resources/engine/_internal/playwright/driver/package/'
+                '.local-browsers/chromium_headless_shell-1248/chrome-headless-shell-win64/'
+                'resources/accessibility/reading_mode_gdocs_helper_manifest.json')
+        with self.assertRaisesRegex(ValueError, 'Windows extraction path too long'):
+            release.validate_zip_paths([name])
+        release.validate_zip_paths([name.replace('playwright/driver/package/.local-browsers/', 'browsers/')])
+
+    def test_windows_path_budget_counts_utf16_units(self):
+        release.validate_zip_paths(['a' * 179])
+        with self.assertRaisesRegex(ValueError, 'Windows extraction path too long'):
+            release.validate_zip_paths(['a' * 178 + '\U0001f426'])
+
+    def test_path_check_is_enforced_for_an_otherwise_valid_zip(self):
+        with tempfile.TemporaryDirectory() as folder:
+            directory = Path(folder)
+            archive = self.make_archive(directory)
+            with zipfile.ZipFile(archive, 'a') as output:
+                output.writestr('Chickadee-0.6.2/' + 'x' * 180, 'fixture')
+            archive.with_suffix('.zip.sha256').write_text(
+                f'{sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n', encoding='ascii')
+            with self.assertRaisesRegex(ValueError, 'Windows extraction path too long'):
+                release.verify('0.6.2', directory)
+
     def make_archive(self, directory, include_browser=True, browser_name="chrome-headless-shell.exe"):
         value = "0.6.2"
         archive = directory / f"Chickadee-Studio-{value}-win-x64.zip"

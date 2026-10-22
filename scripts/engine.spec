@@ -20,8 +20,17 @@ a = Analysis(
 # and WinDLL diagnostics. This filters build data; installed browsers stay intact.
 def required_browser(entry):
     return '.local-browsers/chromium-' not in entry[0].replace(chr(92), '/')
-a.datas = [entry for entry in a.datas if required_browser(entry)]
-a.binaries = [entry for entry in a.binaries if required_browser(entry)]
+def compact_browser(entry):
+    name = entry[0].replace(chr(92), '/')
+    prefix = 'playwright/driver/package/.local-browsers/'
+    if name.startswith(prefix):
+        return ('browsers/' + name[len(prefix):], *entry[1:])
+    return entry
+
+# Preserve every headless-browser file, including accessibility resources.
+# scanner.py points Playwright to this shorter frozen-only directory.
+a.datas = [compact_browser(entry) for entry in a.datas if required_browser(entry)]
+a.binaries = [compact_browser(entry) for entry in a.binaries if required_browser(entry)]
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='ChickadeeEngine',
           debug=False, bootloader_ignore_signals=False, strip=False, upx=False,
