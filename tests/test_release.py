@@ -13,6 +13,20 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_resource_modified_executable_is_rejected(self):
+        import io
+        expected = sha256(b'official runtime').hexdigest()
+        for binary, valid in [(b'official runtime', True), (b'official runtime with edited icon', False)]:
+            data = io.BytesIO()
+            with zipfile.ZipFile(data, 'w') as output:
+                output.writestr('app/Chickadee.exe', binary)
+            with zipfile.ZipFile(data) as archive:
+                if valid:
+                    release.verify_vendor_runtime(archive, 'app/', expected)
+                else:
+                    with self.assertRaisesRegex(ValueError, 'official Electron runtime'):
+                        release.verify_vendor_runtime(archive, 'app/', expected)
+
     def test_windows_extraction_rejects_the_reported_chromium_path(self):
         name = ('Chickadee-0.10.6/resources/engine/_internal/playwright/driver/package/'
                 '.local-browsers/chromium_headless_shell-1248/chrome-headless-shell-win64/'

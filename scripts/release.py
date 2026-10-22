@@ -21,6 +21,12 @@ def validate_zip_paths(names):
             raise ValueError(f"Windows extraction path too long ({units} > {maximum}): {name}")
 
 
+def verify_vendor_runtime(archive, prefix, expected):
+    with archive.open(prefix + 'Chickadee.exe') as stream:
+        if file_digest(stream, 'sha256').hexdigest() != expected:
+            raise ValueError('App executable differs from the official Electron runtime')
+
+
 def version():
     package = json.loads((ROOT / "desktop/package.json").read_text(encoding="utf-8"))
     value = package["version"]
@@ -82,6 +88,9 @@ def verify(value, directory):
         ]
         if any(prefix + name not in files for name in required):
             raise ValueError("ZIP is missing required app, engine, documentation or licenses")
+        if tuple(map(int, value.split('.'))) >= (0, 10, 8):
+            runtime = json.loads((ROOT / 'desktop/vendor-runtime.json').read_text(encoding='utf-8'))
+            verify_vendor_runtime(archive, prefix, runtime['executable_sha256'])
         browser_names = ("/headless_shell.exe", "/chrome-headless-shell.exe")
         browser_root = (prefix + 'resources/engine/_internal/browsers/'
                         if tuple(map(int, value.split('.'))) >= (0, 10, 7) else None)

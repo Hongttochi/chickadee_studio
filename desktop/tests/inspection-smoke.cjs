@@ -66,7 +66,9 @@ const http = require("node:http");
     }
     await page.evaluate(() => {
       const unsubscribe = window.chickadee.onEvent(event => {
-        if (event.kind === 'finding' || event.kind === 'candidate') {
+        // The evidence panel below selects mandatory findings; an earlier
+        // context candidate belongs to a different tab and cannot satisfy it.
+        if (event.kind === 'finding') {
           unsubscribe(); window.chickadee.pause().catch(() => {});
         }
       });

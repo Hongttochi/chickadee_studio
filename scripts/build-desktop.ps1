@@ -27,12 +27,22 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Desktop dependency installation failed.' }
         }
         $env:CSC_IDENTITY_AUTO_DISCOVERY = 'false'
-        if ($RequireSigned) { npm.cmd run package -- --config.forceCodeSigning=true }
+        if ($RequireSigned) { npm.cmd run package -- --config.win.signAndEditExecutable=true --config.forceCodeSigning=true }
         else { npm.cmd run package }
         if ($LASTEXITCODE -ne 0) { throw 'Desktop package build failed.' }
     } finally { Pop-Location }
     if (-not (Test-Path -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe")) { throw 'Desktop executable is missing: inspect the build log and free disk space.' }
     if (-not (Test-Path -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/resources/engine/ChickadeeEngine.exe")) { throw 'Bundled scan engine is missing.' }
+    if (-not $RequireSigned) {
+        $taskRuntime = Get-Content -LiteralPath 'desktop/vendor-runtime.json' -Raw | ConvertFrom-Json
+        $taskInstalledVersion = (Get-Content -LiteralPath 'desktop/node_modules/electron/package.json' -Raw | ConvertFrom-Json).version
+        $taskVendorHash = (Get-FileHash -LiteralPath 'desktop/node_modules/electron/dist/electron.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
+        $taskAppHash = (Get-FileHash -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($taskInstalledVersion -ne $taskRuntime.version -or $taskVendorHash -ne $taskRuntime.executable_sha256 -or $taskAppHash -ne $taskVendorHash) {
+            throw 'The app executable must preserve the pinned official Electron runtime bytes.'
+        }
+        Write-Output "Official Electron runtime bytes preserved: $taskAppHash"
+    }
     & (Join-Path $PSScriptRoot 'verify-windows-signatures.ps1') -AppDirectory "artifacts/electron-$taskVersion/win-unpacked" -AllNative:$RequireSigned -RequireTrusted:$RequireSigned
     Write-Output "Built artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe. Distribute the complete win-unpacked folder."
 } finally { Pop-Location }
