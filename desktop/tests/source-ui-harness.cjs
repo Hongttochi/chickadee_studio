@@ -184,6 +184,7 @@ exports.launch = async ({ env }) => {
           "history",
           "load",
           "exportCSV",
+          "exportReport",
           "review",
           "saveWorkflow",
           "exportWorkflow",

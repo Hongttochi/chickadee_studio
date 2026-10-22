@@ -109,7 +109,7 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
     const id = setInterval(() => refresh().catch((error) => setMessage(error.message)), 1000);
     return () => clearInterval(id);
   }, [data.agent?.running]);
-  const observedFlow = useMemo(() => explorationFlow(data.graph), [data.graph]);
+  const observedFlow = useMemo(() => explorationFlow(data.graph, 1000), [data.graph]);
   const flow = useMemo(() => withRunMarkers(observedFlow, runStatus), [observedFlow, runStatus]);
   const packet = data.packets.find((item) => item.id === packetId);
   const ledger = data.agent?.ledger || {};

@@ -230,8 +230,12 @@
 .model-statistics > header strong { font-size:13px; color:#303b47; }
 .model-statistics > header span, .model-statistics > p { color:#74808c; font-size:11px; }
 .model-statistics-scroll { overflow-x:auto; }
-.model-statistics table { width:100%; min-width:460px; border-collapse:collapse; text-align:left; font-variant-numeric:tabular-nums; }
-.model-statistics th, .model-statistics td { padding:12px 14px; border-bottom:1px solid #e8ebef; vertical-align:middle; }
+.model-statistics table { width:100%; min-width:640px; table-layout:fixed; border-collapse:collapse; text-align:left; font-variant-numeric:tabular-nums; }
+.model-statistics th, .model-statistics td { padding:12px 14px; border-bottom:1px solid #e8ebef; vertical-align:middle; white-space:normal; overflow:visible; text-overflow:clip; }
+.model-statistics thead th:nth-child(1) { width:12%; }
+.model-statistics thead th:nth-child(2) { width:16%; }
+.model-statistics thead th:nth-child(3) { width:28%; }
+.model-statistics thead th:nth-child(4) { width:44%; }
 .model-statistics thead th { color:#74808c; font-weight:500; font-size:11px; }
 .model-statistics tbody th { color:#303b47; font-weight:600; width:60px; }
 .model-statistics td:nth-child(3) { white-space:nowrap; }
