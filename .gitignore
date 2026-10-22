@@ -31,6 +31,8 @@ scan-report.json
 artifacts/
 logs/
 screenshots/
+!docs/assets/screenshots/
+!docs/assets/screenshots/*.png
 
 # Private application forms and submission packages
 submission-private/
