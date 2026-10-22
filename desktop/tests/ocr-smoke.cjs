@@ -1,6 +1,6 @@
 // Real renderer, scanner and official Korean PaddleOCR model. No paid API.
 const packaged = Boolean(process.env.CHICKADEE_PACKAGED_EXE);
-const launch = packaged ? options => require('playwright')._electron.launch(options) : require('./source-ui-harness.cjs').launch;
+const launch = packaged ? require('./native-app.cjs').launch : require('./source-ui-harness.cjs').launch;
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');

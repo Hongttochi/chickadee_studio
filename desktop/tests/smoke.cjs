@@ -1,4 +1,3 @@
-const { _electron: electron } = require("playwright");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const assert = require("node:assert/strict");
@@ -6,7 +5,7 @@ const http = require("node:http");
 const launch =
   process.env.CHICKADEE_SERVICE_UI === "1"
     ? require("./source-ui-harness.cjs").launch
-    : (options) => electron.launch(options);
+    : require("./native-app.cjs").launch;
 async function waitForHistory(page, count) {
   const deadline = Date.now() + 30000;
   let state;
