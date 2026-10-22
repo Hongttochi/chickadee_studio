@@ -184,7 +184,9 @@ async function waitForHistory(page, count) {
     const edge = page.locator('[data-testid="rf__edge-techniques-dedup"]');
     await edge.dispatchEvent("click");
     await page.keyboard.press("Delete");
-    assert.equal(await page.locator(".react-flow__edge").count(), 10);
+    // Conditional OCR and optional Laya keep all 11 fixed pipeline connections.
+    assert.equal(await page.locator(".react-flow__edge").count(), 11);
+    await edge.waitFor();
     assert.equal(await page.locator(".react-flow__handle.connectable").count(), 0);
     await page.locator('.react-flow__node[data-id="ocr"]').click();
     const ocrSwitch = page.getByRole('checkbox', { name: /이미지 OCR 사용/ });
