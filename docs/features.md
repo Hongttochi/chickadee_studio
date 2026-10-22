@@ -1,124 +1,200 @@
-# 기능 안내와 실제 실행 화면
+# 기능 안내
 
-실제 Windows 앱에서 촬영한 화면입니다. 실제 사이트 검사와 로컬 OCR 검증 화면을 구분했습니다. 저장된 점수는 정확도나 위법 확률이 아닙니다.
+[README](../README.md) | [설치 및 실행](quickstart-windows.md) | [출력 규격](result-format.md)
 
-## 녹화와 GIF
+## 목차
 
-| 영상 | 내용 |
-| --- | --- |
-| [실제 사이트 검사](assets/demos/site-scan.webm) | 100페이지 검사 과정. 페이지 및 수집 한도에 따른 부분 결과 |
-| [기능 전체 보기](assets/demos/features-details.webm) | 통계, Groq 의견, 저장, 근거 확대, 기록과 설정 |
-| [긴 탐색 그래프](assets/demos/graphs-original.webm) | 전체 보기와 60개 확대 구간 |
-| [미리보기와 검토 저장](assets/demos/actions-original.webm) | 화면 확대, 검토 메모, 일괄 선택, CSV 저장과 기록 복원 |
-| [한국어 OCR 검증](assets/demos/ocr-original.webm) | 로컬 검증 이미지에서 글자 추출과 줄 선택 |
+1. [검사 구성 및 탐색](#1-검사-구성-및-탐색)
+2. [문자 위장 및 은닉 탐지](#2-문자-위장-및-은닉-탐지)
+3. [이미지 문자 추출](#3-이미지-문자-추출)
+4. [로컬 분석 및 AI 검토](#4-로컬-분석-및-ai-검토)
+5. [결과 검토 및 출력](#5-결과-검토-및-출력)
+6. [운영 설정 및 편의 기능](#6-운영-설정-및-편의-기능)
+7. [기능 시연](#7-기능-시연)
+8. [전체 그래프 확대](#8-전체-그래프-확대)
 
-![검토와 주요 기능](assets/demos/features.gif)
-
-![이미지 OCR과 글자 영역](assets/demos/ocr.gif)
-
-![탐색 그래프 확대와 이동](assets/demos/exploration.gif)
-
-## 화면별 기능
+## 1. 검사 구성 및 탐색
 
 ### 검사 구성
 
-진입 URL과 검사 조건을 설정합니다. 본문은 ML로 전달하고 이미지는 OCR을 거쳐 전달합니다.
+URL과 검사 조건을 설정합니다. 본문은 바로 ML로 전달하고, 이미지는 OCR로 문구를 추출한 뒤 ML로 전달합니다. 이미지가 없으면 OCR을 건너뜁니다.
+
+게시글과 댓글을 모두 검사합니다. 지연 로딩 댓글과 설정에 등록한 댓글 더보기 동작을 지원하며, 사이트의 구조에 따라 별도 탐색 설정이 필요할 수 있습니다.
 
 ![검사 구성](assets/demos/01-pipeline.png)
 
-### 필수 기법 4종
-
-로컬 검증 페이지에서 닮은꼴 문자, 자모 분해, 투명 문자와 화면 밖 문자를 확인합니다.
-
-![필수 기법 4종](assets/demos/22-four-techniques.png)
-
-### 원문과 탐지 근거
-
-같은 항목의 원문, URL, 위치와 검토 상태를 확인합니다.
-
-![원문과 탐지 근거](assets/demos/06-evidence.png)
-
-### 촬영 화면 확대
-
-검사 당시 화면을 확대합니다. 숨은 요소를 강제로 드러내지 않습니다.
-
-![촬영 화면 확대](assets/demos/07-evidence-zoom.png)
-
-### 이미지 OCR
-
-한국어 검증 이미지의 추출 문구, 글자 박스와 인식 신뢰도를 확인합니다.
-
-![이미지 OCR](assets/demos/23-ocr-boxes.png)
-
-### OCR 줄 선택
-
-줄을 선택하면 이미지의 해당 글자 영역을 강조합니다.
-
-![OCR 줄 선택](assets/demos/24-ocr-line.png)
-
-### 모델 처리 통계
-
-ML 점수 분포와 OCR 처리 상태를 표시합니다. Laya는 미적용 상태를 그대로 표시합니다.
-
-![모델 처리 통계](assets/demos/02-statistics.png)
-
-### Groq 근거 검토
-
-조회한 근거 ID와 광고 문맥 의견, 부족한 근거를 확인합니다.
-
-![Groq 근거 검토](assets/demos/03-groq-report.png)
-
-### Groq 누적 사용량
-
-요청과 토큰 한도를 확인합니다. 예시 검사는 5회와 6,165토큰을 사용했습니다.
-
-![Groq 누적 사용량](assets/demos/04-budget.png)
-
-### 전체 탐색 그래프
-
-100페이지에서 관측한 371개 노드 전체를 표시합니다. START와 END 표시는 UI 안내용입니다.
-
-![전체 탐색 그래프](assets/demos/20-full-graph-overview.png)
-
 ### 탐색 경로
 
-방문한 페이지와 대기 중인 URL을 구분합니다.
+방문한 페이지와 대기 중인 URL을 구분하고, 페이지별 상태를 확인합니다.
 
 ![탐색 경로](assets/demos/11-navigation.png)
 
+### 탐색 그래프
+
+페이지 방문과 수집 동작을 관측한 연결로 표시합니다. 노드를 선택해 관련 정보를 확인하고 확대하거나 이동할 수 있습니다.
+
+![탐색 그래프](assets/demos/09-exploration.png)
+
+![탐색 그래프 전체 보기](assets/demos/20-full-graph-overview.png)
+
+위 전체 화면은 100페이지 검사에서 관측한 371개 노드를 표시합니다. START와 END는 화면 안내용입니다. 페이지와 수집 한도에 도달한 일부 결과입니다.
+
 ### 진행 기록
 
-실제 실행한 수집, 차단과 분석 과정을 확인합니다.
+페이지 수집, 분석과 차단 내역을 실행 순서에 따라 확인합니다.
 
 ![진행 기록](assets/demos/10-events.png)
 
+## 2. 문자 위장 및 은닉 탐지
+
+### 오프라인 데모
+
+검사 실행 옆 펼침 메뉴에서 내장 데모를 실행합니다. 인터넷 없이 문자 위장과 은닉 기법의 처리 흐름을 확인할 수 있습니다.
+
+![로컬 데모의 검사 흐름](assets/demos/21-demo-pipeline.png)
+
+### 네 가지 탐지 기법
+
+닮은꼴 문자, 자모 분해, 투명 문자와 화면 밖 은닉을 탐지합니다. 다음 화면은 로컬 검증 페이지의 결과입니다.
+
+![네 가지 위장 및 은닉 기법](assets/demos/22-four-techniques.png)
+
+### 원문 및 요소 위치
+
+항목을 선택하면 원문, URL, 요소 위치와 탐지 이유를 확인할 수 있습니다.
+
+![원문과 요소 위치](assets/demos/06-evidence.png)
+
+### 촬영 화면 확대
+
+관찰 당시 촬영한 화면을 확대합니다. 숨은 요소를 강제로 표시하지 않으므로, 투명하거나 화면 밖에 있는 글자는 원문과 CSS를 함께 확인합니다.
+
+![촬영 화면 확대](assets/demos/07-evidence-zoom.png)
+
+## 3. 이미지 문자 추출
+
+### 한국어 문구 인식
+
+PaddleOCR가 이미지에서 읽은 문구와 글자 영역을 표시합니다. 다음 화면은 한국어 검증 이미지의 처리 결과입니다.
+
+![한국어 이미지 OCR](assets/demos/23-ocr-boxes.png)
+
+### 줄 단위 확인
+
+인식한 줄을 선택하면 원본 이미지의 해당 위치를 강조합니다. 인식 신뢰도는 문자 추출 모델의 점수입니다.
+
+![OCR 줄 선택](assets/demos/24-ocr-line.png)
+
+### 이미지 처리 통계
+
+처리, 판독 실패, 오류와 생략을 구분합니다. OCR 처리 건수는 이미지 주제 분류나 위법성 판정 건수와 다릅니다.
+
+![OCR 처리 통계](assets/demos/25-ocr-statistics.png)
+
+## 4. 로컬 분석 및 AI 검토
+
+### ML 처리 통계
+
+문자 TF-IDF와 RF의 처리 영역 수와 점수 분포를 확인합니다. 기본 배포본은 기존 RF를 사용하며, Laya는 미적용 상태를 표시합니다. 점수는 정확도나 위법 확률이 아닙니다.
+
+Laya의 로컬 CPU 검토 경로도 연결되어 있습니다. 독립 평가를 확인한 모델 묶음과 실행 환경이 설치된 경우에만 실행하며, 가중치를 자동 다운로드하거나 외부 API를 호출하지 않습니다. [Laya 설정](content-analysis.md)
+
+![모델 처리 통계](assets/demos/02-statistics.png)
+
+### Groq 검토 의견
+
+사용자가 실행하면 수집한 원문과 분석 정보를 조회합니다. 필요한 경우 같은 사이트의 발견된 링크를 제한적으로 추가 확인합니다. 원래 탐지 결과와 사용자의 메모는 유지합니다.
+
+![Groq 검토 의견](assets/demos/03-groq-report.png)
+
+### 누적 사용량
+
+기본 한도는 검사당 6회와 24,000토큰입니다. 한도 도달 시 부분 검토와 미검토 수를 구분해 저장합니다. 다음 예시는 5회 요청과 6,165토큰을 사용했습니다.
+
+![Groq 사용량](assets/demos/04-budget.png)
+
+### API 키 설정
+
+AI 설정에서 사용자의 Groq 키를 입력합니다. 비밀번호 입력으로 표시하며 키는 결과와 보고서에 저장하지 않습니다. 기본 검사, OCR과 ML에는 API 키가 필요하지 않습니다.
+
+![AI 연결 설정](assets/demos/14-settings-groq.png)
+
+## 5. 결과 검토 및 출력
+
+### 페이지 미리보기
+
+검사 브라우저에서 전달한 화면을 확인합니다.
+
+![페이지 미리보기](assets/demos/27-preview.png)
+
+### 미리보기 확대
+
+촬영 화면과 URL을 함께 확인합니다.
+
+![미리보기 확대](assets/demos/28-preview-zoom.png)
+
+### 검토 상태 및 메모
+
+항목별 검토 상태와 메모를 저장합니다. 원래 탐지 결과는 변경하지 않습니다.
+
+![검토 메모 저장](assets/demos/29-review-saved.png)
+
+### 일괄 처리
+
+표시한 항목을 선택해 검토 상태를 함께 적용합니다.
+
+![항목 일괄 선택](assets/demos/30-bulk-selection.png)
+
+### CSV 내보내기
+
+고정 17개 칼럼으로 결과를 내보냅니다. [CSV 예시](assets/demos/sample-results.csv)에서 칼럼과 실제 저장 형태를 확인할 수 있습니다.
+
+![CSV 저장](assets/demos/31-csv-export.png)
+
 ### 검사 기록
 
-저장된 원문과 화면, Groq 의견을 다시 엽니다.
+완료된 검사와 일부 결과를 다시 열어 원문, 이미지와 검토 의견을 확인합니다.
 
 ![검사 기록](assets/demos/12-history.png)
 
-### 환경과 검사 설정
+### 검토 상태 복원
+
+저장한 검사에서 검토 상태와 메모를 다시 불러옵니다.
+
+![검토 상태 복원](assets/demos/32-review-reload.png)
+
+### 보고서 저장
+
+HTML과 Markdown으로 보고서를 저장합니다. 처리 통계, AI 의견, 원문과 촬영 화면을 함께 보존합니다.
+
+![보고서 저장](assets/demos/05-report-saved.png)
+
+<details>
+<summary><strong>HTML 보고서 전체 화면</strong></summary>
+
+![독립 실행형 HTML 보고서](assets/demos/26-standalone-report.png)
+
+</details>
+
+[HTML 보고서 예시](assets/demos/sample-report.html)는 인터넷 없이 열 수 있습니다. 브라우저 인쇄에서 PDF로 저장할 수 있습니다.
+
+## 6. 운영 설정 및 편의 기능
+
+### 실행 환경 및 검사 설정
 
 CPU와 메모리에 맞는 실행 모드, 검사 범위와 저장 위치를 설정합니다.
 
-![환경과 검사 설정](assets/demos/13-settings-general.png)
-
-### AI 연결
-
-키는 비밀번호 입력으로 처리합니다. 녹화에는 키 값을 넣지 않았습니다.
-
-![AI 연결](assets/demos/14-settings-groq.png)
+![실행 환경 및 검사 설정](assets/demos/13-settings-general.png)
 
 ### 알림 설정
 
-완료 알림과 채널별 리포트 설정 화면입니다. 이 촬영에서는 외부 메시지를 전송하지 않았습니다.
+검사 완료 알림과 채널별 보고서 전송 조건을 설정합니다. 외부 채널은 사용자가 연결해야 동작합니다.
 
 ![알림 설정](assets/demos/15-settings-notifications.png)
 
 ### 예약 검사
 
-일정에 맞춰 저장한 검사 구성을 실행합니다. 앱이 실행 중일 때 동작합니다.
+저장한 검사 구성을 일정에 맞춰 실행합니다. 앱이 실행 중일 때 동작합니다.
 
 ![예약 검사](assets/demos/16-settings-schedule.png)
 
@@ -126,7 +202,7 @@ CPU와 메모리에 맞는 실행 모드, 검사 범위와 저장 위치를 설�
 
 화면 이동과 자주 쓰는 명령의 단축키를 설정합니다.
 
-![단축키](assets/demos/17-shortcuts.png)
+![단축키 설정](assets/demos/17-shortcuts.png)
 
 ### 업데이트
 
@@ -136,160 +212,224 @@ CPU와 메모리에 맞는 실행 모드, 검사 범위와 저장 위치를 설�
 
 ### 빠른 명령
 
-화면 이동, 결과 불러오기와 내보내기 명령을 검색합니다.
+Ctrl K로 화면 이동, 결과 불러오기와 내보내기 명령을 검색합니다.
 
 ![빠른 명령](assets/demos/19-command-palette.png)
 
-### 저장한 리포트
+## 7. 기능 시연
 
-네트워크 요청 없이 스크린샷을 포함한 HTML을 열었습니다. 브라우저 인쇄로 PDF를 저장할 수 있습니다.
+### GIF 01. 탐색 흐름 확인
 
-![저장한 리포트](assets/demos/26-standalone-report.png)
+![GIF 01 탐색 그래프 확대 및 이동](assets/demos/exploration.gif)
 
-## 미리보기와 결과 관리
+### GIF 02. 이미지 문자 추출
 
-![미리보기와 검토 저장](assets/demos/review-actions.gif)
+![GIF 02 한국어 이미지 OCR](assets/demos/ocr.gif)
 
-| 화면 | 기능 |
-| --- | --- |
-| [페이지 미리보기](assets/demos/27-preview.png) | 검사 브라우저가 보낸 실제 촬영 화면 |
-| [미리보기 확대](assets/demos/28-preview-zoom.png) | URL과 촬영 화면 확대 |
-| [검토 저장](assets/demos/29-review-saved.png) | 항목별 검토 상태와 메모 저장 |
-| [일괄 선택](assets/demos/30-bulk-selection.png) | 표시한 항목을 선택해 일괄 검토 |
-| [CSV 저장](assets/demos/31-csv-export.png) | 고정 17개 칼럼으로 내보내기 |
-| [검토 복원](assets/demos/32-review-reload.png) | 기록에서 검토 상태와 메모 다시 열기 |
+### GIF 03. 원문 및 촬영 화면 확인
 
-[CSV 예시](assets/demos/sample-results.csv)는 촬영용 검사 기록에서 내보낸 파일입니다.
+![GIF 03 원문 및 촬영 화면](assets/demos/evidence.gif)
 
-## 긴 그래프의 전체 구간
+### GIF 04. 처리 통계 및 AI 검토
 
-371개 관측 노드와 안내용 START, END를 포함해 촬영했습니다. 저장한 원문이나 그래프의 관측 내용을 추가 생성하지 않았습니다. 구간은 겹치도록 이동하며 촬영했습니다.
+![GIF 04 처리 통계 및 AI 검토](assets/demos/features.gif)
+
+### GIF 05. 검토 저장 및 결과 내보내기
+
+![GIF 05 검토 저장 및 결과 내보내기](assets/demos/review-actions.gif)
+
+| 번호 | 녹화 파일 | 내용 |
+| ---: | --- | --- |
+| 1 | [사이트 검사](assets/demos/site-scan.webm) | 100페이지 탐색과 일부 결과 |
+| 2 | [탐색 그래프](assets/demos/graphs-original.webm) | 전체 보기와 60개 확대 구간 |
+| 3 | [한국어 OCR](assets/demos/ocr-original.webm) | 로컬 검증 이미지의 글자 추출과 줄 선택 |
+| 4 | [분석 및 AI 검토](assets/demos/features-details.webm) | 처리 통계, Groq 의견, 보고서와 설정 |
+| 5 | [검토 및 내보내기](assets/demos/actions-original.webm) | 미리보기, 메모, 일괄 선택, CSV와 기록 복원 |
+
+## 8. 전체 그래프 확대
+
+371개 관측 노드와 안내용 START, END를 겹치는 구간으로 나눠 촬영했습니다. [노드 및 촬영 구간 정보](assets/demos/graph-capture.json)에서 관측 범위를 확인할 수 있습니다.
 
 <details>
-<summary>60개 확대 구간 펼치기</summary>
+<summary><strong>확대 화면 60개</strong></summary>
 
-![graph-tile-001](assets/demos/graph-tile-001.png)
+![탐색 그래프 확대 구간 01](assets/demos/graph-tile-001.png)
 
-![graph-tile-002](assets/demos/graph-tile-002.png)
 
-![graph-tile-003](assets/demos/graph-tile-003.png)
+![탐색 그래프 확대 구간 02](assets/demos/graph-tile-002.png)
 
-![graph-tile-004](assets/demos/graph-tile-004.png)
 
-![graph-tile-005](assets/demos/graph-tile-005.png)
+![탐색 그래프 확대 구간 03](assets/demos/graph-tile-003.png)
 
-![graph-tile-006](assets/demos/graph-tile-006.png)
 
-![graph-tile-007](assets/demos/graph-tile-007.png)
+![탐색 그래프 확대 구간 04](assets/demos/graph-tile-004.png)
 
-![graph-tile-008](assets/demos/graph-tile-008.png)
 
-![graph-tile-009](assets/demos/graph-tile-009.png)
+![탐색 그래프 확대 구간 05](assets/demos/graph-tile-005.png)
 
-![graph-tile-010](assets/demos/graph-tile-010.png)
 
-![graph-tile-011](assets/demos/graph-tile-011.png)
+![탐색 그래프 확대 구간 06](assets/demos/graph-tile-006.png)
 
-![graph-tile-012](assets/demos/graph-tile-012.png)
 
-![graph-tile-013](assets/demos/graph-tile-013.png)
+![탐색 그래프 확대 구간 07](assets/demos/graph-tile-007.png)
 
-![graph-tile-014](assets/demos/graph-tile-014.png)
 
-![graph-tile-015](assets/demos/graph-tile-015.png)
+![탐색 그래프 확대 구간 08](assets/demos/graph-tile-008.png)
 
-![graph-tile-016](assets/demos/graph-tile-016.png)
 
-![graph-tile-017](assets/demos/graph-tile-017.png)
+![탐색 그래프 확대 구간 09](assets/demos/graph-tile-009.png)
 
-![graph-tile-018](assets/demos/graph-tile-018.png)
 
-![graph-tile-019](assets/demos/graph-tile-019.png)
+![탐색 그래프 확대 구간 10](assets/demos/graph-tile-010.png)
 
-![graph-tile-020](assets/demos/graph-tile-020.png)
 
-![graph-tile-021](assets/demos/graph-tile-021.png)
+![탐색 그래프 확대 구간 11](assets/demos/graph-tile-011.png)
 
-![graph-tile-022](assets/demos/graph-tile-022.png)
 
-![graph-tile-023](assets/demos/graph-tile-023.png)
+![탐색 그래프 확대 구간 12](assets/demos/graph-tile-012.png)
 
-![graph-tile-024](assets/demos/graph-tile-024.png)
 
-![graph-tile-025](assets/demos/graph-tile-025.png)
+![탐색 그래프 확대 구간 13](assets/demos/graph-tile-013.png)
 
-![graph-tile-026](assets/demos/graph-tile-026.png)
 
-![graph-tile-027](assets/demos/graph-tile-027.png)
+![탐색 그래프 확대 구간 14](assets/demos/graph-tile-014.png)
 
-![graph-tile-028](assets/demos/graph-tile-028.png)
 
-![graph-tile-029](assets/demos/graph-tile-029.png)
+![탐색 그래프 확대 구간 15](assets/demos/graph-tile-015.png)
 
-![graph-tile-030](assets/demos/graph-tile-030.png)
 
-![graph-tile-031](assets/demos/graph-tile-031.png)
+![탐색 그래프 확대 구간 16](assets/demos/graph-tile-016.png)
 
-![graph-tile-032](assets/demos/graph-tile-032.png)
 
-![graph-tile-033](assets/demos/graph-tile-033.png)
+![탐색 그래프 확대 구간 17](assets/demos/graph-tile-017.png)
 
-![graph-tile-034](assets/demos/graph-tile-034.png)
 
-![graph-tile-035](assets/demos/graph-tile-035.png)
+![탐색 그래프 확대 구간 18](assets/demos/graph-tile-018.png)
 
-![graph-tile-036](assets/demos/graph-tile-036.png)
 
-![graph-tile-037](assets/demos/graph-tile-037.png)
+![탐색 그래프 확대 구간 19](assets/demos/graph-tile-019.png)
 
-![graph-tile-038](assets/demos/graph-tile-038.png)
 
-![graph-tile-039](assets/demos/graph-tile-039.png)
+![탐색 그래프 확대 구간 20](assets/demos/graph-tile-020.png)
 
-![graph-tile-040](assets/demos/graph-tile-040.png)
 
-![graph-tile-041](assets/demos/graph-tile-041.png)
+![탐색 그래프 확대 구간 21](assets/demos/graph-tile-021.png)
 
-![graph-tile-042](assets/demos/graph-tile-042.png)
 
-![graph-tile-043](assets/demos/graph-tile-043.png)
+![탐색 그래프 확대 구간 22](assets/demos/graph-tile-022.png)
 
-![graph-tile-044](assets/demos/graph-tile-044.png)
 
-![graph-tile-045](assets/demos/graph-tile-045.png)
+![탐색 그래프 확대 구간 23](assets/demos/graph-tile-023.png)
 
-![graph-tile-046](assets/demos/graph-tile-046.png)
 
-![graph-tile-047](assets/demos/graph-tile-047.png)
+![탐색 그래프 확대 구간 24](assets/demos/graph-tile-024.png)
 
-![graph-tile-048](assets/demos/graph-tile-048.png)
 
-![graph-tile-049](assets/demos/graph-tile-049.png)
+![탐색 그래프 확대 구간 25](assets/demos/graph-tile-025.png)
 
-![graph-tile-050](assets/demos/graph-tile-050.png)
 
-![graph-tile-051](assets/demos/graph-tile-051.png)
+![탐색 그래프 확대 구간 26](assets/demos/graph-tile-026.png)
 
-![graph-tile-052](assets/demos/graph-tile-052.png)
 
-![graph-tile-053](assets/demos/graph-tile-053.png)
+![탐색 그래프 확대 구간 27](assets/demos/graph-tile-027.png)
 
-![graph-tile-054](assets/demos/graph-tile-054.png)
 
-![graph-tile-055](assets/demos/graph-tile-055.png)
+![탐색 그래프 확대 구간 28](assets/demos/graph-tile-028.png)
 
-![graph-tile-056](assets/demos/graph-tile-056.png)
 
-![graph-tile-057](assets/demos/graph-tile-057.png)
+![탐색 그래프 확대 구간 29](assets/demos/graph-tile-029.png)
 
-![graph-tile-058](assets/demos/graph-tile-058.png)
 
-![graph-tile-059](assets/demos/graph-tile-059.png)
+![탐색 그래프 확대 구간 30](assets/demos/graph-tile-030.png)
 
-![graph-tile-060](assets/demos/graph-tile-060.png)
+
+![탐색 그래프 확대 구간 31](assets/demos/graph-tile-031.png)
+
+
+![탐색 그래프 확대 구간 32](assets/demos/graph-tile-032.png)
+
+
+![탐색 그래프 확대 구간 33](assets/demos/graph-tile-033.png)
+
+
+![탐색 그래프 확대 구간 34](assets/demos/graph-tile-034.png)
+
+
+![탐색 그래프 확대 구간 35](assets/demos/graph-tile-035.png)
+
+
+![탐색 그래프 확대 구간 36](assets/demos/graph-tile-036.png)
+
+
+![탐색 그래프 확대 구간 37](assets/demos/graph-tile-037.png)
+
+
+![탐색 그래프 확대 구간 38](assets/demos/graph-tile-038.png)
+
+
+![탐색 그래프 확대 구간 39](assets/demos/graph-tile-039.png)
+
+
+![탐색 그래프 확대 구간 40](assets/demos/graph-tile-040.png)
+
+
+![탐색 그래프 확대 구간 41](assets/demos/graph-tile-041.png)
+
+
+![탐색 그래프 확대 구간 42](assets/demos/graph-tile-042.png)
+
+
+![탐색 그래프 확대 구간 43](assets/demos/graph-tile-043.png)
+
+
+![탐색 그래프 확대 구간 44](assets/demos/graph-tile-044.png)
+
+
+![탐색 그래프 확대 구간 45](assets/demos/graph-tile-045.png)
+
+
+![탐색 그래프 확대 구간 46](assets/demos/graph-tile-046.png)
+
+
+![탐색 그래프 확대 구간 47](assets/demos/graph-tile-047.png)
+
+
+![탐색 그래프 확대 구간 48](assets/demos/graph-tile-048.png)
+
+
+![탐색 그래프 확대 구간 49](assets/demos/graph-tile-049.png)
+
+
+![탐색 그래프 확대 구간 50](assets/demos/graph-tile-050.png)
+
+
+![탐색 그래프 확대 구간 51](assets/demos/graph-tile-051.png)
+
+
+![탐색 그래프 확대 구간 52](assets/demos/graph-tile-052.png)
+
+
+![탐색 그래프 확대 구간 53](assets/demos/graph-tile-053.png)
+
+
+![탐색 그래프 확대 구간 54](assets/demos/graph-tile-054.png)
+
+
+![탐색 그래프 확대 구간 55](assets/demos/graph-tile-055.png)
+
+
+![탐색 그래프 확대 구간 56](assets/demos/graph-tile-056.png)
+
+
+![탐색 그래프 확대 구간 57](assets/demos/graph-tile-057.png)
+
+
+![탐색 그래프 확대 구간 58](assets/demos/graph-tile-058.png)
+
+
+![탐색 그래프 확대 구간 59](assets/demos/graph-tile-059.png)
+
+
+![탐색 그래프 확대 구간 60](assets/demos/graph-tile-060.png)
 
 </details>
-
-## 리포트 파일
-
-[스크린샷이 포함된 HTML 예시](assets/demos/sample-report.html)와 [모델 평가 수치](assets/evaluation/metrics.json)를 확인할 수 있습니다. 검사 실행마다 결과 폴더에 HTML과 Markdown을 함께 저장합니다.

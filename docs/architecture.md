@@ -2,6 +2,10 @@
 
 Chickadee Studio는 Electron 화면과 Python 검사 엔진으로 구성됩니다. Chromium으로 수집한 DOM·CSS·이미지를 분석하고, 원문과 근거를 JSON·CSV 및 검사 기록에 저장합니다.
 
+![Chickadee Studio 전체 설계](assets/architecture.png)
+
+전체 설계 개요이며 현재 배포본은 이미지에만 OCR을 적용합니다. 본문 텍스트는 바로 규칙과 ML로 전달합니다. Laya는 별도로 검증한 모델 묶음과 실행 환경을 지정한 경우에 실행하는 선택 단계이며, 기본 패키지에는 가중치를 포함하지 않습니다. 결과는 실행별 로컬 파일로 저장하고 Groq는 사용자가 검토를 시작할 때 호출합니다.
+
 | 구성 | 위치 | 역할 |
 | --- | --- | --- |
 | 화면·앱 셸 | `desktop/src`, `desktop/electron` | 검사 구성, 근거 확인, 기록·검토·로그인 창 |
@@ -11,6 +15,7 @@ Chickadee Studio는 Electron 화면과 Python 검사 엔진으로 구성됩니�
 | 필수 탐지 | `detection.py`, `rules.json` | 닮은꼴 문자·자모 분해·투명 텍스트·화면 밖 은닉 |
 | 이미지 문자 추출 | `image_ocr.py`, `ocr_worker.py` | 이미지에 한해 PaddleOCR 한국어 CPU 추론 |
 | 로컬 AI | `local_ai.py`, `chickadee/data` | 문자 문맥과 이미지 특징의 검토 신호 |
+| 선택 로컬 문맥 검토 | `laya_review.py`, `laya_worker.py` | 검증한 Laya 묶음의 CPU 추론, 미설치 시 기존 검사 유지 |
 | 선택 AI 검토 | `agent.py`, `exploration.py` | Groq의 근거 조회와 제한된 같은 사이트 추가 탐색 |
 | 결과·검토 | `exports.py`, `reviews.py`, `inspection.py` | 결과 저장, 근거·화면 보존, 검토 상태·메모 |
 

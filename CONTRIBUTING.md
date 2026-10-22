@@ -1,6 +1,6 @@
 # Contributing to Chickadee Studio
 
-버그 수정, 탐지 규칙, UI, 문서와 번역 개선을 환영합니다. 개발 환경 설치는 [README](README.md#소스에서-실행)를 참고하세요.
+버그 수정, 탐지 규칙, UI, 문서와 번역 개선을 환영합니다. 개발 환경 설치는 [README](README.md#8-개발-환경)를 참고하세요.
 
 ## 이슈와 PR
 
