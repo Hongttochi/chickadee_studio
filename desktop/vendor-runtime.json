@@ -4,5 +4,9 @@
   "platform": "win32-x64",
   "source_url": "https://github.com/electron/electron/releases/download/v44.9.1/electron-v44.9.1-win32-x64.zip",
   "archive_sha256": "41bd7900bd42d0f49110a81617876137041fbbf473466920248ddb076349ef91",
-  "executable_sha256": "1432afee01d6a788f11cb6649efd271923e1e490beef688c24d31f47965013aa"
+  "executable_sha256": "1432afee01d6a788f11cb6649efd271923e1e490beef688c24d31f47965013aa",
+  "icon_sha256": "4f4f7bc17d5f2c073d32f69b217df7afac94effee005549b549e5674e905a695",
+  "icon_editor": "electron-winstaller/vendor/rcedit.exe",
+  "icon_editor_sha256": "e2df7b664db830f159d0dc6b3da8a95442cca175b9577f2d19952646d37ac32f",
+  "packaged_executable_sha256": "b19370290c0ff921ee1c3ea5414ba52b4bae2aff2739498fffa247b2e2eef7f1"
 }

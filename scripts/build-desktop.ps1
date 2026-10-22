@@ -41,7 +41,23 @@ try {
         if ($taskInstalledVersion -ne $taskRuntime.version -or $taskVendorHash -ne $taskRuntime.executable_sha256 -or $taskAppHash -ne $taskVendorHash) {
             throw 'The app executable must preserve the pinned official Electron runtime bytes.'
         }
-        Write-Output "Official Electron runtime bytes preserved: $taskAppHash"
+        $taskIcon = Join-Path $taskRoot 'desktop/assets/app.ico'
+        $taskEditor = Join-Path $taskRoot "desktop/node_modules/$($taskRuntime.icon_editor)"
+        if ((Get-FileHash -LiteralPath $taskIcon -Algorithm SHA256).Hash.ToLowerInvariant() -ne $taskRuntime.icon_sha256 -or
+            (Get-FileHash -LiteralPath $taskEditor -Algorithm SHA256).Hash.ToLowerInvariant() -ne $taskRuntime.icon_editor_sha256) {
+            throw 'The app icon or icon editor differs from the pinned build inputs.'
+        }
+        $taskApp = Join-Path $taskRoot "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe"
+        $taskVendorInfo = (Get-Item -LiteralPath 'desktop/node_modules/electron/dist/electron.exe').VersionInfo
+        & $taskEditor $taskApp --set-icon $taskIcon
+        if ($LASTEXITCODE -ne 0) { throw 'App icon update failed.' }
+        $taskAppInfo = (Get-Item -LiteralPath $taskApp).VersionInfo
+        foreach ($taskField in @('CompanyName','FileDescription','FileVersion','InternalName','LegalCopyright','OriginalFilename','ProductName','ProductVersion')) {
+            if ($taskAppInfo.$taskField -cne $taskVendorInfo.$taskField) { throw "Upstream runtime metadata changed: $taskField" }
+        }
+        $taskAppHash = (Get-FileHash -LiteralPath $taskApp -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($taskAppHash -ne $taskRuntime.packaged_executable_sha256) { throw 'The executable differs from the verified icon-only runtime.' }
+        Write-Output "Chickadee icon applied; upstream runtime metadata retained: $taskAppHash"
     }
     & (Join-Path $PSScriptRoot 'verify-windows-signatures.ps1') -AppDirectory "artifacts/electron-$taskVersion/win-unpacked" -AllNative:$RequireSigned -RequireTrusted:$RequireSigned
     Write-Output "Built artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe. Distribute the complete win-unpacked folder."
