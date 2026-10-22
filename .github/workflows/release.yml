@@ -89,6 +89,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/ocr-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/login-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/runtime-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package ZIP and SHA256

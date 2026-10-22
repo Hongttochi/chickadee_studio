@@ -21,7 +21,7 @@ const assert=require('node:assert/strict'),http=require('node:http'),path=requir
     const context=browser.contexts()[0];
     app={firstWindow:async()=>context.pages()[0]||await context.waitForEvent('page'),waitForEvent:()=>context.waitForEvent('page'),close:async()=>{await browser.close();child.kill();}};
    } catch(error){child.kill();throw error;}
-  }else app=await electron.launch({executablePath:require('electron'),args:[path.join(root,'desktop')],env,timeout:45000});
+  }else app=await electron.launch({executablePath:process.env.CHICKADEE_PACKAGED_EXE || require('electron'),args:process.env.CHICKADEE_PACKAGED_EXE ? [] : [path.join(root,'desktop')],env,timeout:45000});
   const page=await app.firstWindow();page.setDefaultTimeout(20000);
   await page.getByRole('button',{name:'사용 가이드 닫기',exact:true}).click();
   await page.locator('.header-run-controls button.primary:not(:disabled)').waitFor();
