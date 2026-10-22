@@ -219,4 +219,4 @@ docs/           사용법 · 설계 · 릴리스 노트
 
 ## 라이선스
 
-[Apache License 2.0](LICENSE). 외부 구성요소와 모델에는 각 라이선스가 적용됩니다. [서드파티 고지](docs/third-party-notices.md)를 확인하세요.
+[Apache License 2.0](LICENSE). 외부 구성요소와 모델에는 각 라이선스가 적용됩니다. [3rd-party 고지](docs/third-party-notices.md)를 확인하세요.
