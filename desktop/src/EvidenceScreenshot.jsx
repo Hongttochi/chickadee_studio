@@ -50,7 +50,7 @@ export default function EvidenceScreenshot({ screenshot, hidden = false, caption
       <div className="evidence-capture-image"><img src={screenshot.data_url} alt="검사 브라우저에서 촬영한 스크린샷" /></div>
       <button className="evidence-capture-zoom" type="button" aria-label="확대" title="확대" aria-haspopup="dialog" onClick={() => setExpanded(true)}><Maximize2 size={16} aria-hidden="true" /></button>
     </div>
-    <p className="evidence-capture-note">촬영 당시 화면</p>
+    <p className="evidence-capture-note">{hidden ? "투명하거나 화면 밖에 있는 요소는 촬영 화면에 보이지 않을 수 있습니다. 원문과 CSS 근거를 함께 확인하세요." : "촬영 당시 화면"}</p>
     <details className="capture-metadata"><summary>촬영 정보</summary>
       <dl><div><dt>페이지</dt><dd>{url ? <a href={url} onClick={openURL} title="기본 브라우저에서 열기">{screenshot.url}<ExternalLink size={13} aria-hidden="true" /></a> : "주소 없음"}</dd></div>
         <div><dt>촬영 시각</dt><dd><time dateTime={screenshot.observed_at}>{capturedAt}</time></dd></div>
@@ -61,6 +61,6 @@ export default function EvidenceScreenshot({ screenshot, hidden = false, caption
         <button type="button" aria-label="오류 안내 닫기" onClick={() => setError("")}><X size={14} aria-hidden="true" /></button>
       </div>}
     </details>
-    {expanded && !hidden && <ScreenshotModal screenshot={screenshot} onClose={() => setExpanded(false)} />}
+    {expanded && <ScreenshotModal screenshot={screenshot} onClose={() => setExpanded(false)} />}
   </figure>;
 }

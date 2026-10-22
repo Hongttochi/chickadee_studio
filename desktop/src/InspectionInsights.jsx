@@ -6,6 +6,7 @@ import "./inspection.css";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
 import ImageOCR from "./ImageOCR.jsx";
 import LocalAIAnalysis from "./LocalAIAnalysis.jsx";
+import ModelStatistics from "./ModelStatistics.jsx";
 import { RefreshCw, GitBranch, Sparkles, FileText, Download, Info, X } from "lucide-react";
 
 import pageIcon from "../assets/browser.png";
@@ -19,7 +20,7 @@ function ReviewHelp() {
     <button type="button" className="review-help-trigger" aria-label="전체 검토 안내" aria-describedby={open ? id : undefined} onFocus={() => setOpen(true)} onClick={() => setOpen(true)}><Info size={14} aria-hidden="true" /></button>
     <span id={id} role="tooltip" className={`review-help-tooltip${open ? " is-open" : ""}`}>
       <span className="review-help-item"><span aria-hidden="true">•</span><span>수집 영역을 순서대로 검토</span></span>
-      <span className="review-help-item"><span aria-hidden="true">•</span><span>한도 도달·중단 시 완료된 결과만 포함</span></span>
+      <span className="review-help-item"><span aria-hidden="true">•</span><span>한도 도달 또는 중단 시 완료된 결과만 포함</span></span>
       <span className="review-help-item"><span aria-hidden="true">•</span><span>필요 시 같은 사이트를 추가 확인</span></span>
     </span>
   </span>;
@@ -119,9 +120,10 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
   const completed = report?.completed || 0;
   const assessmentLabel = value => ({ ad_suspected: "광고 의심", benign_context: "정상 문맥 제안", uncertain: "보류" }[value] || value);
   function downloadReport() {
-    const content = [`# 검사 검토 리포트`, `검토 범위: 전체 수집 영역`, `검토 완료: ${completed}/${total} · 미검토: ${total - completed}`, `상태: ${report?.status === "completed" ? "완료" : "부분 검토"}`, "AI 검토 의견이며 최종 판정은 직접 확인하세요.", ...assessments.map((item, index) => `## ${index + 1}. ${assessmentLabel(item.assessment)}\n${item.summary}\n미확인: ${item.missing_evidence.join(", ") || "없음"}`)].join("\n\n");
-    const url = URL.createObjectURL(new Blob([content], { type: "text/markdown;charset=utf-8" }));
-    const link = document.createElement("a"); link.href = url; link.download = "chickadee-review.md"; link.click();
+    const content = data.review_report?.html;
+    if (!content) { setMessage("검사 리포트를 다시 불러와 주세요."); return; }
+    const url = URL.createObjectURL(new Blob([content], { type: "text/html;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "chickadee-review.html"; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return <section className="inspection-extension" data-tab={tab} aria-label="검사 분석">
@@ -162,11 +164,12 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
     {tab === "agent" && <>
       <div className="review-workspace">
         {data.local_ai && <section className="local-ai-overview" aria-label="로컬 AI 결과">
-          <div><strong>로컬 AI</strong><span>문자 {data.local_ai.text_analyzed}개 · 화면 {data.local_ai.visual_analyzed}개 · API 0회{data.ocr_summary?.enabled === false ? " · 이미지 OCR 끔" : ""}{data.local_ai.status !== "completed" ? " · 일부 분석 미완료" : ""}</span></div>
+          <div><strong>로컬 AI</strong><span>문자 {data.local_ai.text_analyzed}개 / 화면 {data.local_ai.visual_analyzed}개 / API 0회{data.ocr_summary?.enabled === false ? " / 이미지 OCR 끔" : ""}{data.local_ai.status !== "completed" ? " / 일부 분석 미완료" : ""}</span></div>
           <details onToggle={event => setLocalOpen(event.currentTarget.open)}><summary>분석 결과</summary>{localOpen && data.packets.filter(p => !p.supplemental).slice(0, localVisible).map(p => <article key={p.id}>
             <p>{p.text.slice(0, 180)}</p><LocalAIAnalysis analysis={p.local_ai} />
           </article>)}{localOpen && total > localVisible && <button onClick={() => setLocalVisible(count => count + 50)}>분석 결과 더보기</button>}</details>
         </section>}
+        {data.local_ai && <ModelStatistics data={data} />}
         <header className="review-heading"><div><h2><FileText size={20} />검사 결과 리포트</h2><p>수집한 전체 영역을 검토하고 확인이 필요한 내용을 정리합니다.</p></div>{data.agent?.running ? <button className="review-stop" onClick={() => action(() => api.stopAgent())}>검토 중단</button> : <button className="review-primary" disabled={!total || busy || ["running", "paused"].includes(runStatus)} onClick={() => action(() => api.runAgent({ run_id: run, scope: "all" }))}>전체 검토 시작</button>}</header>
         <section className="review-overview" aria-label="검토 범위">
           <div><span>검토 범위</span><strong>전체 수집 영역</strong></div>
@@ -174,21 +177,21 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
           <div><span>검토 완료</span><strong>{completed.toLocaleString()}<small>개</small></strong></div>
           <div><span>미검토</span><strong>{(total - completed).toLocaleString()}<small>개</small></strong></div>
         </section>
-        {report && <div className="review-progress" role="status"><progress max={Math.max(total, 1)} value={completed} /><span>{({running: "검토 중", completed: "전체 검토 완료", stopped: "검토 중단", partial: "일부 검토 완료"})[report.status]} · {completed}/{total}{report.status !== "completed" && !data.agent?.running ? ` · 미검토 ${total - completed}개` : ""}</span></div>}
-        <details className="review-notice"><summary>검토 안내 및 사용량</summary><div className="review-usage">{[["요청 횟수", ledger.calls || 0, ledger.call_limit || callLimit, "회"], ["토큰 사용량", ledger.charged_tokens || 0, ledger.token_limit || tokenLimit, "토큰"]].map(([label, used, limit, unit]) => <div className="review-meter" key={label}><div><span>{label}</span><strong>{used.toLocaleString()}<small> / {limit.toLocaleString()}{unit}</small></strong></div><progress aria-label={label} value={Math.min(used, limit)} max={limit} /><small>{Math.max(0, limit - used).toLocaleString()}{unit} 남음</small></div>)}</div><div className="review-usage-footer"><span className="review-usage-caption">현재 검사 기준 · 토큰은 사용 한도에서 차감된 양입니다.<ReviewHelp /></span><button className="review-text-action" onClick={onOpenSettings}>AI 설정</button></div></details>
+        {report && <div className="review-progress" role="status"><progress max={Math.max(total, 1)} value={completed} /><span>{({running: "검토 중", completed: "전체 검토 완료", stopped: "검토 중단", partial: "일부 검토 완료"})[report.status]} / {completed}/{total}{report.status !== "completed" && !data.agent?.running ? ` / 미검토 ${total - completed}개` : ""}</span></div>}
+        <details className="review-notice"><summary>검토 안내 및 사용량</summary><div className="review-usage">{[["요청 횟수", ledger.calls || 0, ledger.call_limit || callLimit, "회"], ["토큰 사용량", ledger.charged_tokens || 0, ledger.token_limit || tokenLimit, "토큰"]].map(([label, used, limit, unit]) => <div className="review-meter" key={label}><div><span>{label}</span><strong>{used.toLocaleString()}<small> / {limit.toLocaleString()}{unit}</small></strong></div><progress aria-label={label} value={Math.min(used, limit)} max={limit} /><small>{Math.max(0, limit - used).toLocaleString()}{unit} 남음</small></div>)}</div><div className="review-usage-footer"><span className="review-usage-caption">현재 검사 기준 / 토큰은 사용 한도에서 차감된 양입니다.<ReviewHelp /></span><button className="review-text-action" onClick={onOpenSettings}>AI 설정</button></div></details>
         {!assessments.length && !data.agent?.running && <div className="review-empty"><FileText size={30} /><strong>전체 검토를 시작하면 리포트가 표시됩니다.</strong><span>영역별 검토 의견과 확인이 필요한 근거를 모아 볼 수 있습니다.</span></div>}
       {data.agent?.events?.length > 0 && <details open={Boolean(data.agent.running)}><summary>조사 과정</summary><ol>
-        {data.agent.events.slice(-20).map((event, index) => <li key={index}>{({model_request: "Groq 요청", tool_result: "근거 조회", site_explore: "같은 사이트 추가 탐색", browser_phase: "브라우저 확인", browser_request_blocked: "요청 차단", browser_warning: "수집 알림", exploration_incomplete: "추가 확인 미완료"})[event.action] || event.kind}{event.tool && ` · ${event.tool}`}{event.url && ` · ${event.url}`}{event.message && ` · ${event.message}`}{event.reason && ` · ${event.reason}`}</li>)}
+        {data.agent.events.slice(-20).map((event, index) => <li key={index}>{({model_request: "Groq 요청", tool_result: "근거 조회", site_explore: "같은 사이트 추가 탐색", browser_phase: "브라우저 확인", browser_request_blocked: "요청 차단", browser_warning: "수집 알림", exploration_incomplete: "추가 확인 미완료"})[event.action] || event.kind}{event.tool && ` / ${event.tool}`}{event.url && ` / ${event.url}`}{event.message && ` / ${event.message}`}{event.reason && ` / ${event.reason}`}</li>)}
       </ol></details>}
-      {data.agent?.explorations?.map((visit, index) => <details key={index}><summary>추가 탐색 {index + 1} · {visit.status}</summary><p>{visit.url}</p><p>수집 영역 {visit.packets.length}개 · 차단 요청 {visit.blocked_requests.length}개</p>
-        {visit.blocked_requests.map((item, i) => <p key={i}>{item.reason} · {item.target_url || item.url}</p>)}
+      {data.agent?.explorations?.map((visit, index) => <details key={index}><summary>추가 탐색 {index + 1} / {visit.status}</summary><p>{visit.url}</p><p>수집 영역 {visit.packets.length}개 / 차단 요청 {visit.blocked_requests.length}개</p>
+        {visit.blocked_requests.map((item, i) => <p key={i}>{item.reason} / {item.target_url || item.url}</p>)}
         <EvidenceScreenshot screenshot={Object.values(visit.screenshots || {})[0]} />
       </details>)}
-      {assessments.length > 0 && <div className="review-results-heading"><h3>검토 결과 <span>{assessments.length}</span></h3>{report && !busy && completed > 0 && <button className="review-text-action" onClick={downloadReport}><Download size={14} aria-hidden="true" />리포트 저장</button>}</div>}
+      {data.review_report && !busy && <div className="review-results-heading"><h3>검토 결과 <span>{assessments.length}</span></h3><button className="review-text-action" onClick={downloadReport}><Download size={14} aria-hidden="true" />리포트 저장</button></div>}
       {assessments.slice().reverse().map((item, index) => <article className="inspection-detail" key={index}>
         <strong>{{ ad_suspected: "광고 의심", benign_context: "정상 문맥 제안", uncertain: "보류" }[item.assessment]}</strong><p>{item.summary}</p>
-        {item.phishing_assessment && <p>피싱 분석: {{ suspected: "의심 신호", no_observed_signal: "관측 신호 없음", uncertain: "추가 확인" }[item.phishing_assessment]}{item.phishing_reasons?.length > 0 && ` · ${item.phishing_reasons.join(" · ")}`}</p>}
-        <p>{item.reads.map((read) => read.tool).join(" → ")} · {item.provider} / {item.model}</p>
+        {item.phishing_assessment && <p>피싱 분석: {{ suspected: "의심 신호", no_observed_signal: "관측 신호 없음", uncertain: "추가 확인" }[item.phishing_assessment]}{item.phishing_reasons?.length > 0 && ` / ${item.phishing_reasons.join(" / ")}`}</p>}
+        <p>{item.reads.map((read) => read.tool).join(" → ")} / {item.provider} / {item.model}</p>
         {item.missing_evidence.length > 0 && <p>미확인: {item.missing_evidence.join(", ")}</p>}
         {item.exploration_status && <p>추가 확인: {({completed: "완료", incomplete: "미완료", budget_exhausted: "예산 부족"})[item.exploration_status]}</p>}
       </article>)}

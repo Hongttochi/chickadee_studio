@@ -12,6 +12,7 @@ const assert=require('node:assert/strict'),http=require('node:http'),path=requir
  try{
   app=await require('./native-app.cjs').launch({executablePath:process.env.CHICKADEE_PACKAGED_EXE || require('electron'),args:process.env.CHICKADEE_PACKAGED_EXE ? [] : [path.join(root,'desktop')],env});
   const page=await app.firstWindow();page.setDefaultTimeout(20000);
+  await page.emulateMedia({reducedMotion:'reduce'});
   await page.getByRole('button',{name:'사용 가이드 닫기',exact:true}).click();
   await page.locator('.header-run-controls button.primary:not(:disabled)').waitFor();
   await page.locator('.react-flow__node[data-id="target"]').click();
@@ -27,7 +28,8 @@ const assert=require('node:assert/strict'),http=require('node:http'),path=requir
     const site=el.querySelector('.login-site').getBoundingClientRect();
     const panel=el.querySelector('.login-help-panel').getBoundingClientRect();
     const actions=el.querySelector('.login-actions').getBoundingClientRect();
-    return panel.top>=site.bottom && actions.top>=panel.bottom;
+    // Fractional compositor coordinates can differ by less than one pixel.
+    return panel.top+1>=site.bottom && actions.top+1>=panel.bottom;
   });
   assert.equal(layout,true);
   await page.screenshot({path:path.join(root,'artifacts/login-help.png')});

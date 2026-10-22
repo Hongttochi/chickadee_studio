@@ -1,0 +1,89 @@
+{
+  "text_comparison": {
+    "scope": "Fixed development split of Korean promotional bot comments versus normal comments; not independent 14-topic legal classification",
+    "test_examples": 118,
+    "training": {
+      "real": 440,
+      "synthetic": 49
+    },
+    "dataset_sha256": "346fa15148b90dfb13d1bc2351975bbe33007615cda2cbc059fb547954dc3ecb",
+    "split_sha256": "a41f7e8ab2bfd09bf58dad4f623c678c258908848f936bc067e7685ffab74b81",
+    "models": {
+      "rf": {
+        "n": 118,
+        "accuracy": 0.864406779661017,
+        "macro_f1": 0.861867134913667,
+        "positive_recall": 0.7288135593220338,
+        "false_positive_rate": 0.0
+      },
+      "rf_augmented": {
+        "n": 118,
+        "accuracy": 0.8728813559322034,
+        "macro_f1": 0.8707934885758084,
+        "positive_recall": 0.7457627118644068,
+        "false_positive_rate": 0.0
+      },
+      "bert_frozen": {
+        "n": 118,
+        "accuracy": 0.8813559322033898,
+        "macro_f1": 0.8804976851851851,
+        "positive_recall": 0.7966101694915254,
+        "false_positive_rate": 0.03389830508474576
+      },
+      "laya_native": {
+        "n": 118,
+        "accuracy": 0.4661016949152542,
+        "macro_f1": 0.45733265201839546,
+        "positive_recall": 0.5932203389830508,
+        "false_positive_rate": 0.6610169491525424
+      },
+      "laya_scorer_augmented": {
+        "n": 118,
+        "accuracy": 0.7627118644067796,
+        "macro_f1": 0.7624388840954845,
+        "positive_recall": 0.7288135593220338,
+        "false_positive_rate": 0.2033898305084746
+      },
+      "bert_full_augmented": {
+        "n": 118,
+        "accuracy": 0.8898305084745762,
+        "macro_f1": 0.8891858701148595,
+        "positive_recall": 0.8135593220338984,
+        "false_positive_rate": 0.03389830508474576
+      },
+      "laya_full_augmented": {
+        "n": 118,
+        "accuracy": 0.9576271186440678,
+        "macro_f1": 0.9575997125404241,
+        "positive_recall": 0.9322033898305084,
+        "false_positive_rate": 0.01694915254237288
+      }
+    }
+  },
+  "ocr_comparison": {
+    "scope": "43 fixed Latin-script regions from 16 images; zero Korean regions; single visual transcription reference",
+    "baseline": {
+      "regions": 43,
+      "source_images": 16,
+      "character_errors": 13,
+      "reference_characters": 1229,
+      "cer": 0.010577705451586655,
+      "exact_match": 0.7906976744186046,
+      "casefold_exact_match": 0.8372093023255814,
+      "normalization": "NFC and collapse whitespace; case and punctuation retained; CER may exceed 1",
+      "korean_regions": 0
+    },
+    "trained": {
+      "regions": 43,
+      "source_images": 16,
+      "character_errors": 36,
+      "reference_characters": 1229,
+      "cer": 0.029292107404393815,
+      "exact_match": 0.4418604651162791,
+      "casefold_exact_match": 0.5581395348837209,
+      "normalization": "NFC and collapse whitespace; case and punctuation retained; CER may exceed 1",
+      "korean_regions": 0
+    }
+  },
+  "app_model_changed": false
+}

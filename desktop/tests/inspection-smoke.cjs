@@ -116,6 +116,13 @@ const http = require("node:http");
     assert.equal(current.history.length, 2);
     const result = current.history[0].path;
     const raw = await fs.readFile(result);
+    // Invisible source text must not disable enlargement of its captured viewport.
+    await page.getByRole('button', { name: /^탐지 내역/ }).click();
+    await page.locator('tbody tr').first().click();
+    await page.getByRole('button', { name: '확대', exact: true }).click();
+    await page.getByRole('dialog', { name: '스크린샷 확대' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '검사 분석', exact: true }).click();
     await assert.rejects(fs.access(path.join(path.dirname(result), 'comparison.json')), { code: 'ENOENT' });
     assert.equal(await page.evaluate(() => typeof window.chickadee.compare), 'undefined');
     await page.getByRole('tab', { name: 'AI 검토', exact: true }).click();

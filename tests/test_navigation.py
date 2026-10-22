@@ -3,10 +3,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 import unittest
 
-from chickadee.scanner import ScanConfig, navigation_priority, scan
+from chickadee.scanner import ScanConfig, navigation_priority, readonly_navigation, scan
 
 
 class NavigationTests(unittest.TestCase):
+    def test_write_and_destructive_endpoints_are_not_followed(self):
+        for url in ('https://example.invalid/board/write.do', 'https://example.invalid/logout',
+                    'https://example.invalid/board?mode=delete', 'https://example.invalid/board?act=update'):
+            self.assertFalse(readonly_navigation(url))
+        self.assertTrue(readonly_navigation('https://example.invalid/board/view.do?board_idx=7'))
+
     @classmethod
     def setUpClass(cls):
         class Handler(BaseHTTPRequestHandler):

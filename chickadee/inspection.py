@@ -7,6 +7,10 @@ import json
 import math
 import re
 
+SCREENSHOT_MAX_COUNT = 64
+SCREENSHOT_MAX_BYTES = 8_000_000
+OCR_MAX_OBSERVATIONS = 250
+
 
 def fingerprint(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
@@ -203,7 +207,7 @@ def validate_local_ai(value):
 
 
 def validate_screenshots(screenshots):
-    if not isinstance(screenshots, dict) or len(screenshots) > 24:
+    if not isinstance(screenshots, dict) or len(screenshots) > SCREENSHOT_MAX_COUNT:
         raise ValueError('근거 화면 목록 형식 오류')
     size = 0
     for value in screenshots.values():
@@ -217,12 +221,12 @@ def validate_screenshots(screenshots):
         size += len(pixels)
         if len(pixels) > 200_000 or not pixels.startswith(b'\xff\xd8\xff') or hashlib.sha256(pixels).hexdigest() != value.get('sha256'):
             raise ValueError('근거 화면 크기·해시 오류')
-    if size > 3_000_000:
+    if size > SCREENSHOT_MAX_BYTES:
         raise ValueError('근거 화면 총 크기 초과')
 
 
 def validate_ocr_images(images):
-    if not isinstance(images, list) or len(images) > 50:
+    if not isinstance(images, list) or len(images) > OCR_MAX_OBSERVATIONS:
         raise ValueError('OCR 이미지 목록 형식 오류')
     ids, preview_size = set(), 0
     for item in images:

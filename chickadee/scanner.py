@@ -26,7 +26,7 @@ from .local_ai import enrich_report, visual_analysis, prepare_models
 from .laya_review import enrich_laya
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
-from .inspection import InspectionTrace, validate_inspection, validate_screenshots
+from .inspection import InspectionTrace, validate_inspection, validate_screenshots, SCREENSHOT_MAX_COUNT, SCREENSHOT_MAX_BYTES, OCR_MAX_OBSERVATIONS
 
 # Keep the frozen browser close to the engine to fit Windows ZIP path limits.
 # Source and older frozen builds keep Playwright's original directory layout.
@@ -72,6 +72,15 @@ def navigation_priority(url: str) -> int:
     if keys & {'q', 'query', 'keyword', 'searchword'} or 'search' in path:
         return 30
     return 20
+
+
+def readonly_navigation(url: str) -> bool:
+    parts = urlsplit(url)
+    if re.search(r'/(?:write|edit|modify|delete|remove|logout|signout)(?:[./]|$)', parts.path.casefold()):
+        return False
+    return not any(key.casefold() in {'action', 'act', 'mode', 'cmd'} and
+                   value.casefold() in {'write', 'edit', 'modify', 'delete', 'remove', 'insert', 'update', 'logout'}
+                   for key, value in parse_qsl(parts.query))
 
 
 def is_loopback(url: str) -> bool:
@@ -259,6 +268,7 @@ class _State:
     ocr_enabled: bool = True
     ocr_max_images: int = 50
     ocr_skipped: int = 0
+    ocr_limit_reported: bool = False
     merged_observations: int = 0
 
     image_origins: set = field(default_factory=set)
@@ -387,7 +397,7 @@ def _cross_source_match(records, incoming, details=None):
 def _ocr_summary(state, config):
     unreadable = sum(i.get('recognition_status') == 'unreadable' for i in state.ocr_images)
     failed = sum(i['status'] == 'failed' for i in state.ocr_images)
-    return {'engine': 'PaddleOCR', 'images': len(state.ocr_images),
+    return {'engine': 'PaddleOCR', 'images': len(state.ocr_images), 'unique_images': len(state.ocr_cache),
             'enabled': config.ocr_enabled, 'max_images': config.ocr_max_images, 'runtime_mode': config.runtime_mode,
             'completed': sum(i['status'] == 'completed' for i in state.ocr_images),
             'failed': failed, 'unreadable': unreadable, 'skipped': state.ocr_skipped,
@@ -670,6 +680,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         except ValueError:
                             continue
                         if origin(candidate) == site and urlsplit(candidate).path.startswith(profile.path_prefix) and candidate_key not in queued and candidate_key not in visited:
+                            if not readonly_navigation(candidate):
+                                continue
                             if Path(urlsplit(candidate).path).suffix.lower() in {".pdf", ".zip", ".exe", ".hwp", ".hwpx", ".docx", ".xlsx", ".png", ".jpg", ".mp4"}:
                                 continue
                             if len(queued) >= 20000:
@@ -772,7 +784,8 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
                   "message": "DOM·본문·계산된 CSS·링크를 수집합니다."})
             links.extend(await _inspect_frame(page.main_frame, "", {}, page.url, script, state, emit, rules,
                                               profile.content_selector, config.detect_techniques, config.detect_candidates, config.ocr_enabled, config.ocr_techniques, config.ocr_candidates))
-            if config.detect_candidates and page.url not in state.pages:
+            # Reserve the remaining bounded screenshot budget for actual hits.
+            if config.detect_candidates and page.url not in state.pages and len(state.screenshots) < 4:
                 await _evidence_screenshot(page, state, emit)
 
             if config.capture_previews:
@@ -1001,11 +1014,11 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         _record_skipped_images(images, prefix, page_url, state)
         return elements
     for index, image in enumerate(images):
-        if len(state.ocr_images) >= state.ocr_max_images or state.ocr_disabled:
+        if len(state.ocr_images) >= OCR_MAX_OBSERVATIONS or state.ocr_disabled:
             state.ocr_skipped += len(images) - index
 
             if not state.ocr_disabled:
-                state.errors.append({'url': page_url, 'message': f'OCR 이미지 {state.ocr_max_images}개 처리 한도 도달'})
+                state.errors.append({'url': page_url, 'message': 'OCR 이미지 관측 영역 기록 한도 도달'})
             break
         location = prefix + image['location']
         source = image['source_url']
@@ -1024,6 +1037,13 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
             digest = hashlib.sha256(data).hexdigest()
+            if digest not in state.ocr_cache and len(state.ocr_cache) >= state.ocr_max_images:
+                state.ocr_images.pop()
+                state.ocr_skipped += 1
+                if not state.ocr_limit_reported:
+                    state.errors.append({'url': page_url, 'message': f'OCR 서로 다른 이미지 {state.ocr_max_images}개 처리 한도 도달'})
+                    state.ocr_limit_reported = True
+                continue
             emit({'kind': 'phase', 'stage': 'ocr', 'action': 'image_ocr', 'url': page_url,
                   'message': 'PaddleOCR로 이미지 속 글자를 읽습니다.', 'location': location})
             if digest not in state.ocr_cache:
@@ -1067,12 +1087,12 @@ async def _evidence_screenshot(page, state, emit):
     key = state.trace.active
     if key in state.screenshots:
         return key
-    if not key or len(state.screenshots) >= 24 or state.screenshot_bytes >= 3_000_000:
+    if not key or len(state.screenshots) >= SCREENSHOT_MAX_COUNT or state.screenshot_bytes >= SCREENSHOT_MAX_BYTES:
         return None
     try:
         # Preserve the observed viewport: never scroll or unhide an element for evidence.
         pixels = await page.screenshot(type='jpeg', quality=55, timeout=1200)
-        if len(pixels) > 200_000 or state.screenshot_bytes + len(pixels) > 3_000_000:
+        if len(pixels) > 200_000 or state.screenshot_bytes + len(pixels) > SCREENSHOT_MAX_BYTES:
             return None
         state.screenshots[key] = {
             'data_url': 'data:image/jpeg;base64,' + base64.b64encode(pixels).decode('ascii'),

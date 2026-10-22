@@ -24,6 +24,8 @@ from .inspection import validate_inspection, validate_screenshots
 from .agent import EvidenceAgent, settings as agent_settings
 from .site_explorer import exploration_options, collect_page
 from .runtime import environment, probe_png, MODES
+from .async_runtime import event_loop_runner
+from .reporting import review_report
 from .image_ocr import OCRSession
 from .content_analysis import inputs as content_inputs, analyze_content
 
@@ -202,6 +204,7 @@ class DesktopBridge:
             self.run_environment = environment(self.runtime_mode)
             config = ScanConfig(params.get('url', ''), interactive_login=True, max_pages=params.get('max_pages', 100),
                                 timeout_sec=params.get('timeout_sec', 300), settle_ms=params.get('settle_ms', 350),
+                                page_timeout_sec=params.get('page_timeout_sec', 45),
                                 interval_sec=params.get('interval_sec', .5), allow_network=True,
                                 profile_path=profile_path, capture_previews=params.get('preview', True),
                                 ocr_enabled=flags.pop('ocr_enabled') and self.run_environment['features']['ocr_enabled'],
@@ -323,6 +326,13 @@ class DesktopBridge:
                 image['relative_path'] = relative
         data = {**self.agent_data, 'result_sha256': self.outcome.report['result_sha256']}
         atomic_write(Path(self.output_path).with_name('agent.json'), json.dumps(data, ensure_ascii=False).encode('utf-8'))
+        if self.agent_data.get('report', {}).get('status') != 'running':
+            self._save_review_report()
+
+    def _save_review_report(self):
+        contents = review_report(self.outcome.result, self.outcome.report, self.agent_data)
+        for extension, key in [('md', 'markdown'), ('html', 'html')]:
+            atomic_write(Path(self.output_path).with_name('review-report.' + extension), contents[key].encode('utf-8'))
 
     def _inspection_command(self, method, params):
         if method == 'agent-configure':
@@ -372,7 +382,8 @@ class DesktopBridge:
             return {'run_id': self.run_id, 'graph': {**graph, 'nodes': nodes, 'edges': edges}, 'packets': list(packets.values()),
                     'screenshots': screenshots, 'ocr_images': ocr_images, 'local_ai': report.get('local_ai'),
                     'ocr_summary': report.get('ocr_summary'),
-                    'agent': self._inspection_command('agent-status', {})}
+                    'agent': self._inspection_command('agent-status', {}),
+                    'review_report': review_report(self.outcome.result, report, self.agent_data) if self.outcome else None}
         if self.running or self.outcome is None:
             raise ValueError('검사 완료 후 실행하세요.')
         if method == 'agent-run':
@@ -383,7 +394,11 @@ class DesktopBridge:
                 packets = self.outcome.report.get('evidence_packets', [])
                 if not packets:
                     raise ValueError('검토할 수집 영역이 없습니다.')
-                packets = sorted(packets, key=lambda p: not any(s.get('review_priority') == 'high' for s in p.get('local_ai', {}).values()))
+                from .detection import analyze_element
+                packets = sorted(packets, key=lambda p: (
+                    not analyze_element(p).get('is_advertisement'),
+                    not any(s.get('review_priority') == 'high' for s in p.get('local_ai', {}).values()),
+                    bool(p.get('truncated')), len(p.get('text', '')) < 10))
                 config = self.agent_config or agent_settings({})
                 self.agent_stop = Event()
                 self.agent_data['report'] = {'total': len(packets), 'completed': 0, 'status': 'running', 'assessments': []}
@@ -405,7 +420,7 @@ class DesktopBridge:
         def progress(stage):
             self.emit({'kind': 'content_analysis', 'analysis_id': analysis_id, 'status': 'running', 'stage': stage})
         try:
-            with asyncio.Runner() as runner:
+            with event_loop_runner() as runner:
                 runner.get_loop()
                 result = runner.run(analyze_content(text, pixels, runtime, self.content_stop, progress))
             self.content_data = {'analysis_id': analysis_id, 'status': result['status'], 'result': result}
@@ -429,7 +444,7 @@ class DesktopBridge:
                 if not task.done(): task.cancel(); await asyncio.gather(task, return_exceptions=True)
                 await worker.close()
         try:
-            with asyncio.Runner() as runner:
+            with event_loop_runner() as runner:
                 runner.get_loop(); self.ocr_check = runner.run(probe())
         except asyncio.CancelledError: self.ocr_check = {'status': 'cancelled'}
         except Exception as error: self.ocr_check = {'status': 'failed', 'message': str(error)[:300]}
@@ -445,6 +460,8 @@ class DesktopBridge:
                 assessment = self._run_agent(config, packet, batch=True)
                 if assessment is None:
                     report['status'] = 'partial'
+                    events = self.agent_data.get('events', [])
+                    report['stop_reason'] = next((e['message'] for e in reversed(events) if e.get('kind') == 'agent_failed'), '검토 중단 또는 사용 한도 도달')
                     break
                 report['assessments'].append(assessment)
                 report['completed'] += 1
@@ -546,7 +563,7 @@ class DesktopBridge:
             observe({'kind': 'started', 'url': config.entry_url, 'folder': str(folder)})
             # Initialize the event loop before constructing the coroutine so an
             # OS startup failure does not leak an unawaited scan coroutine.
-            with asyncio.Runner() as runner:
+            with event_loop_runner() as runner:
                 runner.get_loop()
                 self.outcome = runner.run(scan(config, self.stop, observe, self.control))
             observe({'kind': 'phase', 'stage': 'report', 'action': 'save', 'message': 'JSON·CSV·탐색 보고서와 실행 기록을 저장합니다.'})
@@ -556,6 +573,7 @@ class DesktopBridge:
             self.outcome.report['desktop_options'] = {'demo': demo, 'preview': config.capture_previews}
             path = self.outcome.save(folder)
             self.output_path = str(path)
+            self._save_review_report()
             self.reviews = ReviewStore(path, self.outcome)
             entry = {'id': folder.name, 'url': config.entry_url, 'status': self.outcome.report['status'],
                      'findings': len(self.outcome.result['findings']), 'candidates': self.outcome.report['candidate_count'],

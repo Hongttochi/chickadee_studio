@@ -8,16 +8,37 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import AsyncMock, patch
 
 from chickadee.image_ocr import OCRSession, fetch_image, inline_image
+from chickadee.async_runtime import event_loop_runner
 from chickadee.inspection import validate_ocr_images
-from chickadee.scanner import ScanConfig, ScanOutcome, _State, _fetch_image_bounded, origin, scan
+from chickadee.scanner import ScanConfig, ScanOutcome, _State, _fetch_image_bounded, _inspect_images, origin, scan
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / 'tests/fixtures/ocr'
 
 
 class ImageOCRTests(unittest.TestCase):
+    def test_repeated_logos_do_not_consume_unique_image_budget(self):
+        async def scenario():
+            state = _State(); state.ocr_max_images = 2
+            sample = deepcopy(next(i for i in self.outcome.report['ocr_images'] if i['status'] == 'completed' and i.get('text')))
+            sample['preview_data_url'] = 'data:image/png;base64,AA=='
+            state.ocr = AsyncMock()
+            state.ocr.recognize.return_value = sample
+            inline = 'data:image/png;base64,' + base64.b64encode(self.ad).decode()
+            images = [{'location': f'img#logo{i}', 'source_url': inline, 'source_type': 'img'} for i in range(5)]
+            second = 'data:image/png;base64,' + base64.b64encode((FIXTURES/'benign.png').read_bytes()).decode()
+            images += [{'location': 'img#new', 'source_url': second, 'source_type': 'img'}]
+            await _inspect_images(None, images, '', self.url, state, lambda _: None, None)
+            self.assertEqual(state.ocr.recognize.await_count, 2)
+            self.assertEqual(len(state.ocr_cache), 2)
+            self.assertEqual(len(state.ocr_images), 6)
+            self.assertEqual(state.ocr_skipped, 0)
+        with event_loop_runner() as runner:
+            runner.run(scenario())
+
     @classmethod
     def setUpClass(cls):
         cls.external_requests = []

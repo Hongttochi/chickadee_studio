@@ -60,12 +60,10 @@ try {
         if ($taskInstalledVersion -ne $taskRuntime.version -or $taskVendorHash -ne $taskRuntime.executable_sha256) {
             throw 'The installed Electron runtime differs from the pinned official release.'
         }
-        # Keep electron-builder's embedded ASAR integrity resource. Only its
-        # verified output for this app version may receive the character icon.
-        $taskAsarHash = (Get-FileHash -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/resources/app.asar" -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($taskRuntime.app_version -ne $taskVersion -or $taskAsarHash -ne $taskRuntime.app_asar_sha256 -or $taskAppHash -ne $taskRuntime.builder_executable_sha256) {
-            throw 'The packaged app differs from the pinned ASAR-integrity build. Verify and update vendor-runtime.json for this version.'
-        }
+        $taskApp = Join-Path $taskRoot "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe"
+        $taskProofJson = & node (Join-Path $PSScriptRoot 'verify-windows-runtime.cjs') $taskVendorExe $taskApp
+        if ($LASTEXITCODE -ne 0) { throw 'Upstream runtime and ASAR integrity verification failed.' }
+        $taskProof = $taskProofJson | ConvertFrom-Json
         $taskIcon = Join-Path $taskRoot 'desktop/assets/app.ico'
         $taskEditor = Join-Path $taskRoot "desktop/node_modules/$($taskRuntime.icon_editor)"
         if ((Get-FileHash -LiteralPath $taskIcon -Algorithm SHA256).Hash.ToLowerInvariant() -ne $taskRuntime.icon_sha256 -or
@@ -81,7 +79,10 @@ try {
             if ($taskAppInfo.$taskField -cne $taskVendorInfo.$taskField) { throw "Upstream runtime metadata changed: $taskField" }
         }
         $taskAppHash = (Get-FileHash -LiteralPath $taskApp -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($taskAppHash -ne $taskRuntime.packaged_executable_sha256) { throw 'The executable differs from the verified icon-only runtime.' }
+        @{ app_version=$taskVersion; electron_version=$taskRuntime.version; vendor_sha256=$taskVendorHash;
+           icon_sha256=$taskRuntime.icon_sha256; icon_editor_sha256=$taskRuntime.icon_editor_sha256;
+           asar_header_sha256=$taskProof.asar_header_sha256; app_asar_sha256=$taskProof.app_asar_sha256;
+           packaged_executable_sha256=$taskAppHash } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path (Split-Path $taskApp) 'resources/runtime-provenance.json') -Encoding utf8
         Write-Output "Chickadee icon applied; upstream runtime metadata retained: $taskAppHash"
     }
     & (Join-Path $PSScriptRoot 'verify-windows-signatures.ps1') -AppDirectory "artifacts/electron-$taskVersion/win-unpacked" -AllNative:$RequireSigned -RequireTrusted:$RequireSigned

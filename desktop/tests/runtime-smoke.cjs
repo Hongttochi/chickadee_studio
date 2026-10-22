@@ -17,7 +17,7 @@ const http = require('node:http');
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   try {
-    app = await launch({ env: { ...process.env, CHICKADEE_TEST_DATA: data }, ...(packaged ? { executablePath: process.env.CHICKADEE_PACKAGED_EXE, args: [] } : {}) });
+    app = await launch({ env: { ...process.env, CHICKADEE_TEST_DATA: data }, ...(packaged ? { executablePath: process.env.CHICKADEE_PACKAGED_EXE, args: [], inspectMain: false } : {}) });
     const page = await app.firstWindow();
     page.setDefaultTimeout(20000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));

@@ -39,6 +39,21 @@ Use uncertain for short or truncated fragments, conflicting/insufficient evidenc
 Your final answer must be a JSON object matching the supplied schema, with a concise
 Korean summary referencing only evidence IDs actually returned by tools. No hidden reasoning.
 Do not invent observations. You cannot change scan findings or human reviews.'''
+SYSTEM += '''
+Review Korean public-site posts, comments and image text. Consider sexual content,
+gambling, drugs, illegal finance, fraud, medical services, medicines, adult entertainment,
+youth-harmful promotions, recruitment fraud, personal-data trading, illicit goods,
+misleading claims and illegal digital services as review topics, not automatic verdicts.
+Distinguish promotional intent (solicitation, contact, purchase, signup, rewards) from
+news, education, prevention notices and quotations. A keyword or unusual font alone is
+insufficient. OCR mistakes must not be silently corrected into incriminating words.
+Write the Korean summary in two or three short sentences: observed promotional context,
+the specific supporting phrase, then what remains unconfirmed. Do not use headings,
+middle-dot separators, generic disclaimers or unsupported numerical confidence.
+For phishing require observed impersonation, credential/payment collection or deceptive
+destination evidence; advertising and redirects alone do not establish phishing.
+List concrete missing observations and a useful next action. Never claim a page is safe
+because no signal was collected. Respect the supplied call and token budget.'''
 
 
 def redact(text):

@@ -92,9 +92,12 @@ def verify(value, directory):
             raise ValueError("ZIP is missing required app, engine, documentation or licenses")
         if tuple(map(int, value.split('.'))) >= (0, 10, 8):
             runtime = json.loads((ROOT / 'desktop/vendor-runtime.json').read_text(encoding='utf-8'))
-            if runtime['app_version'] != value:
-                raise ValueError('Runtime manifest differs from the app version')
-            verify_vendor_runtime(archive, prefix, runtime)
+            proof = json.loads(archive.read(prefix + 'resources/runtime-provenance.json').decode('utf-8-sig'))
+            if (proof['app_version'] != value or proof['electron_version'] != runtime['version'] or
+                any(proof[key] != runtime[source] for key, source in [('vendor_sha256', 'executable_sha256'),
+                    ('icon_sha256', 'icon_sha256'), ('icon_editor_sha256', 'icon_editor_sha256')])):
+                raise ValueError('Runtime provenance differs from the pinned build inputs')
+            verify_vendor_runtime(archive, prefix, proof)
         browser_names = ("/headless_shell.exe", "/chrome-headless-shell.exe")
         browser_root = (prefix + 'resources/engine/_internal/browsers/'
                         if tuple(map(int, value.split('.'))) >= (0, 10, 7) else None)
