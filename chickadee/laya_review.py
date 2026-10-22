@@ -10,6 +10,30 @@ ROOT = Path(__file__).resolve().parents[1]
 MAX_ITEMS = 12
 
 
+def configuration():
+    """Read only the user's explicit local-model configuration, never credentials."""
+    value = {}
+    config = os.environ.get('CHICKADEE_LAYA_CONFIG')
+    if config:
+        path = Path(config)
+        if not path.is_absolute():
+            raise ValueError('Laya 설정 파일 오류')
+        if path.exists():
+            if path.stat().st_size > 16_384:
+                raise ValueError('Laya 설정 파일 크기 오류')
+            value = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(value, dict) or value.get('format') != 1:
+                raise ValueError('Laya 설정 형식 오류')
+    folder = os.environ.get('CHICKADEE_LAYA_MODEL_DIR') or value.get('model_dir')
+    executable = os.environ.get('CHICKADEE_LAYA_PYTHON') or value.get('python')
+    if folder:
+        if not isinstance(folder, str): raise ValueError('Laya 모델 경로 오류')
+        folder = str(Path(folder).resolve())
+    if executable and (not isinstance(executable, str) or not Path(executable).is_absolute() or not Path(executable).is_file()):
+        raise ValueError('Laya 실행 환경 오류')
+    return folder, executable
+
+
 def unavailable(reason='model_not_validated'):
     messages = {'model_not_validated': '검증한 Laya 모델을 적용하지 않았습니다.',
         'insufficient_scope': '문맥 검토에 필요한 원문 범위가 부족합니다.',
@@ -33,22 +57,26 @@ class LayaSession:
             raise ValueError('Laya 입력 크기 오류')
         if not self.timeout_seconds:
             return [unavailable('time_budget') for _ in texts]
-        folder = os.environ.get('CHICKADEE_LAYA_MODEL_DIR')
+        try:
+            folder, executable = configuration()
+        except (OSError, ValueError, TypeError):
+            return [unavailable('runtime_unavailable') for _ in texts]
         if not folder:
             return [unavailable() for _ in texts]
         from .runtime import memory_info, GIB
         available = memory_info()['available_bytes']
-        if available is not None and available < 4 * GIB:
+        if available is not None and available < 3 * GIB:
             return [unavailable('insufficient_memory') for _ in texts]
-        executable = os.environ.get('CHICKADEE_LAYA_PYTHON')
         if executable:
             if not Path(executable).is_absolute() or not Path(executable).is_file():
                 return [unavailable('runtime_unavailable') for _ in texts]
-            args = [executable, '-m', 'chickadee.laya_worker']
+            # The external Python cannot import modules embedded in a frozen engine.
+            args = [executable, str(Path(__file__).with_name('laya_worker.py'))]
         else:
             args = [sys.executable, '--laya-worker'] if getattr(sys, 'frozen', False) else [sys.executable, '-m', 'chickadee.laya_worker']
         env = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'HF_HUB_OFFLINE': '1',
-               'TRANSFORMERS_OFFLINE': '1', 'TOKENIZERS_PARALLELISM': 'false', 'USE_TF': '0'}
+               'TRANSFORMERS_OFFLINE': '1', 'TOKENIZERS_PARALLELISM': 'false', 'USE_TF': '0',
+               'CHICKADEE_LAYA_MODEL_DIR': folder}
         try:
             self.process = await asyncio.create_subprocess_exec(*args, stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit=100_000,

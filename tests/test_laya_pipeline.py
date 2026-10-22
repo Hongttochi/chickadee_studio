@@ -4,6 +4,7 @@ from copy import deepcopy
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 from threading import Event
 import tempfile
@@ -31,6 +32,17 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ,{'CHICKADEE_LAYA_MODEL_DIR':folder}), patch('chickadee.runtime.memory_info',return_value={'available_bytes':8*1024**3}):
             result=await LayaSession().analyze(['이미지에서 읽은 글자'])
         self.assertEqual(result[0]['status'],'unavailable')
+
+    async def test_external_python_worker_loads_from_installed_configuration(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder=Path(temp)
+            config=folder/'laya.json'
+            config.write_text(json.dumps({'format':1,'model_dir':str(folder),'python':sys.executable}),encoding='utf-8')
+            with patch.dict(os.environ,{'CHICKADEE_LAYA_CONFIG':str(config)},clear=True), patch('chickadee.runtime.memory_info',return_value={'available_bytes':8*1024**3}):
+                result=await LayaSession().analyze(['설치한 로컬 실행 환경의 원문'])
+            self.assertEqual(len(result),1)
+            self.assertEqual(result[0]['reason'],'model_or_runtime_unavailable')
+            self.assertEqual(result[0]['paid_requests'],0)
 
     async def test_low_memory_does_not_load_large_model(self):
         with patch.dict(os.environ,{'CHICKADEE_LAYA_MODEL_DIR':'unused'}), patch('chickadee.runtime.memory_info',return_value={'available_bytes':1024**3}), patch('asyncio.create_subprocess_exec') as process:

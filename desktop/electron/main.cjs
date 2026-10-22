@@ -51,7 +51,14 @@ async function writePreferences(value, folder) {
   if (folder !== undefined) next.outputRoot = folder;
   if (!value || typeof value !== "object")
     throw new Error("설정 형식이 올바르지 않습니다.");
-  for (const key of ["url", "maxPages", "timeout", "profile", "livePreview", "scanInterval"]) {
+  for (const key of [
+    "url",
+    "maxPages",
+    "timeout",
+    "profile",
+    "livePreview",
+    "scanInterval",
+  ]) {
     if (!Object.hasOwn(value, key)) continue;
     const entry = value[key];
     const valid =
@@ -63,9 +70,9 @@ async function writePreferences(value, folder) {
             ? Number.isFinite(entry) && entry > 0 && entry <= 1800
             : key === "scanInterval"
               ? Number.isFinite(entry) && entry >= 0 && entry <= 30
-            : key === "profile"
-              ? ["default", "test", "public"].includes(entry)
-              : typeof entry === "boolean";
+              : key === "profile"
+                ? ["default", "test", "public"].includes(entry)
+                : typeof entry === "boolean";
     if (!valid) throw new Error("검사 설정 값이 올바르지 않습니다.");
     next[key] = entry;
   }
@@ -99,7 +106,8 @@ async function initialize() {
     if (restarting) return;
     const state = await backend.request("state");
     const agent = await backend.request("agent-status");
-    if (state.running || agent.running) throw new Error("진행 중인 검사·AI 검토를 중단한 뒤 재실행하세요.");
+    if (state.running || agent.running)
+      throw new Error("진행 중인 검사·AI 검토를 중단한 뒤 재실행하세요.");
     if (restarting) return;
     restarting = true;
     try {
@@ -112,13 +120,22 @@ async function initialize() {
     }
   });
   handler("open-external", async (value) => {
-    if (typeof value !== "string" || value.length > 8192) throw new Error("잘못된 주소입니다.");
+    if (typeof value !== "string" || value.length > 8192)
+      throw new Error("잘못된 주소입니다.");
     const url = new URL(value);
-    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("웹 주소만 열 수 있습니다.");
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password
+    )
+      throw new Error("웹 주소만 열 수 있습니다.");
     await shell.openExternal(url.href);
   });
-  notifications = new Notifications({ directory: app.getPath("userData"), safeStorage,
-    supported: () => Notification.isSupported(), focused: () => Boolean(window?.isFocused()),
+  notifications = new Notifications({
+    directory: app.getPath("userData"),
+    safeStorage,
+    supported: () => Notification.isSupported(),
+    focused: () => Boolean(window?.isFocused()),
     notify: createNotifier(Notification, () => window),
   });
   await notifications.load();
@@ -126,7 +143,12 @@ async function initialize() {
   handler("notification-save", (value) => notifications.save(value));
   handler("notification-test", () => notifications.testDesktop());
   handler("notification-system-settings", async () => {
-    const target = process.platform === "darwin" ? "x-apple.systempreferences:com.apple.Notifications-Settings.extension" : process.platform === "win32" ? "ms-settings:notifications" : null;
+    const target =
+      process.platform === "darwin"
+        ? "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+        : process.platform === "win32"
+          ? "ms-settings:notifications"
+          : null;
     if (!target) throw new Error("운영체제 설정에서 알림을 확인하세요.");
     await shell.openExternal(target);
   });
@@ -177,7 +199,9 @@ async function initialize() {
     ? path.join(
         process.resourcesPath,
         "engine",
-        process.platform === "win32" ? "ChickadeeEngine.exe" : "ChickadeeEngine",
+        process.platform === "win32"
+          ? "ChickadeeEngine.exe"
+          : "ChickadeeEngine",
       )
     : process.platform === "win32"
       ? path.join(root, ".venv", "Scripts", "python.exe")
@@ -186,7 +210,11 @@ async function initialize() {
     ? ["--data-dir", app.getPath("userData")]
     : ["-m", "chickadee.bridge", "--data-dir", app.getPath("userData")];
   if (!app.isPackaged && process.platform === "darwin") {
-    args = [process.arch === "arm64" ? "-arm64" : "-x86_64", executable, ...args];
+    args = [
+      process.arch === "arm64" ? "-arm64" : "-x86_64",
+      executable,
+      ...args,
+    ];
     executable = "/usr/bin/arch";
   }
   const notifyLogin = createNotifier(Notification, () => window);
@@ -195,17 +223,34 @@ async function initialize() {
     args,
     {
       cwd: app.isPackaged ? process.resourcesPath : root,
-      env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+      env: {
+        ...process.env,
+        PYTHONIOENCODING: "utf-8",
+        CHICKADEE_LAYA_CONFIG:
+          process.env.CHICKADEE_LAYA_CONFIG ||
+          path.join(app.getPath("userData"), "laya.json"),
+      },
     },
     (event) => {
       if (event.kind === "login_required" && Notification.isSupported()) {
-        notifyLogin("Chickadee · 로그인 필요", "검사를 일시 중지했습니다. 앱에서 로그인 창을 열어 주세요.", false).catch(() => {});
+        notifyLogin(
+          "Chickadee · 로그인 필요",
+          "검사를 일시 중지했습니다. 앱에서 로그인 창을 열어 주세요.",
+          false,
+        ).catch(() => {});
       }
-      if (["done", "login_finished"].includes(event.kind)) loginWindow?.close(event.request_id).catch(() => {});
+      if (["done", "login_finished"].includes(event.kind))
+        loginWindow?.close(event.request_id).catch(() => {});
       if (event.kind === "started") activeNotificationRun = event.run_id;
       if (event.kind === "done") currentPath = event.path;
-      if (event.kind === "done" || (event.kind === "error" && activeNotificationRun)) {
-        const reportEvent = event.kind === "done" ? event : { run_id: activeNotificationRun, report: { status: "failed" } };
+      if (
+        event.kind === "done" ||
+        (event.kind === "error" && activeNotificationRun)
+      ) {
+        const reportEvent =
+          event.kind === "done"
+            ? event
+            : { run_id: activeNotificationRun, report: { status: "failed" } };
         activeNotificationRun = null;
         notifications.completed(reportEvent).catch(() => {});
       }
@@ -213,11 +258,20 @@ async function initialize() {
         window.webContents.send("desktop:event", event);
     },
   );
-  loginWindow = new LoginWindow({ BrowserWindow, session, backend, owner: () => window });
-  handler("login-open", requestId => loginWindow.open(requestId));
-  handler("login-complete", requestId => loginWindow.complete(requestId));
-  handler("login-skip", requestId => loginWindow.complete(requestId, true));
-  const updates = new Updates({ current: require("../package.json").version, directory: path.join(app.getPath("userData"), "updates"), reveal: file => shell.showItemInFolder(file) });
+  loginWindow = new LoginWindow({
+    BrowserWindow,
+    session,
+    backend,
+    owner: () => window,
+  });
+  handler("login-open", (requestId) => loginWindow.open(requestId));
+  handler("login-complete", (requestId) => loginWindow.complete(requestId));
+  handler("login-skip", (requestId) => loginWindow.complete(requestId, true));
+  const updates = new Updates({
+    current: require("../package.json").version,
+    directory: path.join(app.getPath("userData"), "updates"),
+    reveal: (file) => shell.showItemInFolder(file),
+  });
   handler("update-state", () => updates.getState());
   handler("update-check", () => updates.check());
   handler("update-download", () => updates.download());
@@ -254,7 +308,14 @@ async function initialize() {
     currentPath = null;
     return backend.request("start", { ...clean, output_root: outputRoot });
   };
-  schedules = new Schedules({ directory: app.getPath("userData"), start: startScan, busy: async () => { const state = await backend.request("state"); return state.running || (await backend.request("agent-status")).running; } });
+  schedules = new Schedules({
+    directory: app.getPath("userData"),
+    start: startScan,
+    busy: async () => {
+      const state = await backend.request("state");
+      return state.running || (await backend.request("agent-status")).running;
+    },
+  });
   await schedules.load();
   handler("schedule-state", () => schedules.state());
   handler("schedule-save", (value) => schedules.save(value));
@@ -264,7 +325,16 @@ async function initialize() {
   handler("pause", () => backend.request("pause"));
   handler("resume", () => backend.request("resume"));
   handler("capabilities", () => backend.request("capabilities"));
-  for (const name of ["inspection", "agent-configure", "agent-run", "agent-stop", "runtime-info", "runtime-configure", "runtime-test", "content-analyze"]) {
+  for (const name of [
+    "inspection",
+    "agent-configure",
+    "agent-run",
+    "agent-stop",
+    "runtime-info",
+    "runtime-configure",
+    "runtime-test",
+    "content-analyze",
+  ]) {
     handler(name, (value) => backend.request(name, value || {}));
   }
   handler("preferences", (value) => savePreferences(value));
@@ -311,7 +381,8 @@ async function initialize() {
   });
   handler("export-report", async () => {
     const state = await backend.request("state");
-    if (state.running || !state.run_id) throw new Error("검사 완료 후 리포트를 저장하세요.");
+    if (state.running || !state.run_id)
+      throw new Error("검사 완료 후 리포트를 저장하세요.");
     const data = await backend.request("inspection", { run_id: state.run_id });
     if (!data.review_report?.html) throw new Error("저장할 리포트가 없습니다.");
     const selected = await dialog.showSaveDialog(window, {
@@ -394,13 +465,19 @@ async function initialize() {
   });
   await window.loadFile(page);
   try {
-    const { startupGroqConfig } = require('./groq-env.cjs');
+    const { startupGroqConfig } = require("./groq-env.cjs");
     const config = await startupGroqConfig(process.argv);
-    if (config) await backend.request('agent-configure', config);
+    if (config) await backend.request("agent-configure", config);
   } catch {
     // Invalid optional configuration must never block the core app window.
-    dialog.showMessageBox(window, {type:'warning', title:'Groq 설정 파일',
-      message:'지정한 파일의 GROQ_API_KEY를 확인하세요. 기본 OCR·ML 검사는 계속 사용할 수 있습니다.'}).catch(() => {});
+    dialog
+      .showMessageBox(window, {
+        type: "warning",
+        title: "Groq 설정 파일",
+        message:
+          "지정한 파일의 GROQ_API_KEY를 확인하세요. 기본 OCR·ML 검사는 계속 사용할 수 있습니다.",
+      })
+      .catch(() => {});
   }
   schedules.activate();
 }

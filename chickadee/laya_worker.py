@@ -66,8 +66,8 @@ class Reader:
         torch.set_num_threads(2)
         self.torch = torch
         self.agent = laya.load(str(folder/'base'), device='cpu')
-        self.agent.model.float()
-        self.agent.model.load_state_dict(load_file(str(folder/'best.safetensors')),strict=True)
+        # Assign the evaluated tensors directly rather than holding a second FP32 copy.
+        self.agent.model.load_state_dict(load_file(str(folder/'best.safetensors')),strict=True,assign=True)
         self.agent.model.eval()
 
     def analyze(self, text):
@@ -95,9 +95,9 @@ def main():
         reader=Reader(os.environ['CHICKADEE_LAYA_MODEL_DIR'])
         results=[reader.analyze(t) for t in texts]
     except Exception:
-        from .laya_review import unavailable
         count=len(texts) if 'texts' in locals() and isinstance(texts,list) and len(texts)<=12 else 0
-        results=[unavailable('model_or_runtime_unavailable') for _ in range(count)]
+        results=[{'status':'unavailable','model':'Laya','reason':'model_or_runtime_unavailable',
+                  'message':'Laya 모델 또는 실행 환경을 확인하세요.','paid_requests':0} for _ in range(count)]
     protocol.write(json.dumps({'results':results},ensure_ascii=True)+'\n')
 
 

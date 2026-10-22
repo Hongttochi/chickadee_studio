@@ -7,6 +7,7 @@ paddle_datas, paddle_binaries, paddle_hidden = collect_all('paddle')
 a = Analysis(
     [str(root / 'run_bridge.py')], pathex=[str(root)], binaries=paddle_binaries,
     datas=[(str(root / 'chickadee/extract.js'), 'chickadee'),
+           (str(root / 'chickadee/laya_worker.py'), 'chickadee'),
            (str(root / 'chickadee/rules.json'), 'chickadee'),
            (str(root / 'chickadee/data'), 'chickadee/data'),
            (str(root / 'schemas/result.schema.json'), 'schemas'),
