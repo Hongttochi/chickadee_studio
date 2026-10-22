@@ -4,14 +4,14 @@
 
 | 파일 | 용도 |
 | --- | --- |
-| `result.json` | 기존 필수 4종 평가 형식. 원문은 변경하지 않음 |
+| `result.json` | 필수 4종 평가 형식. 정규화 전 원문 보존 |
 | `result_extra.json` | 추가 광고 문맥 검토 관측값. `ETC`·`extra_finding` 사용. 검토 후보의 불법성을 확정하지 않으므로 `is_violation:false` |
 | `scan-report.json` | 상태·오류·수집 범위·계산 CSS·광고 의심 후보·파일 해시 |
 | `result.csv` | 필수 탐지와 일반 광고 후보를 고정된 17개 칼럼으로 함께 검토 |
 
 데스크톱 앱은 `events.jsonl`과 `last-preview.jpg`·`last-preview.json`도 보관합니다. 보고서에는 노드 구성과 대기 URL·발견 출처가 추가됩니다. 필수 결과 스키마와 CSV 17개 칼럼은 유지합니다. [앱 출력·기록 안내](desktop.md#출력과-이력)를 참고하세요.
 
-0.6.0의 `review.json`은 검토 상태·메모를 별도로 저장합니다. 필수 탐지의 `is_violation`, 원문, 17칼럼 CSV를 검토 작업으로 바꾸지 않습니다. 보고서에는 `run_id`, `paused_sec`, `active_elapsed_sec`를 추가했고 진행 이벤트에는 실행 ID와 순번을 기록합니다.
+`review.json`은 검토 상태·메모를 별도로 저장합니다. 필수 탐지의 `is_violation`, 원문, 17칼럼 CSV를 검토 작업으로 바꾸지 않습니다. 보고서에는 `run_id`, `paused_sec`, `active_elapsed_sec`를, 진행 이벤트에는 실행 ID와 순번을 기록합니다.
 
 ## CSV 1.0 칼럼 순서
 

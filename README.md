@@ -4,143 +4,120 @@
 
 # Chickadee Studio
 
-**웹사이트의 수상한 문구를 찾고, 근거를 보고, 검토를 남기세요.**
-
-브라우저 수집 · 한국어 이미지 OCR · 탐지 근거 · AI 검토
+**공공 웹사이트의 위장·은닉 광고를 탐지하고, 원문과 위치를 근거로 검토하는 데스크톱 도구**
 
 [![Latest release](https://img.shields.io/github/v/release/orqan137/chickadee_studio?style=flat&color=526d82)](https://github.com/orqan137/chickadee_studio/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_studio/release.yml?branch=main&label=build&style=flat)](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-526d82?style=flat)](LICENSE)
 [![Windows](https://img.shields.io/badge/Windows-x64-526d82?style=flat)](docs/quickstart-windows.md)
-[![Electron](https://img.shields.io/badge/Electron-47848f?style=flat&logo=electron&logoColor=white)](desktop/package.json)
-[![Python](https://img.shields.io/badge/Python-3.12-47779e?style=flat&logo=python&logoColor=white)](requirements.txt)
 
-[**다운로드**](https://github.com/orqan137/chickadee_studio/releases/latest) · [사용 가이드](docs/desktop.md) · [버그 제보](https://github.com/orqan137/chickadee_studio/issues) · [기여하기](CONTRIBUTING.md)
-
-**한국어** · [English](README.en.md)
+[**Windows 다운로드**](https://github.com/orqan137/chickadee_studio/releases/latest) · [사용설명서](docs/quickstart-windows.md) · [결과 규격](docs/result-format.md) · [English](README.en.md)
 
 </div>
 
-![Chickadee Studio의 고정 검사 파이프라인](docs/assets/screenshots/workflow.png)
+![Chickadee Studio 검사 구성 화면](docs/assets/screenshots/workflow.png)
 
-<p align="center"><sub>실제 앱에서 내장 데모를 실행한 화면입니다. 스크린샷은 0.10.5 기준이며, 실사이트 탐지 정확도를 나타내는 자료는 아닙니다.</sub></p>
+## 주요 탐지 기능
 
-## Chickadee는 무엇인가요?
+「공공 웹사이트 불법광고 탐지 도구 개발 공모전」의 주요 탐지 유형 4종을 기준으로 광고 문구의 위장·은닉 여부를 확인합니다.
 
-Chickadee Studio는 공공 웹사이트와 게시판의 광고 의심 문구, 위장 문자, 숨겨진 텍스트를 점검하는 오픈소스 데스크톱 도구입니다. Chromium으로 페이지를 읽고 DOM·CSS·이미지 속 글자를 분석합니다. 발견한 항목은 원문, 위치, 스크린샷과 함께 사람이 검토할 수 있습니다.
-
-**기본 검사·PaddleOCR·로컬 AI는 외부 API 키 없이 실행됩니다.** 외부 AI 검토는 별도 설정 후 사용자가 시작할 때 실행합니다. 탐지 결과는 검토를 돕는 단서이며 최종 판정은 직접 확인해야 합니다.
-
-## 시작하기
-
-1. [최신 Windows 릴리스](https://github.com/orqan137/chickadee_studio/releases/latest)에서 `Chickadee-Studio-<버전>-win-x64.zip`을 내려받습니다.
-2. **전체 압축을 풀고** `Chickadee.exe`를 실행합니다. 앱·Python 검사 엔진·Chromium·모델이 포함되어 있습니다.
-3. **검사 대상** 노드에서 주소를 입력하고 상단 **검사 실행**을 누릅니다.
-4. **탐지 내역**에서 항목을 선택해 근거를 확인하고 검토 상태를 저장합니다.
-
-처음에는 **검사 실행 옆 펼침 메뉴 → 데모 검사**로 둘러보세요. 인터넷 없이 사용할 수 있습니다.
-
-> 배포 파일은 **미서명 Windows x64 ZIP**입니다. 동봉된 파일과 폴더를 함께 유지하세요. macOS는 소스 실행을 지원하며, 별도 배포 파일은 제공하지 않습니다.
-
-[Windows 빠른 시작](docs/quickstart-windows.md) · [설정과 사용법](docs/desktop.md) · [릴리스 변경 사항](https://github.com/orqan137/chickadee_studio/releases)
-
-## 주요 기능
-
-| | 기능 |
-| --- | --- |
-| **브라우저 검사** | 같은 사이트의 링크·게시글을 탐색하고, DOM·계산된 CSS·스크롤로 나타난 내용을 수집합니다. |
-| **이미지 OCR** | PaddleOCR로 한국어 이미지 글자를 읽습니다. 판독 실패·생략은 탐지 없음과 구분합니다. |
-| **근거 중심 검토** | 원문·DOM 위치·이미지 근거·스크린샷을 확인하고, 검토 확인·제외·메모를 저장합니다. |
-| **로그인 이어가기** | 로그인 화면을 감지하면 대기합니다. 별도 창에서 로그인한 뒤 원래 페이지의 검사를 재개합니다. |
-| **검사 분석** | START부터 수집 경로를 살펴보고, 선택적으로 외부 AI 검토와 리포트 저장을 사용합니다. |
-| **작업 자동화** | 탐색 속도·예약 검사를 설정하고, 데스크톱 또는 Slack·Discord 웹훅으로 완료 알림을 받습니다. |
-| **결과 보관** | JSON·CSV와 검사 기록을 저장하고, 이전 결과를 다시 열어 검토를 이어갑니다. |
-
-## 화면 둘러보기
-
-### 탐지 내역과 근거
-
-![원문·스크린샷·검토 상태를 함께 확인하는 탐지 내역](desktop/assets/guide/review.png)
-
-목록에서 항목을 선택하면 오른쪽에 근거가 열립니다. 필수 탐지와 광고 의심을 구분하고, 원문을 확인한 뒤 검토 상태를 남깁니다.
-
-### 검사 분석
-
-![START부터 수집 경로를 확인하는 검사 분석](desktop/assets/guide/analysis.png)
-
-실제로 관측한 페이지와 수집 동작을 그래프로 확인합니다. 외부 AI 검토는 별도 탭에서 시작하며, 원본 탐지 결과와 사람의 검토 상태를 덮어쓰지 않습니다.
-
-<details>
-<summary><strong>검사 구성 · OCR · HTTP 통신 보기</strong></summary>
-
-**검사 대상 입력**
-
-![검사 대상 URL 입력](desktop/assets/guide/start.png)
-
-**이미지 OCR 설정**
-
-![PaddleOCR 노드 설정](desktop/assets/guide/ocr.png)
-
-**HTTP 통신 기록**
-
-![응답 상태와 요청 메서드를 구분한 HTTP 기록](docs/assets/screenshots/http.png)
-
-</details>
-
-<details>
-<summary><strong>설정 · 예약 · 알림 보기</strong></summary>
-
-**일반 설정**
-
-![탐색 범위와 실행 환경 설정](desktop/assets/guide/general.png)
-
-**예약 검사**
-
-![예약 검사 작성 화면](desktop/assets/guide/schedules.png)
-
-**완료 알림**
-
-![데스크톱과 Slack·Discord 알림 설정](desktop/assets/guide/notifications.png)
-
-**AI 연결**
-
-![외부 AI 연결 설정](desktop/assets/guide/ai.png)
-
-**업데이트**
-
-![현재 버전과 업데이트 확인](desktop/assets/guide/updates.png)
-
-**단축키**
-
-![앱 단축키 설정](docs/assets/screenshots/shortcuts.png)
-
-</details>
-
-<details>
-<summary><strong>검사 기록 · 탐색 경로 · AI 검토 보기</strong></summary>
-
-![저장된 검사 기록](desktop/assets/guide/history.png)
-
-![페이지 탐색 경로](docs/assets/screenshots/navigation.png)
-
-![AI 검토 시작 화면 — 외부 API 미실행 상태](docs/assets/screenshots/ai-review.png)
-
-</details>
-
-## 탐지 범위
-
-| 유형 | 코드 | 확인하는 내용 |
+| 유형 | 결과 코드 | 탐지 근거 |
 | --- | --- | --- |
-| 닮은꼴 글자 위장 | `HOMOGLYPH` | 전각·키릴·일부 그리스 문자·숫자 등의 혼합 표기 |
-| 자모 분해 | `JAMO` | 분리된 한글 자모와 태그 사이에 나뉜 문구 |
-| 투명 텍스트 | `TRANSPARENT` | 투명색·요소 및 조상 opacity·단색 배경과 같은 글자색 |
-| 화면 밖 은닉 | `OFFSCREEN` | 음수 좌표·작은 글자·잘린 영역·숨김 요소 |
+| 닮은꼴 글자 위장 | `HOMOGLYPH` | 키릴·전각 문자, 유사 문자·숫자 등을 섞은 표기 |
+| 자모 분해 | `JAMO` | 한글 음절을 분리한 자모, 태그 사이에 나뉜 문구 |
+| 투명 텍스트 | `TRANSPARENT` | `color:transparent`, 요소·조상의 투명도, 배경과 같은 글자색 |
+| 화면 밖 은닉 | `OFFSCREEN` | 음수 좌표, 0~1px 글자, 잘린 영역, `display:none` 등 |
 
-위장·은닉이 없는 도박·대출·투자·구매 유도는 **광고 의심 후보**로 별도 분류합니다. 차단·인증 필요·처리 한도·오류로 읽지 못한 내용은 정상 검사 완료와 구분합니다.
+Chromium으로 페이지를 렌더링해 원문·DOM·계산된 CSS·좌표를 확인합니다. 광고 문맥과 위장·은닉 근거를 함께 사용하며, 추가 광고 문맥은 필수 4종과 분리해 기록합니다.
 
-로그인은 쿠키 기반 인증을 지원합니다. 팝업·브라우저 저장소 기반 인증이나 비표준 로그인 주소는 자동 처리되지 않을 수 있습니다. 개인 Chrome 프로필은 사용하지 않으며, 로그인 쿠키는 이번 검사에서만 메모리로 유지합니다.
+## 바로 실행하기
 
-[탐색 범위와 제한](docs/performance.md) · [AI 검토와 전송 정보](docs/inspection-agent.md) · [결과 파일 형식](docs/result-format.md)
+1. [최신 릴리스](https://github.com/orqan137/chickadee_studio/releases/latest)의 `Chickadee-Studio-<버전>-win-x64.zip`을 받습니다.
+2. ZIP **전체를 새 폴더에 압축 해제**하고 `Chickadee.exe`를 실행합니다. 동봉된 `resources` 폴더를 함께 유지합니다.
+3. **검사 대상**에 진입 URL 하나를 입력하고 **검사 실행**을 누릅니다.
+4. **탐지 내역**에서 원문·위치·근거 이미지를 확인하고 검토 상태와 메모를 저장합니다.
+5. **결과 폴더**에서 `result.json`과 추가 결과·CSV를 확인합니다.
+
+Windows x64 실행본에는 Python 검사 엔진, Chromium, 한국어 OCR·로컬 ML 모델이 포함됩니다. Python·Node.js·Docker·GPU를 별도로 설치할 필요가 없습니다. **검사 실행 옆 펼침 메뉴 → 데모 검사**로 인터넷 없이 기능을 확인할 수 있습니다.
+
+## 모집요강 대응
+
+| 요구 항목 | 구현 내용 | 상세 안내 |
+| --- | --- | --- |
+| 진입 URL 1개 입력 | 같은 사이트의 하위 페이지·게시글·댓글 및 iframe 내부 요소 탐색 | [탐색 설정](docs/desktop.md) |
+| 주요 탐지 유형 4종 | 유형별 원문·URL·CSS 위치·판정 근거 기록 | [요구사항](docs/requirements.md) |
+| 결과 안내·관리 화면 | 탐지 목록, 근거 패널, 검토 상태·메모, 검색·필터, 검사 기록 | [화면 사용법](docs/desktop.md) |
+| 적격평가용 결과 | UTF-8(BOM 없음) `result.json`, `meta`·`findings` 구조 | [결과 규격](docs/result-format.md) |
+| 추가 유형 결과 | `result_extra.json`에 `ETC`·`extra_finding`으로 분리 | [추가 결과](docs/result-format.md) |
+| Windows 11·일반 PC | CPU·RAM 기반 로컬 검사와 한국어 OCR | [실행 안내](docs/quickstart-windows.md) |
+| 개발 산출물 | 소스코드, 빌드 절차, 사용설명서, 버전별 실행본 | [빌드](#소스에서-실행) · [릴리스](https://github.com/orqan137/chickadee_studio/releases) |
+| 외부 AI 설정 | Groq 서비스·모델·환경변수 명시, 외부 파일로 키 교체 | [AI 설정](docs/inspection-agent.md) |
+
+## 검사 흐름과 근거
+
+본문은 ML 문맥 분석으로 전달하고, **이미지가 있을 때만 PaddleOCR로 글자를 추출한 뒤 ML로 전달**합니다. 이미지가 없으면 OCR 단계에 `이미지 없음`을 표시합니다. 이미지 근거에서는 원본, 인식 문구, 글자 위치와 신뢰도를 함께 확인할 수 있습니다.
+
+![탐지 원문과 검토 기능](desktop/assets/guide/review.png)
+
+검사 중인 페이지의 미리보기와 진행 기록, 실제 방문 경로를 확인할 수 있습니다. 로그인 필요 시 별도 창에서 인증한 뒤 검사를 이어가며, 저장한 결과는 사이트를 다시 방문하지 않고 열 수 있습니다.
+
+![탐색 흐름과 검사 분석](desktop/assets/guide/analysis.png)
+
+## 결과 파일
+
+기본 저장 위치는 **`문서/Chickadee/results/<실행별 폴더>/`**입니다. 저장 위치를 바꾸면 해당 폴더 아래에 실행별로 생성됩니다. 실제 위치는 앱의 **결과 폴더**에서 확인합니다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `result.json` | 필수 4종 결과. 모든 페이지의 항목을 `findings` 배열 하나에 저장 |
+| `result_extra.json` | 추가 광고 문맥 관측값. 검토 후보의 불법성을 자동 확정하지 않음 |
+| `result.csv` | 필수 탐지·광고 의심 항목을 고정 17개 칼럼으로 내보내기 |
+| `scan-report.json` | 검사 상태, 수집 범위, 오류, OCR·문맥 분석과 근거 정보 |
+| `review.json` | 검토 상태와 메모 |
+
+`result.json`의 검출 단위는 `(url, location, technique)`입니다. 같은 요소에 기법이 둘이면 별도 항목으로 기록하고, 원문은 정규화 전 그대로 보존합니다. iframe 위치는 `iframe[src="절대주소"] >>> 내부 선택자` 형식으로 기록합니다. 결과가 없을 때도 `findings: []`를 생성합니다.
+
+<details>
+<summary><strong>result.json 구조 예시</strong></summary>
+
+```json
+{
+  "meta": {
+    "topic": "TOPIC",
+    "entry_url": "https://example.org/board",
+    "started_at": "2026-10-23T10:00:00+09:00",
+    "finished_at": "2026-10-23T10:00:12.500+09:00",
+    "elapsed_sec": 12.5
+  },
+  "findings": [
+    {
+      "id": "f_00001",
+      "url": "https://example.org/board/view?id=1",
+      "is_violation": true,
+      "location": "article.post > p:nth-of-type(1)",
+      "evidence_text": "ｃａｓｉｎｏ 가입 보너스 지급",
+      "technique": "HOMOGLYPH"
+    }
+  ]
+}
+```
+
+필드와 인코딩은 [JSON Schema](schemas/result.schema.json) 및 [결과 규격](docs/result-format.md)을 참고하세요. 파일별 생성 위치와 실행 방법은 [사용설명서 첫 장](docs/quickstart-windows.md)에 있습니다.
+
+</details>
+
+## 선택 AI 검토
+
+기본 검사·OCR·ML은 API 키 없이 로컬에서 동작합니다. 추가 근거 검토는 사용자가 Groq 키를 설정하고 실행할 때 사용합니다.
+
+| 설정 | 값 |
+| --- | --- |
+| 서비스 | Groq |
+| 기본 모델 | `openai/gpt-oss-20b` |
+| 외부 파일의 키 이름 | `GROQ_API_KEY` |
+| 기본 누적 한도 | 검사당 6회·24,000토큰 |
+
+앱 AI 설정에서 키를 입력하거나 `Chickadee.exe --groq-env-file "외부 설정 파일 경로"`로 읽습니다. 키 교체에 재빌드가 필요하지 않습니다. [설정 예시](.env.example) · [에이전트 설정·사용량](docs/inspection-agent.md)
 
 ## 소스에서 실행
 
@@ -188,35 +165,10 @@ npm start
 
 </details>
 
-## 기여하기
+## 문서
 
-버그 수정, 탐지 규칙 개선, 문서·번역, UI 개선에 참여할 수 있습니다.
-
-- [이슈](https://github.com/orqan137/chickadee_studio/issues)에 재현 절차와 기대 동작을 적어 주세요.
-- 변경 범위를 작게 유지하고, 관련 테스트 결과를 PR에 포함해 주세요.
-- 스크린샷을 바꿀 때는 실제 앱 화면을 사용하고 개인정보·API 키를 제외해 주세요.
-
-개발·테스트·화면 재촬영 방법은 [기여 가이드](CONTRIBUTING.md)를 참고하세요.
-
-## 문서와 구조
-
-| 사용자 | 개발자 |
-| --- | --- |
-| [Windows 빠른 시작](docs/quickstart-windows.md) | [기여 가이드](CONTRIBUTING.md) |
-| [데스크톱 사용 가이드](docs/desktop.md) | [아키텍처](docs/architecture.md) |
-| [검사 분석·AI 검토](docs/inspection-agent.md) | [테스트 안내](docs/validation.md) |
-| [결과 파일 형식](docs/result-format.md) | [외부 구성요소](docs/third-party-notices.md) |
-| [CLI·호환 UI 매뉴얼](docs/manual.md) | [연구 자료](research/README.md) |
-
-```text
-chickadee/       Python 검사 엔진 · OCR · 탐지 규칙
-desktop/        Electron 앱 · React UI · 데스크톱 테스트
-  tests/        실제 앱 검증 · 문서 화면 촬영
-scripts/        모델 준비 · 빌드 · 릴리스 검증
-tests/          Python 회귀 테스트 · 로컬 테스트 사이트
-docs/           사용법 · 설계 · 릴리스 노트
-```
+[사용설명서](docs/quickstart-windows.md) · [상세 기능](docs/desktop.md) · [모집요강 요구사항](docs/requirements.md) · [제출 체크리스트](docs/submission-checklist.md) · [아키텍처](docs/architecture.md) · [검증](docs/validation.md) · [기여 안내](CONTRIBUTING.md)
 
 ## 라이선스
 
-[Apache License 2.0](LICENSE). 외부 구성요소와 모델에는 각 라이선스가 적용됩니다. [3rd-party 고지](docs/third-party-notices.md)를 확인하세요.
+[Apache License 2.0](LICENSE). 외부 구성요소·모델의 라이선스와 고지는 [외부 구성요소 안내](docs/third-party-notices.md)에 정리되어 있습니다.

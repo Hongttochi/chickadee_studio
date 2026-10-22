@@ -24,7 +24,7 @@ PaddleOCR 공식 모델은 [PP-OCRv5 모바일 탐지](https://huggingface.co/Pa
 
 Playwright가 동봉하는 Node.js·브라우저 및 의존성의 라이선스·고지 파일도 배포본 내부에 유지해야 합니다. Electron 배포본의 `resources`, Chromium 라이선스 파일과 검사 프로그램의 `_internal`을 유지합니다. Pretendard 라이선스는 `desktop/licenses/Pretendard-OFL.txt`에 보관합니다. 이 목록은 최종 제출 시 필요한 전체 의존성·라이선스 검토를 대신하지 않습니다.
 
-원래 README 로고는 `desktop/assets/logo-original.png`에 보존했습니다. `app-mark.png`는 사용자 요청에 따라 해당 이미지를 참조해 GPT 이미지 도구로 생성한 새·돋보기 부분의 변형입니다. ICO는 같은 이미지의 Windows 아이콘 형식 변환본입니다.
+로고 원본은 `desktop/assets/logo-original.png`, 앱 아이콘은 새와 돋보기를 모티프로 한 `desktop/assets/app-mark.png`입니다. ICO는 앱 아이콘의 Windows 형식 변환본입니다.
 
 구현 참고: [Playwright 설치](https://playwright.dev/python/docs/library), [프레임 API](https://playwright.dev/python/docs/api/class-frame), [PyInstaller 연동](https://playwright.dev/python/docs/library#pyinstaller).
 

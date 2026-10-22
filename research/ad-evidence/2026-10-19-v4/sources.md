@@ -1,85 +1,82 @@
-# Sources
+# 사례 출처
 
-2026-10-19 수집. source_url은 관찰한 공개 원본이며 광고 목적지가 아니다. observed는 원본 응답/텍스트 직접 확인, reported는 기술 보고의 간접 사례다. 웹 텍스트는 캐시될 수 있어 수집시각의 실시간 상태를 보장하지 않는다.
-
-- A001 | observed | dom_verified | https://mse.hanyang.ac.kr/park/?go=%EB%B0%94%EC%B9%B4%EB%9D%BC-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EB%B0%B0%ED%8C%85 | 2026-10-19T03:13:48.015900+00:00
-- A002 | observed | dom_verified | https://peel.snu.ac.kr/2026/06/19/rooli-casino-fasttrack-fun-for-the-modern-mobile-g/ | 2026-10-19T03:15:13.104471+00:00
-- A003 | observed | dom_verified | https://dh.aks.ac.kr/Korea100/wiki/index.php/Title%3A_Casino_Safety_Site%3A_How_to_Play_Safely | 2026-10-19T03:15:40.143460+00:00
-- A004 | observed | dom_verified | https://ace.gachon.ac.kr/write/community/qna_view?page=774&uid=398 | 2026-10-19T03:20:16.301800+00:00
-- A005 | observed | dom_verified | https://arobot.co.kr/article/%EC%83%81%ED%92%88-qa/6/119316/ | 2026-10-19T03:48:26+00:00
-- A006 | observed | dom_verified | https://atc.cu.ac.kr/22/?bmode=view&idx=174906031&q=YToyOntzOjEyOiJrZXl3b3JkX3R5cGUiO3M6MzoiYWxsIjtzOjQ6InBhZ2UiO2k6Mjt9&t=board | 2026-10-19T03:49:03+00:00
-- A007 | observed | dom_verified | https://land.dongguk.ac.kr/HOME/seoncenter/sub.htm?mode=view&mv_data=aWR4PTU1JnN0YXJ0UGFnZT0xMCZsaXN0Tm89MTEmdGFibGU9ZXhfYmJzX2RhdGFfc2VvbmNlbnRlciZuYXZfY29kZT1zZW8xNzIzNTIxNzIyJmNvZGU9cmQ1dzA0eThxQVlkJnNlYXJjaF9pdGVtPSZzZWFyY2hfb3JkZXI9Jm9yZGVyX2xpc3Q9Jmxpc3Rfc2NhbGU9JnZpZXdfbGV2ZWw9JnZpZXdfY2F0ZT0mdmlld19jYXRlMj0%3D | 2026-10-19T03:49:35+00:00
-- R003 | reported | reported_only | https://blog.sucuri.net/2023/07/abandoned-us-congressional-website-used-in-asian-gambling-spam-infection.html | 2026-10-19T04:11:32+00:00
-- R004 | reported | reported_only | https://rafaelcosquiere.com/en/notes/hidden-casino-spam-wordpress/ | 2026-10-19T04:12:51+00:00
-- R005 | reported | reported_only | https://blog.sucuri.net/2019/06/korean-gambling-and-call-girl-spam-on-hacked-and-non-hacked-sites.html | 2026-10-19T04:15:42+00:00
-- A008 | observed | dom_verified | https://muangim.com/article/%EC%9E%90%EB%A3%8C%EC%8B%A4/7/707383/ | 2026-10-19T04:16:27+00:00
-- A009 | observed | dom_verified | https://gtksa.net/bbs/board.php?bo_table=hiring&wr_id=133866 | 2026-10-19T04:18:39+00:00
-- A010 | observed | dom_verified | https://unitstudy.co.kr/floting/?bmode=view&idx=167055475&q=YToxOntzOjEyOiJrZXl3b3JkX3R5cGUiO3M6MzoiYWxsIjt9&t=board | 2026-10-19T04:22:05+00:00
-- A011 | observed | dom_verified | https://m.noelfood.com/board/free/read.html?board_no=6&no=288 | 2026-10-19T04:24:42+00:00
-- R006 | reported | reported_only | https://stackoverflow.com/questions/76113689/hacked-wordpress-howto-get-rid-of-casino | 2026-10-19T04:26:11+00:00
-- A012 | observed | dom_verified | https://sastra.unigres.ac.id/page/beranda | 2026-10-19T04:32:10+00:00
-- A013 | observed | dom_verified | https://ojs.stkippgri-lubuklinggau.ac.id/SJPIF | 2026-10-19T04:35:32+00:00
-- A014 | observed | dom_verified | https://ejournal.undip.ac.id/index.php/izumi/article/view/69409 | 2026-10-19T04:38:48+00:00
-- A015 | observed | dom_verified | https://www.supercomputerbd.online/product/tp-link-tl-mr105-300-mbps-ethernet-single-band-wi-fi-router/ | 2026-10-19T04:41:31+00:00
-- R007 | reported | reported_only | https://securelist.ru/seo-spam-hidden-links/113819/ | 2026-10-19T04:42:49+00:00
-- A016 | observed | visible_only | https://ehc.co.kr/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/1448478/ | 2026-10-19T05:24:59+00:00
-- A017 | observed | visible_only | https://nongbu42.co.kr/article/%EA%B5%AC%EC%9E%85%ED%9B%84%EA%B8%B0/4/921263/ | 2026-10-19T05:25:19+00:00
-- A018 | observed | visible_only | https://wdressroom.co.kr/article/review/4/28705/ | 2026-10-19T05:25:30+00:00
-- A020 | observed | dom_verified | https://jurnalteknik.unkris.ac.id/index.php/sikris | 2026-10-19T05:28:23+00:00
-- A021 | observed | visible_only | https://nicepotr2073.godomall.com/board/view.php?bdId=goodsreview&sno=51 | 2026-10-19T05:28:55+00:00
-- A022 | observed | dom_verified | https://en.islandproject.co.kr/article/product-qa/6/67671/ | 2026-10-19T05:30:05+00:00
-- A023 | observed | visible_only | https://musemusic.co.kr/article/community/6/183/ | 2026-10-19T05:33:31+00:00
-- A024 | observed | visible_only | https://pjm.wiraraja.ac.id/solana-play-guide-bonuses-payments-mobile-experience-for-dutch-players/ | 2026-10-19T05:34:02+00:00
-- A025 | observed | visible_only | https://www.danjong.co.kr/danjong/communication/review?articleSeq=19558 | 2026-10-19T05:34:28+00:00
-- A026 | observed | visible_only | https://nonei.shop/article/%EC%83%81%ED%92%88-qa/6/3178/ | 2026-10-19T05:35:19+00:00
-- A027 | observed | visible_only | https://m.yewonpub.co.kr/article/%EC%83%81%ED%92%88-qa/6/378130/ | 2026-10-19T05:35:30+00:00
-- A028 | observed | visible_only | https://jinsansports.co.kr/article/%EC%83%81%ED%92%88-qa/6/252/ | 2026-10-19T05:35:49+00:00
-- A029 | observed | visible_only | https://annamaria.edu/forums/forum/other/page/326/ | 2026-10-19T05:36:18+00:00
-- A030 | observed | dom_verified | https://ds.ppu.edu/engage-chill-and-win-with-level-up-casino/ | 2026-10-19T05:37:47+00:00
-- A031 | observed | dom_verified | https://ejournal.bsi.ac.id/sw/index.php/cakrawala/article/view/11814/0 | 2026-10-19T05:38:36+00:00
-- A032 | observed | dom_verified | https://ds.ppu.edu/realz-casino-logowanie-jak-przejsc-weryfikacje-konta/ | 2026-10-19T05:41:16+00:00
-- A033 | observed | visible_only | https://ppid.ubt.ac.id/author/ppid/ | 2026-10-19T05:43:01+00:00
-- A034 | observed | visible_only | https://prism-korea.com/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/2859/ | 2026-10-19T05:43:35+00:00
-- A035 | observed | visible_only | https://roem.com/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/18828/ | 2026-10-19T05:43:46+00:00
-- A036 | observed | visible_only | https://gooddayskincare.co.kr/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/4663/ | 2026-10-19T05:44:09+00:00
-- A037 | observed | visible_only | https://theshoppro.cafe24.com/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/6019 | 2026-10-19T05:44:18+00:00
-- A038 | observed | visible_only | https://blogs.uml.edu/paris-summer-2026/2026/08/27/tuerkiyede-deneme-bonusu-veren-en-iyi-casino-siteleri-2026/ | 2026-10-19T05:44:57+00:00
-- A039 | observed | visible_only | https://www.dealbada.com/bbs/board.php?bo_table=comm_free&wr_id=2650162 | 2026-10-19T05:46:20+00:00
-- A040 | observed | visible_only | https://www.dealbada.com/bbs/board.php?bo_table=comm_free&wr_id=2650162 | 2026-10-19T05:46:20+00:00
-- A041 | observed | visible_only | https://inductionmall.co.kr/article/%EC%9E%90%EC%9C%A0%EA%B2%8C%EC%8B%9C%ED%8C%90/5/153/ | 2026-10-19T05:46:37+00:00
-- A042 | observed | visible_only | https://goodnewsinthemorning-online.com/article/qa/6/4891/ | 2026-10-19T05:47:37+00:00
-- A043 | observed | visible_only | https://ssu9th.cafe24.com/board/product/read.html?board_no=6&cate_no=335&no=64844 | 2026-10-19T05:47:55+00:00
-- A044 | observed | dom_verified | https://cloeemall.co.kr/article/%EC%9E%90%EC%9C%A0%EA%B2%8C%EC%8B%9C%ED%8C%90/5/4057/ | 2026-10-19T05:51:08+00:00
-- A045 | observed | visible_only | https://med.upc.edu/team5-2021/2026/06/30/wild-robin-casino-deposits-and-withdrawals/ | 2026-10-19T05:51:50+00:00
-- A046 | observed | visible_only | https://mizlinemedical.com/article/%EC%83%81%ED%92%88-qa/6/216828/ | 2026-10-19T05:52:18+00:00
-- A047 | observed | visible_only | https://bg79.co.kr/article/%EC%83%81%ED%92%88-qa/6/5914/ | 2026-10-19T05:52:27+00:00
-- A048 | observed | visible_only | https://foodyt.kr/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/59868/ | 2026-10-19T05:53:16+00:00
-- A049 | observed | dom_verified | https://casetou.com/board/product/read.html?board_no=4&no=18589&page=313 | 2026-10-19T05:53:49+00:00
-- A050 | observed | dom_verified | https://graphicer.co.kr/article/%EA%B0%9C%EC%9D%B8%EC%A0%9C%EC%9E%91%EB%AC%B8%EC%9D%98/101/5368/ | 2026-10-19T05:55:47+00:00
-- A051 | observed | visible_only | https://markapparel.co.kr/article/%EC%83%81%ED%92%88-qa/6/1574/page/5/ | 2026-10-19T05:57:08+00:00
-- N001 | observed | dom_verified | https://www.togetherschool.go.kr/playGround/policyNotification/detailView?pstId=66264 | 2026-10-19T03:13:04.618036+00:00
-- N002 | observed | dom_verified | https://www.togetherschool.go.kr/playGround/policyNotification/detailView?pstId=66264 | 2026-10-19T03:16:40.329051+00:00
-- N003 | observed | dom_verified | https://ebook.hscu.ac.kr/book/bookdetail.asp?book_num=03090537 | 2026-10-19T03:14:29.212248+00:00
-- N004 | observed | dom_verified | https://dong.paju.go.kr/dong/dong_01/dong_01_02/dong_01_02_09.jsp | 2026-10-19T03:14:55.534912+00:00
-- N005 | observed | dom_verified | https://www.cbe.go.kr/news/na/ntt/selectNttInfo.do?mi=10301&nttSn=1572425 | 2026-10-19T03:18:15.356910+00:00
-- N006 | observed | dom_verified | https://www.cbe.go.kr/news/na/ntt/selectNttInfo.do?mi=10301&nttSn=1572425 | 2026-10-19T03:18:15.356910+00:00
-- N007 | observed | dom_verified | https://ace.gachon.ac.kr/write/community/qna_view?page=774&uid=398 | 2026-10-19T03:20:56.953687+00:00
-- N008 | observed | dom_verified | https://hseng.hanseo.ac.kr/theme/s007/index/department_06_1.php | 2026-10-19T03:21:35.085327+00:00
-- N009 | observed | dom_verified | https://www.korean.go.kr/nkview/nklife/1988_4/15_3.html | 2026-10-19T03:23:24.860416+00:00
-- N010 | observed | dom_verified | https://lifestudy.yangcheon.go.kr/sugang/prgm/lctre/view.do?lctreNo=2726&menuNo=300001&pageIndex=1&pageUnit=10 | 2026-10-19T03:25:39.472687+00:00
-- N011 | observed | dom_verified | https://lifestudy.yangcheon.go.kr/sugang/prgm/lctre/view.do?lctreNo=2726&menuNo=300001&pageIndex=1&pageUnit=10 | 2026-10-19T03:25:20.188927+00:00
-- N012 | observed | visible_only | https://www.moe.go.kr/boardCnts/viewRenew.do?boardID=294&boardSeq=106074&lev=0&m=020402&opType=N&page=1&s=moe&searchType=null&statusYN=W | 2026-10-19T03:10:55+00:00
-- N013 | observed | visible_only | https://kids.nanet.go.kr/newBook.do?bkId=2919&pgMode=show | 2026-10-19T03:22:05+00:00
-- N014 | observed | visible_only | https://www.easylaw.go.kr/CSP/CnpClsMain.laf?ccfNo=2&cciNo=2&cnpClsNo=2&csmSeq=2858&popMenu=ov | 2026-10-19T03:24:35+00:00
-- N015 | observed | visible_only | https://www.bizinfo.go.kr/biz/biza/selectBIZA100Detail.do?crtfcSn=19 | 2026-10-19T03:26:50+00:00
-- N016 | observed | visible_only | https://sgunews.sogang.ac.kr/front/cmsboardview.do?bbsConfigFK=3611&pkid=885098&siteId=sgunews | 2026-10-19T03:43:35+00:00
-- N017 | observed | visible_only | https://encykorea.aks.ac.kr/Article/E0039235 | 2026-10-19T03:44:56+00:00
-- N018 | observed | visible_only | https://mediahub.seoul.go.kr/archives/2017907 | 2026-10-19T03:45:48+00:00
-- N019 | observed | visible_only | https://pure.seoultech.ac.kr/en/publications/design-of-casino-s2s-protocol-engine-player-info-case-study/ | 2026-10-19T03:46:07+00:00
-- N020 | observed | visible_only | https://www.mogef.go.kr/nw/enw/nw_enw_s001d.do?bbtSn=711951&mid=mda700 | 2026-10-19T03:46:42+00:00
-- N021 | observed | dom_verified | https://irriwa.com/product/detail.html?cate_no=24&display_group=1&product_no=386 | 2026-10-19T03:49:56+00:00
-- N022 | observed | visible_only | https://www.baccarat.com/ko_kr/homepage.html | 2026-10-19T04:26:47+00:00
-- N023 | observed | dom_verified | https://www.newsis.com/view/NISX20251117_0003405336 | 2026-10-19T04:31:34+00:00
-
-A019는 과거 429·보안 확인 중단 이력과 충돌하여 제외했다. ID는 재사용하지 않는다.
-
+| ID | 원본 공개 페이지 | 관측 구분 | 상태 |
+| --- | --- | --- | --- |
+| A001 | [출처](<https://mse.hanyang.ac.kr/park/?go=%EB%B0%94%EC%B9%B4%EB%9D%BC-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EB%B0%B0%ED%8C%85>) | observed | dom_verified |
+| A002 | [출처](<https://peel.snu.ac.kr/2026/06/19/rooli-casino-fasttrack-fun-for-the-modern-mobile-g/>) | observed | dom_verified |
+| A003 | [출처](<https://dh.aks.ac.kr/Korea100/wiki/index.php/Title%3A_Casino_Safety_Site%3A_How_to_Play_Safely>) | observed | dom_verified |
+| A004 | [출처](<https://ace.gachon.ac.kr/write/community/qna_view?page=774&uid=398>) | observed | dom_verified |
+| A005 | [출처](<https://arobot.co.kr/article/%EC%83%81%ED%92%88-qa/6/119316/>) | observed | dom_verified |
+| A006 | [출처](<https://atc.cu.ac.kr/22/?bmode=view&idx=174906031&q=YToyOntzOjEyOiJrZXl3b3JkX3R5cGUiO3M6MzoiYWxsIjtzOjQ6InBhZ2UiO2k6Mjt9&t=board>) | observed | dom_verified |
+| A007 | [출처](<https://land.dongguk.ac.kr/HOME/seoncenter/sub.htm?mode=view&mv_data=aWR4PTU1JnN0YXJ0UGFnZT0xMCZsaXN0Tm89MTEmdGFibGU9ZXhfYmJzX2RhdGFfc2VvbmNlbnRlciZuYXZfY29kZT1zZW8xNzIzNTIxNzIyJmNvZGU9cmQ1dzA0eThxQVlkJnNlYXJjaF9pdGVtPSZzZWFyY2hfb3JkZXI9Jm9yZGVyX2xpc3Q9Jmxpc3Rfc2NhbGU9JnZpZXdfbGV2ZWw9JnZpZXdfY2F0ZT0mdmlld19jYXRlMj0%3D>) | observed | dom_verified |
+| R003 | [출처](<https://blog.sucuri.net/2023/07/abandoned-us-congressional-website-used-in-asian-gambling-spam-infection.html>) | reported | reported_only |
+| R004 | [출처](<https://rafaelcosquiere.com/en/notes/hidden-casino-spam-wordpress/>) | reported | reported_only |
+| R005 | [출처](<https://blog.sucuri.net/2019/06/korean-gambling-and-call-girl-spam-on-hacked-and-non-hacked-sites.html>) | reported | reported_only |
+| A008 | [출처](<https://muangim.com/article/%EC%9E%90%EB%A3%8C%EC%8B%A4/7/707383/>) | observed | dom_verified |
+| A009 | [출처](<https://gtksa.net/bbs/board.php?bo_table=hiring&wr_id=133866>) | observed | dom_verified |
+| A010 | [출처](<https://unitstudy.co.kr/floting/?bmode=view&idx=167055475&q=YToxOntzOjEyOiJrZXl3b3JkX3R5cGUiO3M6MzoiYWxsIjt9&t=board>) | observed | dom_verified |
+| A011 | [출처](<https://m.noelfood.com/board/free/read.html?board_no=6&no=288>) | observed | dom_verified |
+| R006 | [출처](<https://stackoverflow.com/questions/76113689/hacked-wordpress-howto-get-rid-of-casino>) | reported | reported_only |
+| A012 | [출처](<https://sastra.unigres.ac.id/page/beranda>) | observed | dom_verified |
+| A013 | [출처](<https://ojs.stkippgri-lubuklinggau.ac.id/SJPIF>) | observed | dom_verified |
+| A014 | [출처](<https://ejournal.undip.ac.id/index.php/izumi/article/view/69409>) | observed | dom_verified |
+| A015 | [출처](<https://www.supercomputerbd.online/product/tp-link-tl-mr105-300-mbps-ethernet-single-band-wi-fi-router/>) | observed | dom_verified |
+| R007 | [출처](<https://securelist.ru/seo-spam-hidden-links/113819/>) | reported | reported_only |
+| A016 | [출처](<https://ehc.co.kr/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/1448478/>) | observed | visible_only |
+| A017 | [출처](<https://nongbu42.co.kr/article/%EA%B5%AC%EC%9E%85%ED%9B%84%EA%B8%B0/4/921263/>) | observed | visible_only |
+| A018 | [출처](<https://wdressroom.co.kr/article/review/4/28705/>) | observed | visible_only |
+| A020 | [출처](<https://jurnalteknik.unkris.ac.id/index.php/sikris>) | observed | dom_verified |
+| A021 | [출처](<https://nicepotr2073.godomall.com/board/view.php?bdId=goodsreview&sno=51>) | observed | visible_only |
+| A022 | [출처](<https://en.islandproject.co.kr/article/product-qa/6/67671/>) | observed | dom_verified |
+| A023 | [출처](<https://musemusic.co.kr/article/community/6/183/>) | observed | visible_only |
+| A024 | [출처](<https://pjm.wiraraja.ac.id/solana-play-guide-bonuses-payments-mobile-experience-for-dutch-players/>) | observed | visible_only |
+| A025 | [출처](<https://www.danjong.co.kr/danjong/communication/review?articleSeq=19558>) | observed | visible_only |
+| A026 | [출처](<https://nonei.shop/article/%EC%83%81%ED%92%88-qa/6/3178/>) | observed | visible_only |
+| A027 | [출처](<https://m.yewonpub.co.kr/article/%EC%83%81%ED%92%88-qa/6/378130/>) | observed | visible_only |
+| A028 | [출처](<https://jinsansports.co.kr/article/%EC%83%81%ED%92%88-qa/6/252/>) | observed | visible_only |
+| A029 | [출처](<https://annamaria.edu/forums/forum/other/page/326/>) | observed | visible_only |
+| A030 | [출처](<https://ds.ppu.edu/engage-chill-and-win-with-level-up-casino/>) | observed | dom_verified |
+| A031 | [출처](<https://ejournal.bsi.ac.id/sw/index.php/cakrawala/article/view/11814/0>) | observed | dom_verified |
+| A032 | [출처](<https://ds.ppu.edu/realz-casino-logowanie-jak-przejsc-weryfikacje-konta/>) | observed | dom_verified |
+| A033 | [출처](<https://ppid.ubt.ac.id/author/ppid/>) | observed | visible_only |
+| A034 | [출처](<https://prism-korea.com/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/2859/>) | observed | visible_only |
+| A035 | [출처](<https://roem.com/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/18828/>) | observed | visible_only |
+| A036 | [출처](<https://gooddayskincare.co.kr/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/4663/>) | observed | visible_only |
+| A037 | [출처](<https://theshoppro.cafe24.com/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/6019>) | observed | visible_only |
+| A038 | [출처](<https://blogs.uml.edu/paris-summer-2026/2026/08/27/tuerkiyede-deneme-bonusu-veren-en-iyi-casino-siteleri-2026/>) | observed | visible_only |
+| A039 | [출처](<https://www.dealbada.com/bbs/board.php?bo_table=comm_free&wr_id=2650162>) | observed | visible_only |
+| A040 | [출처](<https://www.dealbada.com/bbs/board.php?bo_table=comm_free&wr_id=2650162>) | observed | visible_only |
+| A041 | [출처](<https://inductionmall.co.kr/article/%EC%9E%90%EC%9C%A0%EA%B2%8C%EC%8B%9C%ED%8C%90/5/153/>) | observed | visible_only |
+| A042 | [출처](<https://goodnewsinthemorning-online.com/article/qa/6/4891/>) | observed | visible_only |
+| A043 | [출처](<https://ssu9th.cafe24.com/board/product/read.html?board_no=6&cate_no=335&no=64844>) | observed | visible_only |
+| A044 | [출처](<https://cloeemall.co.kr/article/%EC%9E%90%EC%9C%A0%EA%B2%8C%EC%8B%9C%ED%8C%90/5/4057/>) | observed | dom_verified |
+| A045 | [출처](<https://med.upc.edu/team5-2021/2026/06/30/wild-robin-casino-deposits-and-withdrawals/>) | observed | visible_only |
+| A046 | [출처](<https://mizlinemedical.com/article/%EC%83%81%ED%92%88-qa/6/216828/>) | observed | visible_only |
+| A047 | [출처](<https://bg79.co.kr/article/%EC%83%81%ED%92%88-qa/6/5914/>) | observed | visible_only |
+| A048 | [출처](<https://foodyt.kr/article/%EC%83%81%ED%92%88-%EC%82%AC%EC%9A%A9%ED%9B%84%EA%B8%B0/4/59868/>) | observed | visible_only |
+| A049 | [출처](<https://casetou.com/board/product/read.html?board_no=4&no=18589&page=313>) | observed | dom_verified |
+| A050 | [출처](<https://graphicer.co.kr/article/%EA%B0%9C%EC%9D%B8%EC%A0%9C%EC%9E%91%EB%AC%B8%EC%9D%98/101/5368/>) | observed | dom_verified |
+| A051 | [출처](<https://markapparel.co.kr/article/%EC%83%81%ED%92%88-qa/6/1574/page/5/>) | observed | visible_only |
+| N001 | [출처](<https://www.togetherschool.go.kr/playGround/policyNotification/detailView?pstId=66264>) | observed | dom_verified |
+| N002 | [출처](<https://www.togetherschool.go.kr/playGround/policyNotification/detailView?pstId=66264>) | observed | dom_verified |
+| N003 | [출처](<https://ebook.hscu.ac.kr/book/bookdetail.asp?book_num=03090537>) | observed | dom_verified |
+| N004 | [출처](<https://dong.paju.go.kr/dong/dong_01/dong_01_02/dong_01_02_09.jsp>) | observed | dom_verified |
+| N005 | [출처](<https://www.cbe.go.kr/news/na/ntt/selectNttInfo.do?mi=10301&nttSn=1572425>) | observed | dom_verified |
+| N006 | [출처](<https://www.cbe.go.kr/news/na/ntt/selectNttInfo.do?mi=10301&nttSn=1572425>) | observed | dom_verified |
+| N007 | [출처](<https://ace.gachon.ac.kr/write/community/qna_view?page=774&uid=398>) | observed | dom_verified |
+| N008 | [출처](<https://hseng.hanseo.ac.kr/theme/s007/index/department_06_1.php>) | observed | dom_verified |
+| N009 | [출처](<https://www.korean.go.kr/nkview/nklife/1988_4/15_3.html>) | observed | dom_verified |
+| N010 | [출처](<https://lifestudy.yangcheon.go.kr/sugang/prgm/lctre/view.do?lctreNo=2726&menuNo=300001&pageIndex=1&pageUnit=10>) | observed | dom_verified |
+| N011 | [출처](<https://lifestudy.yangcheon.go.kr/sugang/prgm/lctre/view.do?lctreNo=2726&menuNo=300001&pageIndex=1&pageUnit=10>) | observed | dom_verified |
+| N012 | [출처](<https://www.moe.go.kr/boardCnts/viewRenew.do?boardID=294&boardSeq=106074&lev=0&m=020402&opType=N&page=1&s=moe&searchType=null&statusYN=W>) | observed | visible_only |
+| N013 | [출처](<https://kids.nanet.go.kr/newBook.do?bkId=2919&pgMode=show>) | observed | visible_only |
+| N014 | [출처](<https://www.easylaw.go.kr/CSP/CnpClsMain.laf?ccfNo=2&cciNo=2&cnpClsNo=2&csmSeq=2858&popMenu=ov>) | observed | visible_only |
+| N015 | [출처](<https://www.bizinfo.go.kr/biz/biza/selectBIZA100Detail.do?crtfcSn=19>) | observed | visible_only |
+| N016 | [출처](<https://sgunews.sogang.ac.kr/front/cmsboardview.do?bbsConfigFK=3611&pkid=885098&siteId=sgunews>) | observed | visible_only |
+| N017 | [출처](<https://encykorea.aks.ac.kr/Article/E0039235>) | observed | visible_only |
+| N018 | [출처](<https://mediahub.seoul.go.kr/archives/2017907>) | observed | visible_only |
+| N019 | [출처](<https://pure.seoultech.ac.kr/en/publications/design-of-casino-s2s-protocol-engine-player-info-case-study/>) | observed | visible_only |
+| N020 | [출처](<https://www.mogef.go.kr/nw/enw/nw_enw_s001d.do?bbtSn=711951&mid=mda700>) | observed | visible_only |
+| N021 | [출처](<https://irriwa.com/product/detail.html?cate_no=24&display_group=1&product_no=386>) | observed | dom_verified |
+| N022 | [출처](<https://www.baccarat.com/ko_kr/homepage.html>) | observed | visible_only |
+| N023 | [출처](<https://www.newsis.com/view/NISX20251117_0003405336>) | observed | dom_verified |

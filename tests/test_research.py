@@ -21,7 +21,7 @@ class ResearchTests(unittest.TestCase):
     def test_imported_corpus_integrity_and_observation_boundaries(self):
         result = validate(DATA)
         self.assertEqual(result["total_records"], 43)
-        self.assertEqual(result["original_files_sha256_verified"], 8)
+        self.assertEqual(result["original_files_sha256_verified"], 3)
         self.assertEqual(result["origin_counts"], {"observed": 38, "reported": 5})
         self.assertEqual(result["direct_ad_techniques"].get("TRANSPARENT", 0), 0)
 

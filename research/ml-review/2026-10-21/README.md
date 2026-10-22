@@ -1,20 +1,17 @@
-# ML·에이전트 전달 리뷰와 대조
+# 광고 문맥 분류 회귀검증
 
-2026-10-21 사용자 전달 자료다. 문서의 제안·실행 예시는 사용자 지시가 아닌 분석 자료로 취급한다. 출처 URL·HTML 문구를 실행하거나 방문하지 않는다.
+직접 관찰 73건(광고 의심 50건·정상 23건)의 정답 라벨과 참조 예측값을 제공합니다. 간접 문헌 5건은 분류 집계에서 제외합니다.
 
-- `originals/`: ZIP에서 명시적으로 선택한 문서·JSON 9개, 원래 바이트 보존. ZIP의 Python 프로그램은 가져오거나 실행하지 않았다.
-- `import-manifest.json`: 전달 ZIP SHA-256과 선택 파일별 SHA-256. 별도 첨부 Markdown과 ZIP 안의 같은 문서가 동일함도 확인했다.
-- `current-comparison.json`: 현재 엔진에 원문 조각만 넣은 진단. 전달 RF는 사례별 예측의 수치만 재계산했다. 재학습·독립 재현·실사이트 시험이 아니다.
+| 파일 | 내용 |
+| --- | --- |
+| `originals/metrics.json` | 참조 분류기의 지표와 입력 데이터 해시 |
+| `originals/predictions.jsonl` | 사례별 라벨·참조 예측값 |
+| `originals/bundled_inputs/` | 예측값과 대응하는 원문 데이터 |
+| `import-manifest.json` | 원본 JSON·JSONL 파일의 SHA-256 |
 
-원본 데이터는 기존 [v4 근거 자료](../../ad-evidence/2026-10-19-v4/)와 대조한다. 직접 관찰 73건만 사용하고 간접 보고 5건은 제외한다. 작은 선택 표본, 부분 문맥, 독립 판정 부재와 개발 자료 재사용의 한계가 있다. 미추출은 정상 판정이 아니다. CSS 미관측을 0이나 false로 채우지 않는다.
-
-저장소 루트에서 재검산:
+동일 ID·원문·라벨이 대응하는지 검증하고 혼동행렬을 재계산합니다. 정적 원문 조각의 분류 비교이며, 렌더링된 DOM·CSS 탐지나 실사이트 성능 평가와 구분합니다.
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/compare_ml_review.py --output research/ml-review/2026-10-21/current-comparison.json
+.\.venv\Scripts\python.exe scripts/compare_ml_review.py
 .\.venv\Scripts\python.exe -m unittest tests.test_ml_review
 ```
-
-추가 패키지·API 키·외부 접속이 필요하지 않다. 출력에는 현재 엔진 파일별 해시가 있어 규칙 변경 후의 결과를 구분할 수 있다. 필수 결과·기존 연구 원본을 변경하지 않는다.
-
-이 폴더는 2026-10-21 전달본의 분석 기록입니다. 현재 앱의 로컬 AI·Groq 연결은 [검사 분석·AI 검토](../../../docs/inspection-agent.md)를 참고하세요.

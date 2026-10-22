@@ -4,133 +4,87 @@
 
 # Chickadee Studio
 
-**Find suspicious website content. Inspect the evidence. Record your review.**
-
-Browser collection · Korean image OCR · Detection evidence · AI review
+**Detect obfuscated and hidden advertising on public-sector websites, inspect evidence, and record reviews.**
 
 [![Latest release](https://img.shields.io/github/v/release/orqan137/chickadee_studio?style=flat&color=526d82)](https://github.com/orqan137/chickadee_studio/releases/latest)
 [![Build](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_studio/release.yml?branch=main&label=build&style=flat)](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-526d82?style=flat)](LICENSE)
-[![Windows](https://img.shields.io/badge/Windows-x64-526d82?style=flat)](docs/quickstart-windows.md)
-[![Electron](https://img.shields.io/badge/Electron-47848f?style=flat&logo=electron&logoColor=white)](desktop/package.json)
-[![Python](https://img.shields.io/badge/Python-3.12-47779e?style=flat&logo=python&logoColor=white)](requirements.txt)
 
-[**Download**](https://github.com/orqan137/chickadee_studio/releases/latest) · [User guide](docs/desktop.md) · [Report a bug](https://github.com/orqan137/chickadee_studio/issues) · [Contribute](CONTRIBUTING.md)
-
-[한국어](README.md) · **English**
+[**Windows download**](https://github.com/orqan137/chickadee_studio/releases/latest) · [User guide](docs/quickstart-windows.md) · [Output format](docs/result-format.md) · [한국어](README.md)
 
 </div>
 
-![Chickadee Studio's fixed inspection pipeline](docs/assets/screenshots/workflow.png)
+![Chickadee Studio inspection configuration](docs/assets/screenshots/workflow.png)
 
-<p align="center"><sub>Actual desktop screenshots from version 0.10.5 using the bundled demo. These illustrate the UI, not real-site detection accuracy.</sub></p>
+## Required detection categories
 
-## What is Chickadee?
-
-Chickadee Studio is an open-source desktop tool for inspecting suspected advertising, obfuscated characters, and hidden text on public-sector websites and message boards. It uses Chromium to collect pages and analyze the DOM, computed CSS, and text inside images. Findings include source text, locations, and screenshots for human review.
-
-**Core inspection, PaddleOCR, and local AI run without an external API key.** External AI review requires separate configuration and a user-initiated action. Findings support review; they are not a final determination.
-
-The app interface, screenshots, and most linked documents are currently in Korean.
-
-## Get started
-
-1. Download `Chickadee-Studio-<version>-win-x64.zip` from the [latest Windows release](https://github.com/orqan137/chickadee_studio/releases/latest).
-2. **Extract the entire archive** and run `Chickadee.exe`. The app, Python engine, Chromium, and models are bundled.
-3. Select **Scan target (검사 대상)**, enter a URL, and click **Run scan (검사 실행)**.
-4. Open **Findings (탐지 내역)**, inspect the evidence, and save your review.
-
-To try it offline, open the dropdown next to Run scan and choose **Demo scan (데모 검사)**.
-
-> The download is an **unsigned Windows x64 ZIP**. Keep all bundled files and folders together. macOS can run from source; a packaged macOS download is not provided.
-
-[Windows quick start](docs/quickstart-windows.md) · [Settings and usage](docs/desktop.md) · [Release notes](https://github.com/orqan137/chickadee_studio/releases)
-
-## Features
-
-| | Capability |
-| --- | --- |
-| **Browser inspection** | Collect same-site links, posts, DOM, computed CSS, and content revealed by scrolling. |
-| **Image OCR** | Read Korean image text with PaddleOCR. Failed or skipped OCR is distinguished from no findings. |
-| **Evidence review** | Inspect source text, DOM locations, image evidence, and screenshots; save reviewed/excluded states and notes. |
-| **Login handoff** | Pause when a login screen is detected, authenticate in a separate window, and resume the original page. |
-| **Inspection analysis** | Explore the observed path from START, optionally request external AI review, and export a report. |
-| **Automation** | Set the crawl pace and schedules; receive desktop or Slack/Discord webhook completion notifications. |
-| **Saved results** | Export JSON/CSV, retain scan history, and reopen results to continue reviewing. |
-
-## Screenshots
-
-### Findings and evidence
-
-![Findings with source text, screenshots, and review controls](desktop/assets/guide/review.png)
-
-Select an item to open its evidence. Required detection categories and suspected advertising remain separate, with review states recorded after you inspect the source.
-
-### Inspection analysis
-
-![Observed collection paths starting at START](desktop/assets/guide/analysis.png)
-
-Explore observed pages and collection actions. External AI review runs in a separate tab and does not overwrite original findings or human review states.
-
-<details>
-<summary><strong>Configuration, OCR, and HTTP activity</strong></summary>
-
-**Target configuration**
-
-![Target URL input](desktop/assets/guide/start.png)
-
-**Image OCR**
-
-![PaddleOCR node settings](desktop/assets/guide/ocr.png)
-
-**HTTP activity**
-
-![HTTP response status and request methods](docs/assets/screenshots/http.png)
-
-</details>
-
-<details>
-<summary><strong>Settings, schedules, and notifications</strong></summary>
-
-![General inspection settings](desktop/assets/guide/general.png)
-
-![Creating a scheduled scan](desktop/assets/guide/schedules.png)
-
-![Desktop and Slack/Discord notifications](desktop/assets/guide/notifications.png)
-
-![External AI connection settings](desktop/assets/guide/ai.png)
-
-![Version and update settings](desktop/assets/guide/updates.png)
-
-![Keyboard shortcut settings](docs/assets/screenshots/shortcuts.png)
-
-</details>
-
-<details>
-<summary><strong>History, navigation, and AI review</strong></summary>
-
-![Saved scan history](desktop/assets/guide/history.png)
-
-![Page navigation paths](docs/assets/screenshots/navigation.png)
-
-![AI review before any external API request](docs/assets/screenshots/ai-review.png)
-
-</details>
-
-## Detection scope
+Chickadee implements the four required techniques in the Korean Public Website Illegal Advertising Detection Tool Development Competition.
 
 | Category | Code | Evidence |
 | --- | --- | --- |
-| Look-alike characters | `HOMOGLYPH` | Mixed full-width, Cyrillic, selected Greek characters, digits, and similar substitutions |
-| Decomposed Korean text | `JAMO` | Separated jamo and text split across inline tags |
-| Transparent text | `TRANSPARENT` | Transparent colors, element/ancestor opacity, and text matching a solid background |
-| Offscreen or hidden text | `OFFSCREEN` | Negative coordinates, tiny text, clipped regions, and hidden elements |
+| Look-alike characters | `HOMOGLYPH` | Full-width, Cyrillic, similar characters, and digit substitutions |
+| Decomposed Korean text | `JAMO` | Separated jamo and text divided across inline tags |
+| Transparent text | `TRANSPARENT` | Transparent colors, element/ancestor opacity, and text matching the background |
+| Offscreen or hidden text | `OFFSCREEN` | Negative coordinates, 0–1px text, clipping, and hidden elements |
 
-Gambling, loan, investment, and purchase solicitations without obfuscation are separate **suspected advertising** candidates. Blocked, authentication-required, limited, or failed collection is distinguished from successful completion.
+Chromium renders pages to collect source text, DOM locations, computed CSS, and geometry. Advertising context and hiding evidence are assessed together. Additional advertising observations are recorded separately from the four required techniques.
 
-Login handoff supports cookie-based authentication. Popup or browser-storage authentication and nonstandard login URLs may not be handled automatically. Chickadee does not use your personal Chrome profile; login cookies remain in memory for the current scan only.
+## Get started
 
-[Crawling scope and limits](docs/performance.md) · [AI review and transmitted data](docs/inspection-agent.md) · [Output formats](docs/result-format.md)
+1. Download `Chickadee-Studio-<version>-win-x64.zip` from the [latest release](https://github.com/orqan137/chickadee_studio/releases/latest).
+2. **Extract the entire ZIP into a new folder** and run `Chickadee.exe`. Keep the bundled `resources` folder together with the app.
+3. Enter one starting URL in **검사 대상**, then select **검사 실행**.
+4. Inspect source text, locations, and images in **탐지 내역**, and save review states and notes.
+5. Open **결과 폴더** to find JSON and CSV output.
+
+The Windows x64 package includes the Python engine, Chromium, Korean OCR, and local ML models. No separate Python, Node.js, Docker, or GPU installation is needed. Use the Run scan dropdown → **데모 검사** to try the bundled offline demonstration. The app interface and most guides are in Korean.
+
+## Competition requirements
+
+| Requirement | Implementation |
+| --- | --- |
+| One entry URL | Same-site page, post, comment, and iframe exploration |
+| Four mandatory techniques | Source text, page URL, CSS location, and technique evidence |
+| Results and management UI | Evidence panels, search, filters, review notes, and saved history |
+| Evaluation output | UTF-8 without BOM, `result.json` containing `meta` and `findings` |
+| Additional findings | Separate `result_extra.json` using `ETC` and `extra_finding` |
+| Windows 11, general-purpose PC | CPU/RAM inference with bundled OCR models |
+| Development deliverables | Source code, build instructions, user guide, and versioned executable releases |
+| External AI configuration | Documented Groq service, model, and external key file; no rebuild for key changes |
+
+See the [requirements](docs/requirements.md) and [submission checklist](docs/submission-checklist.md).
+
+## Inspection and evidence
+
+Text goes directly to ML context analysis. **Only images pass through PaddleOCR before ML.** Without images, the OCR stage displays `이미지 없음`. Image evidence includes the original image, extracted text, bounding boxes, and confidence.
+
+![Source evidence and review controls](desktop/assets/guide/review.png)
+
+The app shows page previews, activity logs, and observed navigation paths. Cookie-based login can resume through a separate authentication window. Saved results reopen without revisiting the site.
+
+![Observed exploration paths](desktop/assets/guide/analysis.png)
+
+## Output files
+
+Default location: **`Documents/Chickadee/results/<run-folder>/`**. A custom output location also receives separate run folders. Open **결과 폴더** to see the actual path.
+
+| File | Contents |
+| --- | --- |
+| `result.json` | The four required detection techniques, combined in one `findings` array |
+| `result_extra.json` | Additional context observations; review candidates are not automatically confirmed as illegal |
+| `result.csv` | Mandatory findings and advertising candidates in 17 fixed columns |
+| `scan-report.json` | Status, coverage, errors, OCR/context analysis, and evidence metadata |
+| `review.json` | Review states and notes |
+
+The detection unit is `(url, location, technique)`. Multiple techniques on one element produce separate records. Evidence text preserves the original characters. Iframe selectors use `iframe[src="absolute URL"] >>> inner selector`. Empty results still contain `findings: []`.
+
+See the [JSON Schema](schemas/result.schema.json), [output specification](docs/result-format.md), and [first page of the user guide](docs/quickstart-windows.md) for file locations and examples.
+
+## Optional AI review
+
+Core inspection, OCR, and ML work locally without an API key. Additional evidence review uses **Groq** when configured and started by the user. The default model is `openai/gpt-oss-20b`, with limits of **6 requests and 24,000 tokens per scan**.
+
+Enter a key in AI settings or launch `Chickadee.exe --groq-env-file "path to external configuration"`. The file contains `GROQ_API_KEY`; changing the key requires no rebuild. See the [configuration example](.env.example) and [agent guide](docs/inspection-agent.md).
 
 ## Run from source
 
@@ -178,40 +132,10 @@ Run `./scripts/build-desktop.ps1` from the repository root to package the app. O
 
 </details>
 
-## Contributing
+## Documentation
 
-Contributions to detection rules, bug fixes, UI, documentation, and translations are welcome.
-
-- Describe reproduction steps and expected behavior in an [issue](https://github.com/orqan137/chickadee_studio/issues).
-- Keep changes focused and include relevant test results in your PR.
-- Use actual app screenshots and remove personal information, API keys, cookies, and webhook addresses.
-
-See the [contribution guide](CONTRIBUTING.md) for development, testing, and screenshot capture instructions. To refresh documentation images from the real app:
-
-```sh
-npm --prefix desktop run build
-node desktop/tests/capture-docs.cjs
-```
-
-## Documentation and layout
-
-| Users | Developers |
-| --- | --- |
-| [Windows quick start](docs/quickstart-windows.md) | [Contribution guide](CONTRIBUTING.md) |
-| [Desktop guide](docs/desktop.md) | [Architecture](docs/architecture.md) |
-| [Inspection and AI review](docs/inspection-agent.md) | [Testing](docs/validation.md) |
-| [Output formats](docs/result-format.md) | [Third-party notices](docs/third-party-notices.md) |
-| [CLI and legacy UI](docs/manual.md) | [Research materials](research/README.md) |
-
-```text
-chickadee/       Python engine, OCR, and detection rules
-desktop/        Electron app, React UI, and desktop tests
-  tests/        Native app verification and documentation captures
-scripts/        Model preparation, packaging, and release checks
-tests/          Python regression tests and local fixtures
-docs/           Usage, architecture, and release notes
-```
+[User guide](docs/quickstart-windows.md) · [Desktop features](docs/desktop.md) · [Requirements](docs/requirements.md) · [Architecture](docs/architecture.md) · [Validation](docs/validation.md) · [Contributing](CONTRIBUTING.md)
 
 ## License
 
-[Apache License 2.0](LICENSE). Third-party components and models retain their respective licenses; see the [third-party notices](docs/third-party-notices.md).
+[Apache License 2.0](LICENSE). Third-party components and models retain their respective licenses; see [third-party notices](docs/third-party-notices.md).

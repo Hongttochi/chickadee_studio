@@ -39,3 +39,6 @@ submission-private/
 
 # Local-only OCR training workspace, datasets, weights and upload bundles
 /training-local/
+
+# Local agent configuration
+/.codex/
