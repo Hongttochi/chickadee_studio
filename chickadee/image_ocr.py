@@ -14,9 +14,11 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args, **_kwargs): return None
 
 
-def fetch_image(url, limit=2_000_000):
+def fetch_image(url, limit=2_000_000, cookie_header=""):
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
-    request = urllib.request.Request(url, headers={'User-Agent': 'Chickadee-Image-Collector'})
+    headers = {'User-Agent': 'Chickadee-Image-Collector'}
+    if cookie_header: headers['Cookie'] = cookie_header
+    request = urllib.request.Request(url, headers=headers)
     with opener.open(request, timeout=5) as response:
         mime = response.headers.get_content_type()
         if mime not in ('image/png', 'image/jpeg', 'image/webp', 'image/gif'):

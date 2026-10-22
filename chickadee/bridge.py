@@ -91,6 +91,11 @@ class DesktopBridge:
     def command(self, method, params):
         if not isinstance(params, dict):
             raise ValueError('명령 인자가 올바르지 않습니다.')
+        if method == 'login-session':
+            return self.control.login.session(params.get('request_id'))
+        if method == 'login-complete':
+            self.control.login.complete(params.get('request_id'), params.get('cookies'), params.get('skip', False))
+            return {'accepted': True}
         if method == 'content-analyze':
             if 'analysis_id' in params:
                 if set(params) - {'analysis_id', 'cancel'} or type(params.get('cancel', False)) is not bool:
@@ -144,7 +149,7 @@ class DesktopBridge:
                      'pausing' if self.control.requested.is_set() else 'running') if self.running else self.last_status
             return {'version': __version__, 'running': self.running, 'history': self.history,
                     'run_id': self.run_id, 'status': state, 'phase': self.phase, 'sequence': self.sequence,
-                    'paused_sec': round(self.control.paused_seconds, 3), 'protocol_version': 1}
+                    'paused_sec': round(self.control.paused_seconds, 3), 'authentication': self.control.login.state(), 'protocol_version': 1}
         if method in ('pause', 'resume'):
             if not self.running or self.stopping:
                 raise ValueError('진행 중인 검사가 없습니다.')
@@ -195,7 +200,7 @@ class DesktopBridge:
             root = Path(__file__).resolve().parent.parent
             profile_path = root/'profiles'/('inuri-test.json' if profile == 'test' else 'public-site.json') if profile != 'default' else None
             self.run_environment = environment(self.runtime_mode)
-            config = ScanConfig(params.get('url', ''), max_pages=params.get('max_pages', 100),
+            config = ScanConfig(params.get('url', ''), interactive_login=True, max_pages=params.get('max_pages', 100),
                                 timeout_sec=params.get('timeout_sec', 300), settle_ms=params.get('settle_ms', 350),
                                 interval_sec=params.get('interval_sec', .5), allow_network=True,
                                 profile_path=profile_path, capture_previews=params.get('preview', True),

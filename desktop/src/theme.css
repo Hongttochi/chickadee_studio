@@ -2290,7 +2290,7 @@
 .node-config .config-icon-dedup img { width:42px; height:42px; max-width:none; flex-shrink:0; }
 /* Compensate for the transparent margins in hierarchy.png. */
 .node-tile > img.node-symbol-candidates { width:80px; height:80px; max-width:none; flex-shrink:0; }
-.node-config .config-icon-candidates img { width:52px; height:52px; max-width:none; flex-shrink:0; }
+.node-config .config-icon-candidates img { width:52px; height:52px; max-width:none; flex-shrink:0; transform:translate(-13px, 13px); }
 
 /* Topic navigation keeps the detailed guide usable without a long tab row. */
 .tutorial-steps ol { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0; }
@@ -2305,3 +2305,112 @@
 .tutorial-instructions dd { overflow-wrap:anywhere; }
 @media (max-width:760px) { .tutorial-screen { position:static; } }
 @media (max-width:480px) { .tutorial-steps { padding-inline:12px; } .tutorial-steps ol { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+
+.login-prompt { width:min(400px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); box-sizing:border-box; overflow:auto; padding:0; border:1px solid #383a3e; border-radius:12px; background:#1b1c1e; color:#e6e7e9; font-size:12px; line-height:1.6; box-shadow:0 20px 70px #0006; }
+.login-prompt[open] { animation:login-prompt-enter 160ms ease-out; }
+.login-prompt::backdrop { background:#0008; }
+.login-body { padding:22px; }
+.login-prompt header { display:flex; align-items:center; gap:8px; }
+.login-prompt header > svg { flex-shrink:0; color:#b5bac2; width:16px; height:16px; }
+.login-prompt h2 { margin:0; font-size:15px; font-weight:600; letter-spacing:-.3px; }
+.login-prompt p { margin:0; }
+.login-prompt #login-description { margin:6px 0 20px; color:#aeb2b9; font-size:12px; }
+.login-site { padding:13px 14px; border-radius:7px; background:#ffffff04; border:1px solid #ffffff0b; }
+.login-site-identity { display:flex; align-items:center; gap:10px; min-width:0; }
+.login-site-identity > img, .login-site-identity > svg { width:22px; height:22px; flex-shrink:0; object-fit:contain; color:#969eaa; }
+.login-site-identity > div { display:grid; gap:2px; min-width:0; }
+.login-site-identity strong { font-size:12px; font-weight:500; overflow-wrap:anywhere; color:#d7dbe1; }
+.login-site-identity small { font-size:10px; color:#929ba8; overflow-wrap:anywhere; }
+.login-actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:22px; }
+.login-main-actions { display:flex; align-items:center; gap:6px; margin-left:auto; }
+.login-prompt button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:32px; padding:5px 10px; border:1px solid #3c4047; border-radius:6px; background:transparent; color:#c5cbd4; cursor:pointer; font:inherit; font-size:11px; transition:background 140ms,color 140ms,border-color 140ms; }
+.login-prompt button:hover:not(:disabled) { background:#ffffff09; border-color:#626975; color:#fff; }
+.login-prompt button:disabled { opacity:.4; cursor:default; }
+.login-prompt button:focus-visible { outline:2px solid #9dbef5; outline-offset:3px; }
+.login-prompt .login-primary { background:#dce2e9; border-color:#dce2e9; color:#20252c; }
+.login-prompt .login-primary:hover:not(:disabled) { background:#f0f3f7; border-color:#f0f3f7; color:#171c22; }
+.login-prompt .login-skip { padding-inline:0; border-color:transparent; color:#9da5b0; }
+.login-prompt .login-stop { padding:5px 8px; border-color:transparent; color:#aeb6c2; white-space:nowrap; }
+.login-prompt .login-info { margin-left:auto; padding:4px; min-height:28px; width:28px; border-color:transparent; color:#8d96a2; }
+.login-prompt .login-info[aria-expanded="true"] { color:#dce2e9; background:#ffffff09; }
+.login-help-panel { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows 180ms ease,opacity 180ms ease; }
+.login-help-panel.is-open { grid-template-rows:1fr; opacity:1; }
+.login-help-panel > div { overflow:hidden; min-height:0; }
+.login-help-panel ul { margin:12px 0 0; padding:0 0 0 15px; color:#aeb6c2; font-size:11px; line-height:1.8; }
+.login-help-panel li + li { margin-top:3px; }
+.login-help-panel strong { font-weight:500; color:#d4dae3; }
+
+.login-prompt .login-error { margin-top:12px; font-size:11px; color:#efa59f; overflow-wrap:anywhere; }
+@keyframes login-prompt-enter { from { opacity:0; transform:translateY(6px) scale(.985); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce) { .login-prompt[open] { animation:none; } .login-prompt button,.login-help-panel { transition:none; } }
+
+/* Shared dark surfaces for app-owned dialogs and overlays. */
+:root {
+  --dialog-surface:#1b1c1e;
+  --dialog-raised:#282b30;
+  --dialog-border:#3b3f46;
+  --dialog-text:#e3e7ed;
+  --dialog-muted:#adb5c0;
+}
+:is(.scan-notice-dialog,.review-saved-dialog,.tutorial-dialog,.tutorial-image-dialog,.settings-modal,.command-palette,.preview-modal,.login-prompt) {
+  color-scheme:dark;
+  background:var(--dialog-surface);
+  color:var(--dialog-text);
+  border-color:var(--dialog-border);
+  border-radius:12px;
+  box-shadow:0 20px 70px #0006;
+}
+:is(.scan-notice-dialog,.review-saved-dialog,.tutorial-dialog,.tutorial-image-dialog,.login-prompt)::backdrop { background:#0009; }
+.modal-backdrop { background:#0009; }
+:is(.scan-notice-dialog,.review-saved-dialog) h2 { color:var(--dialog-text); font-size:16px; }
+:is(.scan-notice-dialog,.review-saved-dialog) p { color:var(--dialog-muted); font-size:12px; }
+.scan-notice-dialog button,.review-saved-confirm,.login-prompt .login-primary,
+.settings-modal .modal-footer .primary,.tutorial-footer .button {
+  background:var(--dialog-raised); color:var(--dialog-text); border:1px solid #535a65; border-radius:6px;
+}
+.scan-notice-dialog button:hover,.review-saved-confirm:hover,.login-prompt .login-primary:hover:not(:disabled),
+.settings-modal .modal-footer .primary:hover,.tutorial-footer .button:hover:not(:disabled) {
+  background:#353a42; color:#f3f5f8; border-color:#707b8b;
+}
+:is(.scan-notice-dialog,.review-saved-dialog,.tutorial-dialog,.tutorial-image-dialog) button:focus-visible { outline:2px solid #9dbef5; outline-offset:3px; }
+.review-saved-close,.tutorial-close,.tutorial-image-dialog header button { color:var(--dialog-muted); }
+.review-saved-close:hover,.tutorial-close:hover,.tutorial-image-dialog header button:hover { background:#ffffff0b; color:var(--dialog-text); }
+.tutorial-dialog :is(.tutorial-header,.tutorial-steps,.tutorial-footer,.tutorial-instructions > div),
+.tutorial-screen img { border-color:var(--dialog-border); }
+.tutorial-dialog :is(h2,h3,.tutorial-instructions dt,.tutorial-address code),.tutorial-image-dialog header { color:var(--dialog-text); }
+.tutorial-dialog :is(#tutorial-description,.tutorial-instructions dd,.tutorial-address,.tutorial-hint,.tutorial-reopen,.tutorial-screen figcaption) { color:var(--dialog-muted); }
+.tutorial-dialog .tutorial-unavailable { color:#c5ad8b; }
+.tutorial-dialog .tutorial-steps button { background:transparent; color:var(--dialog-muted); }
+.tutorial-dialog .tutorial-steps [aria-current="step"] { color:#f1f4f8; }
+.tutorial-dialog .tab-indicator { background:#aab8ca; }
+.tutorial-dialog .tutorial-number { background:var(--dialog-raised); color:var(--dialog-muted); }
+.tutorial-dialog .tutorial-zoom-icon,.tutorial-dialog .tutorial-screen-button:hover .tutorial-zoom-icon { background:#25282dec; color:var(--dialog-text); border-color:var(--dialog-border); }
+.tutorial-footer .button:disabled { background:#222428; color:#757d89; border-color:#34383f; }
+.command-palette .command-search { border-color:var(--dialog-border); color:var(--dialog-muted); }
+.command-palette .command-search input { background:transparent; color:var(--dialog-text); }
+.command-palette .command-search input::placeholder { color:#8f99a7; }
+.command-palette .command-results > button { background:transparent; color:var(--dialog-text); }
+.command-palette .command-results > button[aria-selected="true"] { background:var(--dialog-raised); color:#f2f5fa; }
+.command-palette .command-results small,.command-palette > footer { color:var(--dialog-muted); }
+.command-palette > footer { background:#18191b; border-color:var(--dialog-border); }
+.command-palette kbd { background:var(--dialog-raised); color:var(--dialog-muted); border-color:var(--dialog-border); }
+.preview-modal > div { background:var(--dialog-surface); color:var(--dialog-text); border-color:var(--dialog-border); }
+.preview-modal > div span { color:var(--dialog-muted); }
+.preview-modal > div button { background:transparent; color:var(--dialog-text); }
+.preview-modal > img { background:#111214; }
+.screenshot-viewer .screenshot-viewer-content { background:var(--dialog-surface); border-color:var(--dialog-border); }
+
+/* Distinguish response status from request method in the HTTP activity log. */
+.http-event-title { display:inline-flex; align-items:center; flex-wrap:wrap; gap:7px; }
+.http-event-status,.http-event-method { display:inline-flex; align-items:center; justify-content:center; min-height:18px; padding:0 6px; border:1px solid #cdd3dc; border-radius:999px; color:#566170; background:#f1f3f6; font-size:10px; font-weight:500; line-height:1.5; font-variant-numeric:tabular-nums; }
+.http-event-status.status-1 { color:#50627e; background:#edf1f7; border-color:#d3ddea; }
+.http-event-status.status-2 { color:#18704e; background:#eaf6ef; border-color:#bfe1cc; }
+.http-event-status.status-3 { color:#8a5a14; background:#fff5df; border-color:#ecd6a4; }
+.http-event-status.status-4,.http-event-status.status-5 { color:#af3743; background:#fceef0; border-color:#efc4cb; }
+.http-event-method.method-get,.http-event-method.method-head { color:#285fa3; background:#ecf3ff; border-color:#c7d9f1; }
+.http-event-method.method-post { color:#7c4ba0; background:#f4edfb; border-color:#ddc9ed; }
+.http-event-method.method-put,.http-event-method.method-patch { color:#8a5a14; background:#fff5df; border-color:#ecd6a4; }
+.http-event-method.method-delete { color:#af3743; background:#fceef0; border-color:#efc4cb; }
+.http-event-resource { color:#687583; font-size:11px; font-weight:400; }
+
+.http-event-title .http-event-method { min-height:0; padding:0; border:0; border-radius:0; background:transparent; font-size:10px; font-weight:500; }

@@ -14,6 +14,9 @@ async function invoke(channel, ...args) {
 contextBridge.exposeInMainWorld(
   "chickadee",
   Object.freeze({
+    openLogin: requestId => invoke("desktop:login-open", requestId),
+    completeLogin: requestId => invoke("desktop:login-complete", requestId),
+    skipLogin: requestId => invoke("desktop:login-skip", requestId),
     restart: () => invoke("desktop:restart"),
     updateState: () => invoke("desktop:update-state"),
     checkUpdates: () => invoke("desktop:update-check"),

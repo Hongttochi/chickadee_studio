@@ -2,10 +2,12 @@
 import asyncio
 from threading import Event, Lock
 import time
+from .authentication import LoginCoordinator
 
 
 class ScanControl:
     def __init__(self):
+        self.login = LoginCoordinator()
         self.requested = Event()
         self.paused = Event()
         self._lock = Lock()
@@ -21,7 +23,7 @@ class ScanControl:
     @property
     def paused_seconds(self):
         with self._lock:
-            return self._total + (time.monotonic() - self._since if self._since is not None else 0)
+            return self._total + (time.monotonic() - self._since if self._since is not None else 0) + self.login.paused_seconds
 
     async def checkpoint(self, emit):
         if not self.requested.is_set():

@@ -100,6 +100,7 @@ import {
 import "./style.css";
 import "./theme.css";
 import brandMark from "../assets/app-mark.png";
+import LoginPrompt from "./LoginPrompt.jsx";
 import InspectionInsights from "./InspectionInsights.jsx";
 import targetMap from "../assets/map.png";
 import browserImage from "../assets/browser.png";
@@ -113,7 +114,11 @@ import diceImage from "../assets/dice.png";
 import profitsImage from "../assets/profits.png";
 import creditCardImage from "../assets/3d-credit-card.png";
 import shoppingCartImage from "../assets/shopping-cart.png";
-import demoImage from "../assets/poison.png";
+import warningImage from "../assets/image_warning.png";
+import errorImage from "../assets/error.png";
+import pauseImage from "../assets/pause.png";
+import resumeImage from "../assets/resume.png";
+import stopImage from "../assets/stop.png";
 import checkImage from "../assets/check.png";
 import deleteImage from "../assets/delete.png";
 import saveImage from "../assets/save.png";
@@ -640,6 +645,7 @@ function App() {
   };
   const timelineRef = useRef(null),
     autoScroll = useRef(true);
+  const [loginRequest, setLoginRequest] = useState(null);
   const running = ["running", "pausing", "paused", "stopping"].includes(status);
   const tell = (message, type = "info") => {
     if (message === "이미 검사 중입니다.") {
@@ -774,10 +780,13 @@ function App() {
         } else {
           setFlow(current => ({ ...current, nodes: restoreNodeLayout(current.nodes) }));
         }
+        setLoginRequest(state.authentication || null);
         setBooted(true);
       })
       .catch((error) => tell(error.message, "error"));
     return api.onEvent((event) => {
+      if (event.kind === "login_required") setLoginRequest(event);
+      if (["login_finished", "done", "started"].includes(event.kind)) setLoginRequest(null);
       if (event.kind === "evidence_screenshot") {
         if (event.screenshot && event.screenshot_id) setLiveScreenshots(previous => ({ ...previous, [event.screenshot_id]: event.screenshot }));
         return;
@@ -1314,7 +1323,7 @@ function App() {
                       : "Pause"
                   }
                   variant="secondary"
-                  disabled={status === "stopping"}
+                  disabled={status === "stopping" || Boolean(loginRequest)}
                   onClick={pause}
                   title="현재 페이지 검사가 끝나면 일시정지합니다."
                 >
@@ -2144,6 +2153,7 @@ function App() {
                             <span title={page.url}>
                               {relativeUrl(page.url)}
                             </span>
+                            {page.status === "authentication_required" && <small>로그인 필요 · 미수집</small>}
                             {page.discovered_from && (
                               <small title={page.discovered_from}>
                                 ↳ {relativeUrl(page.discovered_from)}
@@ -2306,6 +2316,7 @@ function App() {
       {palette && (
         <CommandPalette commands={commands} onClose={() => setPalette(false)} />
       )}
+      {loginRequest && <LoginPrompt key={loginRequest.request_id} request={loginRequest} onStop={() => api.stop()} />}
       {tutorial && (
         <Tutorial
           onClose={closeTutorial}
@@ -2542,6 +2553,8 @@ function NodeSettings({ id, flow, setFlow, url, setUrl, running, onClose }) {
   );
 }
 function eventLabel(event) {
+  if (event.kind === "page_complete" && event.page.status === "authentication_required")
+    return { icon: "LockKeyhole", title: "로그인 필요 · 미수집", detail: event.page.url, tone: "amber" };
   if (event.kind === "url_discovered")
     return {
       icon: "Network",
@@ -2623,13 +2636,21 @@ function EventRow({ event, onClick, compact = false }) {
     page_complete: checkImage,
     done: saveImage,
     started: searchImage,
-    error: deleteImage,
-    warning: demoImage,
+    error: errorImage,
+    warning: warningImage,
   };
-  const eventImage = event.kind === "phase"
+  const eventImage = event.kind === "control"
+    ? (["paused", "pausing"].includes(event.state) ? pauseImage : event.state === "stopping" ? stopImage : resumeImage)
+    : event.kind === "page_complete" && event.page?.status === "authentication_required" ? warningImage
+    : event.kind === "done" && event.report?.status === "cancelled" ? stopImage
+    : event.kind === "done" && event.report?.status === "failed" ? errorImage
+    : event.kind === "phase"
     ? nodeImages[event.stage] || browserImage
     : eventImages[event.kind] || refreshImage;
   const imageScale = eventImage === browserImage ? 1.2
+    : eventImage === hierarchyImage ? 1.8
+    : eventImage === duplicateRemoveImage ? 1.5
+    : eventImage === saveImage ? 1.15
     : eventImage === checkImage ? 1.5
     : eventImage === deleteImage ? 1.8
     : eventImage === searchImage ? .92 : 1;
@@ -2642,7 +2663,7 @@ function EventRow({ event, onClick, compact = false }) {
         <img src={eventImage} alt="" width={compact ? 20 : 26} height={compact ? 20 : 26} style={{ transform: `scale(${imageScale})` }} draggable={false} />
       </span>
       <div>
-        <strong>{label.title}</strong>
+        <strong>{event.kind === "http_response" ? <span className="http-event-title"><span className={`http-event-status status-${Math.floor(Number(event.http_status) / 100)}`} aria-label={`HTTP 상태 ${event.http_status}`}>{event.http_status}</span><span className={`http-event-method method-${String(event.method || "").toLowerCase()}`}>{event.method}</span><span className="http-event-resource">{event.resource_type}</span></span> : label.title}</strong>
         {label.detail && <p title={label.detail}>{label.detail}</p>}
       </div>
       <time>{event.timestamp ? time(event.timestamp) : ""}</time>

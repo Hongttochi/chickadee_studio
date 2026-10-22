@@ -8,6 +8,7 @@ const {
   screen,
   Notification,
   safeStorage,
+  session,
 } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs/promises");
@@ -16,6 +17,8 @@ const { createNotifier } = require("./native-notification.cjs");
 const { Notifications } = require("./notifications.cjs");
 const { Updates } = require("./updates.cjs");
 const { Schedules } = require("./schedules.cjs");
+const { LoginWindow } = require("./login.cjs");
+let loginWindow;
 let notifications, activeNotificationRun, schedules;
 const { Backend } = require("./backend.cjs");
 let window,
@@ -186,6 +189,7 @@ async function initialize() {
     args = [process.arch === "arm64" ? "-arm64" : "-x86_64", executable, ...args];
     executable = "/usr/bin/arch";
   }
+  const notifyLogin = createNotifier(Notification, () => window);
   backend = new Backend(
     executable,
     args,
@@ -194,6 +198,10 @@ async function initialize() {
       env: { ...process.env, PYTHONIOENCODING: "utf-8" },
     },
     (event) => {
+      if (event.kind === "login_required" && Notification.isSupported()) {
+        notifyLogin("Chickadee · 로그인 필요", "검사를 일시 중지했습니다. 앱에서 로그인 창을 열어 주세요.", false).catch(() => {});
+      }
+      if (["done", "login_finished"].includes(event.kind)) loginWindow?.close(event.request_id).catch(() => {});
       if (event.kind === "started") activeNotificationRun = event.run_id;
       if (event.kind === "done") currentPath = event.path;
       if (event.kind === "done" || (event.kind === "error" && activeNotificationRun)) {
@@ -205,6 +213,10 @@ async function initialize() {
         window.webContents.send("desktop:event", event);
     },
   );
+  loginWindow = new LoginWindow({ BrowserWindow, session, backend, owner: () => window });
+  handler("login-open", requestId => loginWindow.open(requestId));
+  handler("login-complete", requestId => loginWindow.complete(requestId));
+  handler("login-skip", requestId => loginWindow.complete(requestId, true));
   const updates = new Updates({ current: require("../package.json").version, directory: path.join(app.getPath("userData"), "updates"), reveal: file => shell.showItemInFolder(file) });
   handler("update-state", () => updates.getState());
   handler("update-check", () => updates.check());

@@ -17,6 +17,7 @@ import time
 from urllib.parse import parse_qsl, urljoin, urlsplit, urlunsplit
 from urllib.error import HTTPError
 
+from .authentication import AuthenticationRequired, LoginRedirect, is_login_url, requires_login, active_timeout, fetch_favicon
 from . import __version__
 from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
@@ -120,6 +121,7 @@ class ScanConfig:
     detect_candidates: bool = True
     ocr_max_images: int = 50
     runtime_mode: str = 'standard'
+    interactive_login: bool = False
 
     def __post_init__(self):
         normalize_url(self.entry_url)
@@ -138,7 +140,7 @@ class ScanConfig:
             raise ValueError("재시도는 0~3회, 요청 간격은 0~30초여야 합니다.")
         Rules.load(self.rules_path)
         SiteProfile.load(self.profile_path)
-        if not all(type(v) is bool for v in (self.ocr_enabled, self.ocr_techniques, self.ocr_candidates, self.capture_previews, self.follow_links, self.detect_techniques, self.detect_candidates)):
+        if not all(type(v) is bool for v in (self.interactive_login, self.ocr_enabled, self.ocr_techniques, self.ocr_candidates, self.capture_previews, self.follow_links, self.detect_techniques, self.detect_candidates)):
             raise ValueError("검사 단계 설정은 true/false여야 합니다.")
         if not (self.detect_techniques or self.detect_candidates):
             raise ValueError("하나 이상의 분석 단계를 연결하세요.")
@@ -238,6 +240,7 @@ class _State:
     screenshot_bytes: int = 0
     pending_redirects: dict = field(default_factory=dict)
     ocr: OCRSession = field(default_factory=OCRSession)
+    image_context: object = None
     image_cache: dict = field(default_factory=dict)
     image_requests: int = 0
     image_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -428,11 +431,18 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
             context = await browser.new_context(viewport={"width": 1366, "height": 900},
                                                 accept_downloads=False, service_workers="block")
             allowed = {origin(config.entry_url), *(origin(url) for url in profile.allowed_resource_origins)}
+            state.image_context = context
             state.image_origins = allowed
             state.image_allow_network = config.allow_network
+            login_targets = {}
             async def guard(route):
                 request = route.request
                 reason = None
+                main_document = request.resource_type == 'document' and request.frame == request.frame.page.main_frame
+                if main_document and is_login_url(request.url) and (config.allow_network or is_loopback(request.url)):
+                    login_targets[request.frame.page] = request.url
+                    await route.fulfill(status=200, content_type='text/html', body='<html></html>')
+                    return
                 essential = request.resource_type in ("document", "stylesheet", "script")
                 if request.method not in ("GET", "HEAD"):
                     reason = "GET/HEAD 외 요청 차단"
@@ -477,6 +487,11 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     destination = response.headers.get('location')
                     if response.status in (301, 302, 303, 307, 308) and destination:
                         target = urljoin(request.url, destination)
+                        if main_document and is_login_url(target) and (config.allow_network or is_loopback(target)):
+                            login_targets[request.frame.page] = target
+                            await response.dispose()
+                            await route.fulfill(status=200, content_type='text/html', body='<html></html>')
+                            return
                         try:
                             permitted = (origin(target) == origin(config.entry_url) if request.resource_type == 'document'
                                          else origin(target) in allowed)
@@ -565,9 +580,30 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                 page.on("dialog", lambda dialog: dialog.dismiss())
                 page.on("popup", lambda popup: popup.close())
                 try:
-                    async def inspect():
+                    identity = {}
+                    icon_url = urljoin(url, '/favicon.ico')
+                    async def check_login(response=None):
+                        nonlocal icon_url
+                        redirect = state.pending_redirects.pop(page.url, None)
+                        if redirect:
+                            response = await _navigate(page, redirect, config, state, emit)
+                            await page.wait_for_timeout(config.settle_ms)
+                        target = login_targets.pop(page, None)
+                        if target or await requires_login(page, response):
+                            raise LoginRedirect(target or page.url)
+                        if origin(page.url) == origin(url):
+                            metadata = await page.evaluate("""() => ({title: document.title,
+                                icon: document.querySelector('link[rel~="icon"]')?.href})""")
+                            if metadata['title']:
+                                identity['title'] = metadata['title'][:200]
+                            if metadata['icon'] and origin(metadata['icon']) == origin(url):
+                                icon_url = metadata['icon']
+
+                    async def inspect_once():
                         nonlocal site
                         response = await _navigate(page, url, config, state, emit)
+                        await page.wait_for_timeout(config.settle_ms)
+                        await check_login(response)
                         diagnostic["final_url"] = page.url
                         diagnostic["http_status"] = response.status if response else None
                         diagnostic["title"] = await page.title()
@@ -585,8 +621,35 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         if final_key in visited and final_key != key:
                             return []
                         visited.add(final_key)
-                        return await _inspect_dynamic(page, config, profile, rules, site, script, state, emit)
-                    links = await asyncio.wait_for(inspect(), timeout=config.page_timeout_sec)
+                        return await _inspect_dynamic(page, config, profile, rules, site, script, state, emit, check_login)
+
+                    async def inspect():
+                        while True:
+                            try:
+                                return await inspect_once()
+                            except Exception as error:
+                                # Navigation may destroy an execution context before the next snapshot.
+                                if not isinstance(error, LoginRedirect):
+                                    try:
+                                        await check_login()
+                                    except LoginRedirect as redirect:
+                                        error = redirect
+                                if not isinstance(error, LoginRedirect):
+                                    raise
+                                if not config.interactive_login or not control:
+                                    raise AuthenticationRequired('로그인 필요로 미수집') from None
+                                try:
+                                    if config.allow_network or is_loopback(icon_url):
+                                        identity['favicon'] = await asyncio.to_thread(fetch_favicon, icon_url)
+                                except Exception:
+                                    pass
+                                decision = await control.login.wait(error.url, url, await context.cookies(), emit, identity)
+                                if decision.get('skip'):
+                                    raise AuthenticationRequired('사용자가 로그인 페이지를 건너뛰었습니다. 인증 필요로 미수집') from None
+                                await context.add_cookies(decision['cookies'])
+                                state.image_cache.clear()
+                                visited.discard(visit_key(page.url))
+                    links = await active_timeout(inspect(), config.page_timeout_sec, control.login if control else None)
                     diagnostic["links_discovered"] = len(links)
                     diagnostic["status"] = "scanned"
                     if page.url not in state.pages:
@@ -612,7 +675,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                             emit({'kind': 'url_discovered', **discovery})
                             state.trace.page(candidate, 'pending', emit, page.url)
                 except Exception as exc:
-                    diagnostic["status"] = "error"
+                    diagnostic["status"] = "authentication_required" if isinstance(exc, AuthenticationRequired) else "error"
                     diagnostic["error"] = str(exc) or "페이지 제한시간 초과"
                     state.errors.append({"url": url, "message": str(exc) or "페이지 제한시간을 초과했습니다."})
                     emit({"kind": "warning", "message": f"점검 누락: {url} - {exc or '페이지 제한시간 초과'}"})
@@ -623,6 +686,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     diagnostic["candidates_added"] = len(state.ad_candidates) - candidates_before
                     emit({"kind": "page_complete", "page": diagnostic, "pages_scanned": len(state.pages),
                           "queue_remaining": len(queue), "discovered_urls": state.discovered_urls})
+                    login_targets.pop(page, None)
                     await page.close()
                 state.remaining = len(queue)
             if queue and site not in state.stopped_origins:
@@ -679,9 +743,11 @@ _FINGERPRINT = """() => {
 }"""
 
 
-async def _inspect_dynamic(page, config, profile, rules, site, script, state, emit):
+async def _inspect_dynamic(page, config, profile, rules, site, script, state, emit, check_login=None):
     links, seen = [], set()
     async def snapshot(action='초기 수집'):
+        if check_login:
+            await check_login()
         if site in state.stopped_origins:
             raise RuntimeError("HTTP 429 수신으로 해당 origin 수집을 중단했습니다.")
         if origin(page.url) != site:
@@ -763,6 +829,8 @@ async def _inspect_dynamic(page, config, profile, rules, site, script, state, em
         if action_index == profile.max_actions - 1:
             if any([await page.locator(s).count() == 1 and await page.locator(s).is_visible() and await page.locator(s).is_enabled() for s in profile.controls]):
                 state.errors.append({"url": page.url, "message": "읽기 동작 한도에 도달했습니다. 일부 결과일 수 있습니다."})
+    if check_login:
+        await check_login()
     return list(dict.fromkeys(links))
 
 
@@ -895,7 +963,9 @@ async def _fetch_image_bounded(url, state):
             raise ValueError('이미지 수집 한도 도달')
         state.image_requests += 1
         try:
-            data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, 20_000_000 - state.image_bytes))
+            cookies = await state.image_context.cookies([url]) if state.image_context else []
+            cookie_header = '; '.join(c['name'] + '=' + c['value'] for c in cookies)
+            data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, 20_000_000 - state.image_bytes), cookie_header)
         except HTTPError as error:
             if error.code == 429:
                 parts = urlsplit(url)
