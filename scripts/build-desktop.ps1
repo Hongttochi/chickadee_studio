@@ -36,10 +36,35 @@ try {
     if (-not $RequireSigned) {
         $taskRuntime = Get-Content -LiteralPath 'desktop/vendor-runtime.json' -Raw | ConvertFrom-Json
         $taskInstalledVersion = (Get-Content -LiteralPath 'desktop/node_modules/electron/package.json' -Raw | ConvertFrom-Json).version
-        $taskVendorHash = (Get-FileHash -LiteralPath 'desktop/node_modules/electron/dist/electron.exe' -Algorithm SHA256).Hash.ToLowerInvariant()
+        $taskVendorExe = Join-Path $taskRoot 'desktop/node_modules/electron/dist/electron.exe'
+        if (-not (Test-Path -LiteralPath $taskVendorExe)) {
+            # electron-builder can download Electron without installing its npm
+            # binary. Obtain the pinned upstream EXE independently in that case.
+            $taskVendorDirectory = Join-Path $taskRoot "artifacts/vendor-runtime/$($taskRuntime.version)"
+            New-Item -ItemType Directory -Path $taskVendorDirectory -Force | Out-Null
+            $taskVendorArchive = Join-Path $taskVendorDirectory 'electron.zip'
+            if (-not (Test-Path -LiteralPath $taskVendorArchive)) {
+                Invoke-WebRequest -Uri $taskRuntime.source_url -OutFile $taskVendorArchive
+            }
+            if ((Get-FileHash -LiteralPath $taskVendorArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $taskRuntime.archive_sha256) { throw 'Official Electron archive SHA256 mismatch.' }
+            $taskVendorExe = Join-Path $taskVendorDirectory 'electron.exe'
+            $taskArchive = [IO.Compression.ZipFile]::OpenRead($taskVendorArchive)
+            try {
+                $taskEntry = $taskArchive.GetEntry('electron.exe')
+                if ($null -eq $taskEntry) { throw 'Official Electron archive has no executable.' }
+                [IO.Compression.ZipFileExtensions]::ExtractToFile($taskEntry, $taskVendorExe, $true)
+            } finally { $taskArchive.Dispose() }
+        }
+        $taskVendorHash = (Get-FileHash -LiteralPath $taskVendorExe -Algorithm SHA256).Hash.ToLowerInvariant()
         $taskAppHash = (Get-FileHash -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($taskInstalledVersion -ne $taskRuntime.version -or $taskVendorHash -ne $taskRuntime.executable_sha256 -or $taskAppHash -ne $taskVendorHash) {
-            throw 'The app executable must preserve the pinned official Electron runtime bytes.'
+        if ($taskInstalledVersion -ne $taskRuntime.version -or $taskVendorHash -ne $taskRuntime.executable_sha256) {
+            throw 'The installed Electron runtime differs from the pinned official release.'
+        }
+        # Keep electron-builder's embedded ASAR integrity resource. Only its
+        # verified output for this app version may receive the character icon.
+        $taskAsarHash = (Get-FileHash -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/resources/app.asar" -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($taskRuntime.app_version -ne $taskVersion -or $taskAsarHash -ne $taskRuntime.app_asar_sha256 -or $taskAppHash -ne $taskRuntime.builder_executable_sha256) {
+            throw 'The packaged app differs from the pinned ASAR-integrity build. Verify and update vendor-runtime.json for this version.'
         }
         $taskIcon = Join-Path $taskRoot 'desktop/assets/app.ico'
         $taskEditor = Join-Path $taskRoot "desktop/node_modules/$($taskRuntime.icon_editor)"
@@ -48,7 +73,7 @@ try {
             throw 'The app icon or icon editor differs from the pinned build inputs.'
         }
         $taskApp = Join-Path $taskRoot "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe"
-        $taskVendorInfo = (Get-Item -LiteralPath 'desktop/node_modules/electron/dist/electron.exe').VersionInfo
+        $taskVendorInfo = (Get-Item -LiteralPath $taskVendorExe).VersionInfo
         & $taskEditor $taskApp --set-icon $taskIcon
         if ($LASTEXITCODE -ne 0) { throw 'App icon update failed.' }
         $taskAppInfo = (Get-Item -LiteralPath $taskApp).VersionInfo

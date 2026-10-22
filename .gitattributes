@@ -6,3 +6,8 @@ research/ml-review/**/originals/** -text -whitespace
 examples/mock-site-content.json text eol=lf
 # Preserve CSV CRLF and JSON hashes in the published test outputs.
 examples/test-site-2026-10-20/* -text -whitespace
+# Keep raw files embedded in the Windows ASAR identical on every build host.
+desktop/electron/** text eol=crlf
+desktop/package.json text eol=crlf
+desktop/src/shortcuts.mjs text eol=crlf
+desktop/licenses/*.txt text eol=crlf

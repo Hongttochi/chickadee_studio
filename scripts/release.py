@@ -22,9 +22,11 @@ def validate_zip_paths(names):
 
 
 def verify_vendor_runtime(archive, prefix, expected):
-    with archive.open(prefix + 'Chickadee.exe') as stream:
-        if file_digest(stream, 'sha256').hexdigest() != expected:
-            raise ValueError('App executable differs from the verified Electron runtime')
+    for name, digest in [('Chickadee.exe', expected['packaged_executable_sha256']),
+                         ('resources/app.asar', expected['app_asar_sha256'])]:
+        with archive.open(prefix + name) as stream:
+            if file_digest(stream, 'sha256').hexdigest() != digest:
+                raise ValueError('App differs from the verified Electron runtime: ' + name)
 
 
 def version():
@@ -90,7 +92,9 @@ def verify(value, directory):
             raise ValueError("ZIP is missing required app, engine, documentation or licenses")
         if tuple(map(int, value.split('.'))) >= (0, 10, 8):
             runtime = json.loads((ROOT / 'desktop/vendor-runtime.json').read_text(encoding='utf-8'))
-            verify_vendor_runtime(archive, prefix, runtime['packaged_executable_sha256'])
+            if runtime['app_version'] != value:
+                raise ValueError('Runtime manifest differs from the app version')
+            verify_vendor_runtime(archive, prefix, runtime)
         browser_names = ("/headless_shell.exe", "/chrome-headless-shell.exe")
         browser_root = (prefix + 'resources/engine/_internal/browsers/'
                         if tuple(map(int, value.split('.'))) >= (0, 10, 7) else None)

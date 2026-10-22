@@ -15,11 +15,15 @@ spec.loader.exec_module(release)
 class ReleaseTests(unittest.TestCase):
     def test_unverified_executable_is_rejected(self):
         import io
-        expected = sha256(b'verified icon-only runtime').hexdigest()
-        for binary, valid in [(b'verified icon-only runtime', True), (b'arbitrary runtime edit', False)]:
+        expected = {'packaged_executable_sha256': sha256(b'verified icon runtime').hexdigest(),
+                    'app_asar_sha256': sha256(b'verified app').hexdigest()}
+        for binary, app, valid in [(b'verified icon runtime', b'verified app', True),
+                                   (b'arbitrary runtime edit', b'verified app', False),
+                                   (b'verified icon runtime', b'tampered app', False)]:
             data = io.BytesIO()
             with zipfile.ZipFile(data, 'w') as output:
                 output.writestr('app/Chickadee.exe', binary)
+                output.writestr('app/resources/app.asar', app)
             with zipfile.ZipFile(data) as archive:
                 if valid:
                     release.verify_vendor_runtime(archive, 'app/', expected)
