@@ -28,6 +28,12 @@ const assert=require('node:assert/strict');
   assert.equal(state.agent.running,false);
   assert.equal(state.agent.assessments.length,0);
   assert.ok(!JSON.stringify(state).includes(key));
+  await page.keyboard.press('Control+,');
+  await page.getByRole('button',{name:'AI 연결',exact:true}).click();
+  await page.getByText('등록됨',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'API 키 등록',exact:true}).click();
+  assert.equal(await page.getByLabel('Groq API 키',{exact:true}).getAttribute('type'),'password');
+  assert.equal(await page.getByLabel('Groq API 키',{exact:true}).inputValue(),'');
   console.log(JSON.stringify({status:'passed',external_file_read:true,key_not_in_renderer:true,paid_calls:0}));
  }finally{await app.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

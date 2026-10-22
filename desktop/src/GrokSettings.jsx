@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Plus, ChevronDown } from "lucide-react";
 import grokLogo from "../assets/groq-logo.png";
 
@@ -11,6 +11,13 @@ export default function GrokSettings({ config, onConfigured }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const update = (name, value) => setDraft((previous) => ({ ...previous, [name]: value }));
+  useEffect(() => {
+    let active = true;
+    window.chickadee.state().then(state => window.chickadee.inspection({run_id:state.run_id}))
+      .then(data => { if (active) onConfigured({ ...config, sessionKey:Boolean(data.agent?.configured) }); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [onConfigured]);
   async function apply() {
     setBusy(true); setMessage("");
     try {
