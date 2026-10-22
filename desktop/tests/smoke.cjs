@@ -323,7 +323,15 @@ async function waitForHistory(page, count) {
       }),
     );
   } finally {
+    const process = app.process?.();
+    // Context closure can precede native process exit and release of the profile lock.
+    const exited = process && process.exitCode === null && process.signalCode === null
+      ? new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error('Previous Electron process did not exit before restart')), 30000);
+          process.once('exit', () => { clearTimeout(timer); resolve(); });
+        }) : Promise.resolve();
     await app.close();
+    await exited;
     if (server) {
       server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));
@@ -337,7 +345,7 @@ async function waitForHistory(page, count) {
       timeout: 45000,
     });
     try {
-      const page = await restarted.firstWindow();
+      const page = await restarted.firstWindow({ timeout: 60000 });
       await page
         .locator(".header-run-controls button.primary:not(:disabled)")
         .waitFor({ timeout: 30000 });
