@@ -31,7 +31,8 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
     async def test_bundled_runtime_needs_no_external_python(self):
         with tempfile.TemporaryDirectory() as temp:
             worker=Path(temp)/'ChickadeeLaya.exe';worker.write_bytes(b'test-only')
-            with patch.dict(os.environ,{'CHICKADEE_LAYA_MODEL_DIR':temp,'CHICKADEE_LAYA_WORKER':str(worker)},clear=True), patch('chickadee.runtime.memory_info',return_value={'available_bytes':8*1024**3}), patch('asyncio.create_subprocess_exec',side_effect=OSError('fixture')) as spawn:
+            stale=Path(temp)/'laya.json';stale.write_text(json.dumps({'format':1,'python':'missing-development-python'}))
+            with patch.dict(os.environ,{'CHICKADEE_LAYA_MODEL_DIR':temp,'CHICKADEE_LAYA_WORKER':str(worker),'CHICKADEE_LAYA_CONFIG':str(stale)},clear=True), patch('chickadee.runtime.memory_info',return_value={'available_bytes':8*1024**3}), patch('asyncio.create_subprocess_exec',side_effect=OSError('fixture')) as spawn:
                 value=await LayaSession().analyze(['한국어 본문'])
             self.assertEqual(spawn.call_args.args,(str(worker),))
             self.assertEqual(value[0]['reason'],'inference_failed')

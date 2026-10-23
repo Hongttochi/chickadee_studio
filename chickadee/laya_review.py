@@ -13,6 +13,9 @@ MAX_SECONDS = 120
 
 def configuration():
     """Read only the user's explicit local-model configuration, never credentials."""
+    if os.environ.get('CHICKADEE_LAYA_WORKER') and os.environ.get('CHICKADEE_LAYA_MODEL_DIR'):
+        # A portable release must not depend on a stale developer Python setting.
+        return str(Path(os.environ['CHICKADEE_LAYA_MODEL_DIR']).resolve()), None
     value = {}
     config = os.environ.get('CHICKADEE_LAYA_CONFIG')
     if config:

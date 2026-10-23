@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
 root = Path(SPECPATH).parent
 data = collect_data_files('laya')
-for package in ('torch', 'laya', 'transformers', 'safetensors', 'tokenizers', 'huggingface-hub', 'regex', 'numpy', 'packaging', 'tqdm', 'pyyaml', 'filelock', 'requests'):
+for package in ('torch', 'laya', 'transformers', 'safetensors', 'tokenizers', 'huggingface-hub', 'regex', 'numpy', 'packaging', 'tqdm', 'pyyaml', 'filelock'):
     data += copy_metadata(package)
 a = Analysis([str(root/'run_laya.py')], pathex=[str(root)], datas=data,
     hiddenimports=['laya.agent', 'laya.common', 'transformers.models.modernbert.modeling_modernbert',
