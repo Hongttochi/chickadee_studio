@@ -359,7 +359,8 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     await enrich_content_images(report, state.image_assets, candidates=config.detect_candidates,
         timeout_seconds=min(45,max(0,config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0)))),stop=stop)
     await enrich_laya(report, stop=stop, emit=emit,
-        timeout_seconds=max(0, config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0))))
+        timeout_seconds=max(0, config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0))),
+        candidates=config.detect_candidates)
     emit({'kind': 'phase', 'stage': 'dedup', 'action': 'merge',
           'message': f'동일 문구의 본문·OCR 근거 {state.merged_observations}건을 합쳤습니다.'})
     result['meta'].update(finished_at=datetime.now().astimezone().isoformat(),
@@ -383,6 +384,7 @@ def _ocr_element(image, record):
 
 def _observation(hit, location, screenshot_id=None):
     return {'source_kind': hit.get('source_kind', 'dom_text'), 'image_id': hit.get('image_id'),
+            'source_role': hit.get('source_role'),
             'location': location, 'text': hit['text'], 'screenshot_id': screenshot_id,
             'computed_style': hit.get('computed_style', {}),
             'transparent': hit.get('transparent', False), 'offscreen': hit.get('offscreen', False)}
@@ -919,9 +921,9 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
               "message": f"{len(data['elements'])}개 요소의 문자 위장·자모·투명·화면 밖 은닉을 검사합니다.", "frame_depth": prefix.count(' >>> ')})
     hits = classify_elements(data["elements"] + (ocr_elements if ocr_techniques else []), inherited, rules) if detect_techniques else []
     candidates = classify_candidates(data["elements"] + (ocr_elements if ocr_candidates else []), rules) if detect_candidates else []
-    fresh = any((page_url, prefix + h['location'], h['technique']) not in state.seen_findings for h in hits)
-    fresh |= any((page_url, prefix + (h.get('content_scope') or h['location']), h['category']) not in state.candidate_keys for h in candidates)
-    screenshot_id = await _evidence_screenshot(frame.page, state, emit) if fresh else None
+    async def capture(hit):
+        target = None if hit.get('transparent') or hit.get('offscreen') else frame.locator(hit['location']).first
+        return await _evidence_screenshot(frame.page, state, emit, target=target, location=prefix + hit['location'], frame=frame)
     for hit in hits:
         location = prefix + hit["location"]
         scope = prefix + (hit.get("content_scope") or hit["location"])
@@ -929,6 +931,7 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
         key = page_url, location, hit["technique"]
         if key in state.seen_findings:
             continue
+        screenshot_id = await capture(hit)
         state.seen_findings.add(key)
         finding = {"id": f"f_{len(state.findings) + 1:05d}", "url": page_url, "is_violation": True,
                    "location": location, "evidence_text": hit["text"], "technique": hit["technique"]}
@@ -957,8 +960,18 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
     for hit in candidates:
         scope = prefix + (hit.get("content_scope") or hit["location"])
         key = page_url, scope, hit["category"]
-        if (page_url, scope) in state.finding_scopes or key in state.candidate_keys:
+        if (page_url, scope) in state.finding_scopes:
             continue
+        existing = next((row for row in state.ad_candidates if row['id'] == state.candidate_keys.get(key)), None)
+        source_hits = hit.get('evidence_hits', [hit])
+        if existing:
+            source_hits = [item for item in source_hits if not any(
+                source.get('location') == prefix + item['location'] and source.get('text') == item['text'] and
+                source.get('source_kind') == item.get('source_kind', 'dom_text')
+                for source in existing.get('evidence_sources', []))]
+            if not source_hits:
+                continue
+        screenshot_id = await capture(hit)
         candidate = {"id": f"c_{len(state.ad_candidates) + 1:05d}", "url": page_url,
                      "location": prefix + hit["location"], "scope_location": scope,
                      "evidence_text": hit["text"], "category": hit["category"], "review_required": True,
@@ -967,10 +980,15 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
                      "screenshot_id": screenshot_id,
                      "screenshot_region": await _screen_region(frame, hit['location']) if screenshot_id else None}
         candidate.update(source_kind=hit.get('source_kind', 'dom_text'), image_id=hit.get('image_id'),
-                         evidence_sources=[_observation(hit, prefix + hit['location'], screenshot_id)])
-        previous = _cross_source_match(state.ad_candidates, candidate)
+                         source_role=hit.get('source_role'),
+                         evidence_sources=[_observation(item, prefix + item['location'],
+                             screenshot_id if item['location'] == hit['location'] else await capture(item))
+                             for item in source_hits])
+        previous = existing or _cross_source_match(state.ad_candidates, candidate)
         if previous:
             previous['evidence_sources'].extend(candidate['evidence_sources'])
+            previous['matched_keywords'] = list(dict.fromkeys([*previous.get('matched_keywords', []), *candidate['matched_keywords']]))
+            previous['reasons'] = list(dict.fromkeys([*previous.get('reasons', []), *candidate['reasons']]))
             state.candidate_keys[key] = previous['id']
             state.merged_observations += 1
             emit({'kind': 'candidate', 'candidate': previous})
@@ -1073,6 +1091,8 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         record = {'id': 'im_' + str(len(state.ocr_images) + 1), 'url': page_url, 'location': location,
                   'source_url': '(inline)' if source.startswith('data:') else source[:2000],
                   'source_type': image['source_type'], 'status': 'failed', 'lines': [], '_source_key': source_key}
+        record['source_role'] = image.get('source_role')
+        record['interface_image'] = image.get('interface_image', False)
         state.ocr_images.append(record)
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
@@ -1137,12 +1157,16 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
                 message = unreadable_message(result)
                 record['message'] = message
                 state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + message})
-                emit({'kind': 'warning', 'stage': 'ocr', 'message': message, 'url': page_url})
+                emit({'kind': 'warning', 'stage': 'ocr',
+                      'message': f'{message} 대상 이미지: {location}', 'url': page_url,
+                      'image_id': record['id'], 'location': location,
+                      'source_url': record['source_url']})
             else:
                 elements.append(_ocr_element(image, record))
             emit({'kind': 'image_ocr', 'image_id': record['id'], 'status': 'completed',
                   'line_count': len(record['lines']), 'accepted_lines': observation['accepted_lines'],
-                  'recognition_status': record['recognition_status'], 'url': page_url})
+                  'recognition_status': record['recognition_status'], 'url': page_url,
+                  'location': location, 'source_url': record['source_url']})
         except ImageBudgetExceeded as error:
             state.ocr_images.pop()
             state.ocr_skipped += 1
@@ -1158,22 +1182,40 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
     return elements
 
 
-async def _evidence_screenshot(page, state, emit):
+async def _evidence_screenshot(page, state, emit, *, target=None, location=None, frame=None):
     key = state.trace.active
+    if key and target is not None:
+        key += '_' + hashlib.sha256((location or '').encode()).hexdigest()[:12]
     if key in state.screenshots:
         return key
     if not key or len(state.screenshots) >= SCREENSHOT_MAX_COUNT or state.screenshot_bytes >= SCREENSHOT_MAX_BYTES:
         return None
     try:
-        # Preserve the observed viewport: never scroll or unhide an element for evidence.
-        pixels = await page.screenshot(type='jpeg', quality=55, timeout=1200)
+        # Visible text gets a capture of the exact element. Never unhide or
+        # restyle concealed evidence; retain the viewport for those observations.
+        scrolls = []
+        if target is not None:
+            contexts = [page]
+            context = frame
+            while context is not None:
+                contexts.append(context)
+                context = context.parent_frame
+            for context in contexts:
+                scrolls.append((context, await context.evaluate('() => ({x: scrollX, y: scrollY})')))
+        try:
+            pixels = await (target.screenshot(type='jpeg', quality=55, timeout=1200) if target is not None
+                            else page.screenshot(type='jpeg', quality=55, timeout=1200))
+        finally:
+            for context, position in reversed(scrolls):
+                await context.evaluate("p => scrollTo({left:p.x, top:p.y, behavior:'instant'})", position)
         if len(pixels) > 200_000 or state.screenshot_bytes + len(pixels) > SCREENSHOT_MAX_BYTES:
             return None
         state.screenshots[key] = {
             'data_url': 'data:image/jpeg;base64,' + base64.b64encode(pixels).decode('ascii'),
             'sha256': hashlib.sha256(pixels).hexdigest(), 'url': page.url,
             'viewport': page.viewport_size, 'snapshot_id': key,
-            'observed_at': datetime.now().astimezone().isoformat(), 'capture': 'original_viewport',
+            'observed_at': datetime.now().astimezone().isoformat(),
+            'capture': 'target_element' if target is not None else 'original_viewport', 'location': location,
         }
         state.screenshot_bytes += len(pixels)
         try:

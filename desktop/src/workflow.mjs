@@ -80,16 +80,46 @@ export const PAIRS = [
   ["laya", "dedup"],
   ["dedup", "report"],
 ];
+export function workflowPorts(id, direction) {
+  const peers = PAIRS.filter(([source, target]) => direction === 'in' ? target === id : source === id)
+    .map(([source, target]) => direction === 'in' ? source : target);
+  // Match the vertical order of destinations, independently of PAIRS order.
+  // OCR uses the middle port, so the image path stays horizontal.
+  if (['collector', 'ocr'].includes(id) && direction === 'out') {
+    const order = ['techniques', 'ocr', 'candidates'];
+    peers.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  }
+  // Keep the bypass from the collector below the OCR route into ML.
+  if (id === 'candidates' && direction === 'in') peers.reverse();
+  return peers.map((peer, index) => ({
+    id: peers.length === 1 ? direction : `${direction}-${peer}`,
+    peer, top: peers.length === 1 ? 50 : 25 + index * 50 / (peers.length - 1),
+  }));
+}
+export function workflowRoute(source, target, sourceX, targetX) {
+  const options = { borderRadius: 12, offset: 24 };
+  if (targetX - sourceX < 100) return options;
+  if (source === 'collector' && target === 'techniques') options.centerX = sourceX + 44;
+  if (source === 'collector' && target === 'candidates') options.centerX = sourceX + 64;
+  if (source === 'ocr' && target === 'techniques') options.centerX = targetX - 44;
+  if (source === 'ocr' && target === 'candidates') options.centerX = targetX - 64;
+  if (source === 'techniques' && target === 'dedup') options.centerX = targetX - 104;
+  if (source === 'laya' && target === 'dedup') options.centerX = targetX - 44;
+  return options;
+}
 export const edgeFor = (source, target) => ({
   id: source + "-" + target,
   source,
   target,
   type: "default",
-  sourceHandle: "out",
-  targetHandle: "in",
+  sourceHandle: workflowPorts(source, 'out').find(port => port.peer === target).id,
+  targetHandle: workflowPorts(target, 'in').find(port => port.peer === source).id,
   ...({"collector-ocr":"이미지", "collector-candidates":"본문", "ocr-candidates":"추출 문자"}[source+"-"+target] ? {
     label: {"collector-ocr":"이미지", "collector-candidates":"본문", "ocr-candidates":"추출 문자"}[source+"-"+target],
-    labelShowBg: false, labelStyle: { fill: "#a8afb7", fontSize: 11 },
+    labelShowBg: true,
+    labelStyle: { fill: "#e0e5eb", fontSize: 12, fontWeight: 500 },
+    labelBgStyle: { fill: "#242628", stroke: "#41464b", strokeWidth: 1 },
+    labelBgPadding: [8, 5], labelBgBorderRadius: 5,
   } : {}),
 });
 export function ocrDetectionCount(records = []) {
@@ -112,15 +142,15 @@ export const defaultWorkflow = () => ({
   follow_links: true,
   ocr_enabled: true,
   nodes: [
-    { id: "target", position: { x: 0, y: 200 } },
-    { id: "browser", position: { x: 220, y: 200 } },
-    { id: "collector", position: { x: 440, y: 200 } },
-    { id: "techniques", position: { x: 880, y: 0 } },
-    { id: "ocr", position: { x: 660, y: 400 } },
-    { id: "candidates", position: { x: 880, y: 200 } },
-    { id: "laya", position: { x: 1100, y: 200 } },
-    { id: "dedup", position: { x: 1320, y: 200 } },
-    { id: "report", position: { x: 1540, y: 200 } },
+    { id: "target", position: { x: 0, y: 160 } },
+    { id: "browser", position: { x: 210, y: 160 } },
+    { id: "collector", position: { x: 420, y: 160 } },
+    { id: "techniques", position: { x: 850, y: 0 } },
+    { id: "ocr", position: { x: 630, y: 160 } },
+    { id: "candidates", position: { x: 850, y: 320 } },
+    { id: "laya", position: { x: 1070, y: 320 } },
+    { id: "dedup", position: { x: 1290, y: 160 } },
+    { id: "report", position: { x: 1510, y: 160 } },
   ],
   edges: PAIRS.map(([a, b]) => edgeFor(a, b)),
 });

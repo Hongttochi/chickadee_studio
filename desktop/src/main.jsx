@@ -1,4 +1,6 @@
 import UpdateSettings from "./UpdateSettings.jsx";
+import { advertisingGroup, normalizeCandidates } from "./advertising-groups.mjs";
+import { groupPageRecords, pageReview, expandPageIds, evidenceRole } from "./page-records.mjs";
 import React, {
   useState,
   useId,
@@ -27,6 +29,9 @@ import {
   MiniMap,
   Handle,
   Position,
+  MarkerType,
+  BaseEdge,
+  getSmoothStepPath,
   applyNodeChanges,
 } from "@xyflow/react";
 import {
@@ -99,6 +104,8 @@ import {
   restoreWorkflowLayout,
   ocrPresentation,
   ocrDetectionCount,
+  workflowPorts,
+  workflowRoute,
 } from "./workflow.mjs";
 import "./style.css";
 import "./theme.css";
@@ -144,13 +151,18 @@ const nodeImages = {
 };
 
 const api = window.chickadee;
-const NODE_LAYOUT_KEY = "chickadee.node-layout.v3";
+const NODE_LAYOUT_KEY = "chickadee.node-layout.v5";
 function restoreNodeLayout(nodes) {
   let saved;
   try {
     saved = JSON.parse(localStorage.getItem(NODE_LAYOUT_KEY));
   } catch {}
-  return restoreWorkflowLayout(nodes, saved);
+  // Start the reorganized canvas on its clean grid; subsequent manual changes
+  // are restored from the new layout key without touching analysis settings.
+  const arranged = defaultWorkflow().nodes.map(stage => ({
+    ...nodes.find(node => node.id === stage.id), position: { ...stage.position },
+  }));
+  return restoreWorkflowLayout(arranged, saved);
 }
 const Icons = {
   Activity,
@@ -224,8 +236,9 @@ const LABELS = {
   INVESTMENT: "투자 모집 의심",
   COMMERCIAL: "구매·추천 유도",
   AI_CONTEXT: "AI 광고 문맥",
+  IMAGE_REVIEW: "이미지 검토 필요",
   ACCOUNT_TRADE: "계좌·통장 거래 의심",
-  DRUGS: "마약 관련 이미지",
+  DRUGS: "마약 거래·홍보 의심",
 };
 const TYPE_ICONS = {
   GAMBLING: "Dice5",
@@ -233,6 +246,7 @@ const TYPE_ICONS = {
   LOAN: "Landmark",
   COMMERCIAL: "ShoppingCart",
   AI_CONTEXT: "Sparkles",
+  IMAGE_REVIEW: "ScanSearch",
   ADULT: "ShieldAlert",
   HOMOGLYPH: "Fingerprint",
   JAMO: "TextSearch",
@@ -332,14 +346,16 @@ function FlowNode({ id, data, selected }) {
   return (
     <div className={`flow-node tone-${def.tone} ${data.state || ""} ${selected ? "selected" : ""}`}>
       <div className="node-tile">
-        {def.input && <Handle id="in" type="target" position={positions[def.input]} isConnectable={false} />}
+        {def.input && workflowPorts(id, 'in').map(port => <Handle key={port.id} id={port.id}
+          type="target" position={positions[def.input]} style={{ top: `${port.top}%` }} isConnectable={false} />)}
         {nodeImages[id] ? <img src={nodeImages[id]} alt="" width={44} height={44} className={`node-symbol node-symbol-${id}`} draggable={false} /> : <Icon name={def.icon} size={44} />}
         {statusIcon && (
           <span className="node-run-state" title={status} aria-label={status}>
             <Icon name={statusIcon} size={15} className={data.state === "active" ? "spin" : ""} />
           </span>
         )}
-        {def.output && <Handle id="out" type="source" position={positions[def.output]} isConnectable={false} />}
+        {def.output && workflowPorts(id, 'out').map(port => <Handle key={port.id} id={port.id}
+          type="source" position={positions[def.output]} style={{ top: `${port.top}%` }} isConnectable={false} />)}
       </div>
       <strong>{def.title}</strong>
       <p className="node-caption" title={caption}>{caption}</p>
@@ -349,6 +365,15 @@ function FlowNode({ id, data, selected }) {
 }
 
 const nodeTypes = { stage: FlowNode };
+function WorkflowEdge({ id, source, target, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
+  markerEnd, style }) {
+  const [path] = getSmoothStepPath({
+    sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition,
+    ...workflowRoute(source, target, sourceX, targetX),
+  });
+  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />;
+}
+const edgeTypes = { workflow: WorkflowEdge };
 const REVIEW_LABELS = {
   unreviewed: "미검토",
   confirmed: "검토 확인",
@@ -554,7 +579,7 @@ function App() {
     [active, setActive] = useState(null),
     [visited, setVisited] = useState(new Set());
   const [events, setEvents] = useState([]),
-    [records, setRecords] = useState([]),
+    [rawRecords, setRecords] = useState([]),
     [pages, setPages] = useState([]),
     [history, setHistory] = useState([]);
   const [liveScreenshots, setLiveScreenshots] = useState({});
@@ -573,7 +598,6 @@ function App() {
   useEffect(() => {
     if (selectedRecord) lastSelectedRecord.current = selectedRecord;
   }, [selectedRecord]);
-  const detailRecord = selectedRecord || lastSelectedRecord.current;
   const [pending, setPending] = useState([]),
     [pageFilter, setPageFilter] = useState("visited");
   const [search, setSearch] = useState(""),
@@ -599,6 +623,8 @@ function App() {
     [elapsed, setElapsed] = useState(0),
     [booted, setBooted] = useState(false);
   const [reviewData, setReviewData] = useState({ revision: 0, items: {} });
+  const records = useMemo(() => groupPageRecords(rawRecords, outcome?.report.evidence_details), [rawRecords, outcome]);
+  const detailRecord = records.find(record => record.url === selectedRecord?.url) || selectedRecord || lastSelectedRecord.current;
   const [reviewFilter, setReviewFilter] = useState("all");
   const [pageSearch, setPageSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -695,7 +721,7 @@ function App() {
     setSelectedIds(new Set());
     setRecords([
       ...value.result.findings,
-      ...(value.report.ad_candidates || []),
+      ...normalizeCandidates(value.report.ad_candidates || [], value.report.ocr_images || []),
     ]);
     setPages(
       value.report.page_diagnostics ||
@@ -845,7 +871,7 @@ function App() {
           { ...event.finding, _detail: event.detail },
         ]);
       if (event.kind === "candidate")
-        setRecords((items) => [...items.filter(item => item.id !== event.candidate.id), event.candidate]);
+        setRecords((items) => normalizeCandidates([...items.filter(item => item.id !== event.candidate.id), event.candidate]));
       if (event.kind === "done") {
         applyOutcome(event);
         setView(previous => previous === "workflow" ? "results" : previous);
@@ -1026,7 +1052,8 @@ function App() {
     () =>
       flow.edges.map((edge) => ({
         ...edge,
-        type: "default",
+        type: "workflow",
+        markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color: "#687a72" },
         selectable: false,
         deletable: false,
         focusable: false,
@@ -1184,13 +1211,17 @@ function App() {
     action(async () => {
       setReviewSaving(true);
       try {
-        const value = await api.review({
-          ids,
+        const memberIds = expandPageIds(ids, records);
+        let value = reviewData;
+        for (let start = 0; start < memberIds.length; start += 500) {
+          value = await api.review({
+          ids: memberIds.slice(start, start + 500),
           status,
           ...(note === undefined ? {} : { note }),
-          expected_revision: reviewData.revision,
+          expected_revision: value.revision,
         });
         setReviewData(value);
+        }
         setSelectedIds(new Set());
         setReviewNotice(`${ids.length}건의 검토 내용을 저장했습니다.`);
       } finally {
@@ -1282,17 +1313,19 @@ function App() {
   const filteredRecords = records.filter(
     (record) =>
       (reviewFilter === "all" ||
-        (reviewData.items[record.id]?.status || "unreviewed") ===
+        pageReview(record, reviewData.items).status ===
           reviewFilter) &&
       (filter === "all" ||
         (filter === "required" && record.technique) ||
         (filter === "candidates" && record.category) ||
-        record.technique === filter) &&
+        (["general_ads", "illegal_suspected", "image_review"].includes(filter) && advertisingGroup(record) === filter) ||
+        record.techniques?.includes(filter) || record.technique === filter) &&
       [
         record.url,
         record.evidence_text,
         record.location,
-        LABELS[record.technique || record.category],
+        ...(record.techniques || []).map(type => LABELS[type]),
+        ...(record.categories || []).map(type => LABELS[type]),
       ]
         .join(" ")
         .toLowerCase()
@@ -1502,20 +1535,14 @@ function App() {
               <span>필수 탐지</span>
               <b>{findings.length}</b>
             </button>
-            <button
-              className={
-                view === "results" && filter === "candidates" ? "active" : ""
-              }
-              onClick={() => {
-                setView("results");
-                setFilter("candidates");
-                setSearch("");
-              }}
-            >
-              <Icon name="TextSearch" size={13} />
-              <span>광고 의심</span>
-              <b className="amber-text">{candidates.length}</b>
-            </button>
+            {[["general_ads", "일반 광고", "ShoppingCart"], ["illegal_suspected", "불법 의심", "ShieldAlert"], ["image_review", "이미지 검토", "ScanSearch"]].map(([group, label, icon]) => (
+              <button key={group} className={view === "results" && filter === group ? "active" : ""}
+                onClick={() => { setView("results"); setFilter(group); setSearch(""); }}>
+                <Icon name={icon} size={13} />
+                <span>{label}</span>
+                <b className="amber-text">{candidates.filter(record => advertisingGroup(record) === group).length}</b>
+              </button>
+            ))}
             <button
               className={
                 view === "pages" && pageFilter === "pending" ? "active" : ""
@@ -1650,12 +1677,16 @@ function App() {
             <div className={`studio ${selectedNode || monitorOpen ? "panel-open" : "panel-closed"}`}>
               <section className="canvas-shell">
                 <div className="canvas-toolbar">
-                  <div>
-                    <button title="노드 정렬" aria-label="노드 정렬" disabled={running} onClick={() => {
+                  <span className="canvas-flow-heading"><strong>검사 흐름</strong><small className="canvas-route-legend">
+                    <span>본문 <Icon name="ChevronRight" size={12} /> ML</span>
+                    <span>이미지 <Icon name="ChevronRight" size={12} /> OCR <Icon name="ChevronRight" size={12} /> ML</span>
+                  </small></span>
+                  <div className="canvas-flow-actions">
+                    <button className="canvas-arrange" title="노드 정렬" aria-label="노드 정렬" onClick={() => {
                       const positions = defaultWorkflow().nodes;
                       setFlow(value => ({ ...value, nodes: value.nodes.map(node => ({ ...node, position: positions.find(item => item.id === node.id).position })) }));
                       requestAnimationFrame(() => requestAnimationFrame(() => canvasApi?.fitView({ padding: 0.2, maxZoom: 0.75, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200 })));
-                    }}><Icon name="Workflow" size={15} /></button>
+                    }}><Icon name="Workflow" size={15} /><span>자동 정렬</span></button>
                     <button
                       title="기본 구성"
                       disabled={running}
@@ -1686,6 +1717,7 @@ function App() {
                     nodes={flowNodes}
                     edges={flowEdges}
                     nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
                     onNodesChange={onNodesChange}
                     deleteKeyCode={null}
                     nodesDraggable={!running}
@@ -1701,7 +1733,7 @@ function App() {
                     maxZoom={1.5}
                     proOptions={{ hideAttribution: true }}
                   >
-                    <Background color="#383838" gap={20} size={1} />
+                    <Background color="#2b2d2e" gap={24} size={0.7} />
                     <Controls showInteractive={false} />
                     <MiniMap
                       nodeColor="#60646b"
@@ -1911,11 +1943,14 @@ function App() {
                     {[
                       ["all", "전체", "ListFilter"],
                       ["required", "필수 탐지", "ScanSearch"],
-                      ["candidates", "광고 의심", "ShieldAlert"],
+                      ["general_ads", "일반 광고", "ShoppingCart"],
+                      ["illegal_suspected", "불법 의심", "ShieldAlert"],
+                      ["image_review", "이미지 검토", "ScanSearch"],
                     ].map(([id, label, icon]) => (
                       <button
                         className={filter === id ? "active" : ""}
                         aria-pressed={filter === id}
+                        title={id === "general_ads" ? "일반 광고와 유형 미확인 광고 후보입니다. 합법 여부를 확정하지 않습니다." : id === "illegal_suspected" ? "위험 주제·거래 문맥의 검토 후보입니다. 위법 여부는 원문을 확인해야 합니다." : undefined}
                         key={id}
                         onClick={() => setFilter(id)}
                       >
@@ -2064,17 +2099,26 @@ function App() {
                               }
                             />
                           </td>
-                          <td>
+                          <td className="record-type-cell">
+                            <div className="record-types">
                             <button
                               className={`type-badge type-filter ${record.technique ? "purple" : "amber"}`}
                               data-type={record.technique || record.category}
                               onClick={(event) => {
                                 event.stopPropagation();
-                                setFilter(record.technique || "candidates");
+                                setFilter(record.technique || advertisingGroup(record));
                               }}
                             >
                               <TypeBadgeContent type={record.technique || record.category} />
                             </button>
+                            {(record.techniques.length + record.categories.length > 1) && <button
+                              className="record-type-more" type="button"
+                              aria-label={`추가 유형 ${record.techniques.length + record.categories.length - 1}개 보기`}
+                              title={[...record.techniques, ...record.categories].filter(type => type !== (record.technique || record.category)).map(type => LABELS[type]).join(" · ")}
+                              onClick={event => { event.stopPropagation(); setSelectedRecord(record); }}>
+                              외 {record.techniques.length + record.categories.length - 1}개
+                            </button>}
+                            </div>
                           </td>
                           <td className="evidence-cell">
                             {record.evidence_text}
@@ -2084,11 +2128,11 @@ function App() {
                           </td>
                           <td>
                             <span
-                              className={`review-label review-${reviewData.items[record.id]?.status || "unreviewed"}`}
+                              className={`review-label review-${pageReview(record, reviewData.items).status}`}
                             >
                               {
                                 REVIEW_LABELS[
-                                  reviewData.items[record.id]?.status ||
+                                  pageReview(record, reviewData.items).status ||
                                     "unreviewed"
                                 ]
                               }
@@ -2110,7 +2154,10 @@ function App() {
                   )}
                 </div>
                 <div className="table-footer">
-                  {filteredRecords.length}개 항목{" "}
+                  {filteredRecords.length}개 페이지 · 같은 페이지의 제목·본문·댓글·이미지 근거를 묶어 표시합니다.{" "}
+                  {running && <span>{active === "laya"
+                    ? "· 문맥 분석 중이며 광고 후보가 추가될 수 있습니다."
+                    : "· 검사 진행 중의 임시 목록입니다. 최종 문맥 분석 후 광고 후보가 추가될 수 있습니다."}</span>}
                 </div>
               </section>
               <div className="record-drawer" aria-hidden={!selectedRecord} inert={!selectedRecord}>
@@ -2120,7 +2167,7 @@ function App() {
                 liveScreenshots={liveScreenshots}
                 outcome={outcome}
                 review={
-                  reviewData.items[detailRecord.id]
+                  pageReview(detailRecord, reviewData.items)
                 }
                 onReview={(status, note) =>
                   updateReview([detailRecord.id], status, note)
@@ -2136,6 +2183,7 @@ function App() {
                   await api.copy(text);
                   tell("클립보드에 복사했습니다.", "success");
                 })}
+                onOpen={(url) => action(() => api.openExternal(url))}
                 onClose={() => setSelectedRecord(null)}
               />}
               </div>
@@ -2737,6 +2785,7 @@ function RecordDetail({
   record,
   outcome,
   onCopy,
+  onOpen,
   review,
   onReview,
   reviewDisabled,
@@ -2745,7 +2794,22 @@ function RecordDetail({
   onClose,
 }) {
   const [note, setNote] = useState(review?.note || "");
+  const additionalTypesRef = useRef(null);
   useEffect(() => setNote(review?.note || ""), [record?.id, review?.note]);
+  useEffect(() => {
+    const closeOutside = event => {
+      if (additionalTypesRef.current && !additionalTypesRef.current.contains(event.target)) additionalTypesRef.current.open = false;
+    };
+    const closeOnEscape = event => {
+      if (event.key === "Escape" && additionalTypesRef.current?.open) {
+        additionalTypesRef.current.open = false;
+        additionalTypesRef.current.querySelector('summary')?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeOnEscape); };
+  }, []);
   if (!record)
     return (
       <aside className="record-panel">
@@ -2756,6 +2820,11 @@ function RecordDetail({
         />
       </aside>
     );
+  let pageURL = null;
+  try {
+    const parsed = new URL(record.url);
+    if (["http:", "https:"].includes(parsed.protocol) && !parsed.username && !parsed.password) pageURL = parsed.href;
+  } catch {}
   const detail = record.technique
     ? record._detail || outcome?.report.evidence_details?.[record.id] || {}
     : record;
@@ -2763,6 +2832,8 @@ function RecordDetail({
     ...new Set((detail.analysis?.matches || []).map((match) => match.keyword)),
   ];
   const reasons = [...(detail.style_reasons || detail.reasons || [])];
+  const additionalTypes = [...new Set([...(record.techniques || []), ...(record.categories || [])])]
+    .filter(type => type !== (record.technique || record.category));
   for (const match of detail.analysis?.matches || []) {
     if (
       (record.technique === "HOMOGLYPH" && match.homoglyph) ||
@@ -2791,6 +2862,14 @@ function RecordDetail({
         <span className={`type-badge ${record.technique ? "purple" : "amber"}`} data-type={record.technique || record.category}>
           <TypeBadgeContent type={record.technique || record.category} />
         </span>
+        {additionalTypes.length > 0 && <details className="record-additional-types" ref={additionalTypesRef}>
+          <summary className="record-type-more" aria-label={`추가 유형 ${additionalTypes.length}개 보기`}>
+            외 {additionalTypes.length}개 <Icon name="ChevronDown" size={12} aria-hidden="true" />
+          </summary>
+          <div className="record-additional-types-panel" aria-label="추가 탐지 유형">
+            {additionalTypes.map(type => <span key={type} className={`type-badge ${record.techniques?.includes(type) ? "purple" : "amber"}`} data-type={type}><TypeBadgeContent type={type} /></span>)}
+          </div>
+        </details>}
 
         <div className="review-control">
           <span
@@ -2823,12 +2902,14 @@ function RecordDetail({
           />
         </div>
         </div>
-        <label>발견한 문구</label>
-        <blockquote>{record.evidence_text}</blockquote>
+        <label>{record.page_group ? "페이지 탐지 요약" : "발견한 문구"}</label>
+        {record.page_group ? <>
+          <p className="evidence-capture-note page-evidence-summary">같은 페이지의 근거 {record.evidence_sources.length}곳을 한 항목에 모았습니다.</p>
+        </> : <blockquote>{record.evidence_text}</blockquote>}
         {keywords.length > 0 && (
           <p className="record-keywords"><span>탐지된 표현:</span> {keywords.join(", ")}</p>
         )}
-        <label>탐지 이유</label>
+        <details className="page-reasons" open={record.page_group ? undefined : true}><summary>탐지 이유</summary>
         <ul>
           {(reasons.length
             ? [...new Set(reasons)]
@@ -2839,12 +2920,23 @@ function RecordDetail({
             <li key={index}>{reason}</li>
           ))}
         </ul>
-        {(detail.evidence_sources?.length > 1) && <p className="evidence-capture-note">본문·이미지의 동일 문구를 합쳤습니다. 근거 {detail.evidence_sources.length}곳을 보존했습니다.</p>}
-        {[...new Set([detail.image_id, ...(detail.evidence_sources || []).map(source => source.image_id)].filter(Boolean))].map(id => <ImageOCR key={id} image={outcome?.report.ocr_images?.find(image => image.id === id)} />)}
+        </details>
+        {record.page_group && <div className="page-evidence-list">{record.evidence_sources.map((source, index) => {
+          const screenshot = outcome?.report.screenshots?.[source.screenshot_id] || liveScreenshots[source.screenshot_id];
+          const role = evidenceRole(source);
+          return <section className="page-evidence-item" key={index}>
+            <strong>{index + 1}. {role}{source.source_kind === "image_ocr" && role !== "이미지" ? " 이미지" : ""}</strong>
+            <blockquote>{source.text}</blockquote>
+            {source.image_id && <ImageOCR image={outcome?.report.ocr_images?.find(image => image.id === source.image_id)} />}
+            <EvidenceScreenshot screenshot={screenshot} hidden={source.transparent || source.offscreen} showPageURL={false}
+              caption={screenshot?.capture === "target_element" ? "해당 위치 캡처" : "페이지 참고 화면"} />
+          </section>;
+        })}</div>}
+        {!record.page_group && [...new Set([detail.image_id, ...(detail.evidence_sources || []).map(source => source.image_id)].filter(Boolean))].map(id => <ImageOCR key={id} image={outcome?.report.ocr_images?.find(image => image.id === id)} />)}
         <LocalAIAnalysis analysis={detail.local_ai} />
-        <EvidenceScreenshot screenshot={outcome ? outcome.report.screenshots?.[detail.screenshot_id] : liveScreenshots[detail.screenshot_id]}
+        {!record.page_group && <EvidenceScreenshot screenshot={outcome ? outcome.report.screenshots?.[detail.screenshot_id] : liveScreenshots[detail.screenshot_id]}
 
-          hidden={record.technique === "TRANSPARENT" || record.technique === "OFFSCREEN"} />
+          hidden={record.technique === "TRANSPARENT" || record.technique === "OFFSCREEN"} showPageURL={false} />}
         <div className="review-editor">
           <details className="review-note-details" open={note ? true : undefined}>
           <summary>검토 메모</summary>
@@ -2920,14 +3012,19 @@ function RecordDetail({
             <Icon name="Copy" size={13} />
           </button>
         </label>
-        <pre className="detail-url">{record.url}</pre>
+        <pre className="detail-url">{pageURL ? <a href={pageURL} title="기본 브라우저에서 페이지 열기"
+          onClick={event => { event.preventDefault(); onOpen(pageURL); }}>
+          {record.url} <Icon name="ArrowUpRight" size={14} aria-hidden="true" />
+        </a> : record.url}</pre>
         <label>
           DOM 위치{" "}
-          <button onClick={() => onCopy(record.location)} title="위치 복사">
+          <button onClick={() => onCopy(record.page_group ? record.evidence_sources.map(source => source.location).join('\n') : record.location)} title="위치 복사">
             <Icon name="Copy" size={13} />
           </button>
         </label>
-        <pre>{record.location}</pre>
+        {record.page_group ? record.evidence_sources.map((source, index) => <div key={index}>
+          <label>근거 {index + 1} · {evidenceRole(source)}</label><pre>{source.location}</pre>
+        </div>) : <pre>{record.location}</pre>}
         <details>
           <summary>원시 데이터</summary>
           <pre>{JSON.stringify({ record, detail }, null, 2)}</pre>

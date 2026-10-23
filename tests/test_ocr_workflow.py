@@ -59,13 +59,34 @@ class OCRWorkflowTests(unittest.IsolatedAsyncioTestCase):
                'transparent': False, 'offscreen': False}
         image = {**dom, 'node_id': 'ocr:1', 'location': 'img.ad', 'source_kind': 'image_ocr', 'image_id': 'im_1'}
         frame = SimpleNamespace(evaluate=AsyncMock(return_value={'elements': [dom], 'images': [{}],
-            'links': [], 'truncated': False, 'links_truncated': False}), child_frames=[], page=object())
+            'links': [], 'truncated': False, 'links_truncated': False}), child_frames=[], page=object(), locator=Mock())
         with patch('chickadee.scanner._inspect_images', new_callable=AsyncMock, return_value=[image]), \
              patch('chickadee.scanner._evidence_screenshot', new_callable=AsyncMock, return_value=None):
             await _inspect_frame(frame, '', {}, 'https://example.org', '', state, Mock())
         self.assertEqual(len(state.ad_candidates), 1)
         self.assertEqual(state.merged_observations, 1)
         self.assertEqual({s['location'] for s in state.ad_candidates[0]['evidence_sources']}, {'p.ad', 'img.ad'})
+
+    async def test_discount_image_becomes_review_candidate_without_evasion(self):
+        state = _State()
+        state.trace.capture = Mock()
+        image = {'node_id': 'ocr:1', 'parent_id': None, 'location': 'img.post-image',
+                 'text': '최대 49%할인\n수송전\n플I트-이벤트',
+                 'transparent': False, 'offscreen': False,
+                 'source_kind': 'image_ocr', 'image_id': 'im_20'}
+        frame = SimpleNamespace(evaluate=AsyncMock(return_value={
+            'elements': [], 'images': [{}], 'links': [],
+            'truncated': False, 'links_truncated': False,
+        }), child_frames=[], page=object(), locator=Mock())
+        with patch('chickadee.scanner._inspect_images', new_callable=AsyncMock, return_value=[image]), \
+             patch('chickadee.scanner._evidence_screenshot', new_callable=AsyncMock, return_value=None):
+            await _inspect_frame(frame, '', {}, 'https://example.org', '', state, Mock())
+        self.assertEqual(state.findings, [])
+        self.assertEqual(len(state.ad_candidates), 1)
+        candidate = state.ad_candidates[0]
+        self.assertEqual(candidate['category'], 'COMMERCIAL')
+        self.assertEqual(candidate['image_id'], 'im_20')
+        self.assertTrue(candidate['review_required'])
 
     async def test_different_text_or_page_is_not_merged_and_failure_is_partial(self):
         from chickadee.scanner import _cross_source_match, _ocr_summary, _State, ScanConfig

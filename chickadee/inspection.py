@@ -117,6 +117,7 @@ class InspectionTrace:
                                         (['isolated_scope_context'] if element.get('nested_content_scopes') else []),
                     'snapshot_id': self.active, 'observed_at': datetime.now().astimezone().isoformat(),
                     'source_kind': element.get('source_kind', 'dom_text'), 'image_id': element.get('image_id'),
+                    'source_role': element.get('source_role'),
                 }
                 if element.get('ocr'): self.packets[key]['ocr'] = deepcopy(element['ocr'])
                 size = len(json.dumps(self.packets[key], ensure_ascii=False).encode('utf-8'))

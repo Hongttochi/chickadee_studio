@@ -8,7 +8,7 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-MAX_ITEMS = 12
+MAX_ITEMS = 12  # Per request; the scan can process successive batches.
 MAX_SECONDS = 120
 
 
@@ -99,6 +99,7 @@ class LayaSession:
                'TRANSFORMERS_OFFLINE': '1', 'TOKENIZERS_PARALLELISM': 'false', 'USE_TF': '0',
                'CHICKADEE_LAYA_MODEL_DIR': folder}
         reply = None
+        reusable = False
         try:
             self.process = await asyncio.create_subprocess_exec(*args, stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit=100_000,
@@ -123,6 +124,7 @@ class LayaSession:
             from .inspection import validate_local_ai
             if len(results) != len(texts): raise ValueError('Laya 결과 개수 오류')
             for item in results: validate_local_ai({'laya': item})
+            reusable = any(item['status'] == 'completed' for item in results)
             return results
         except asyncio.TimeoutError:
             return [unavailable('timeout') for _ in texts]
@@ -132,7 +134,7 @@ class LayaSession:
             if reply is not None and not reply.done():
                 reply.cancel()
                 await asyncio.gather(reply, return_exceptions=True)
-            await self.close()
+            if not reusable: await self.close()
 
     async def close(self):
         if self.process:
@@ -146,15 +148,31 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
     """One review per unique evidence text, bounded; never remove deterministic findings."""
     emit({'kind': 'phase', 'stage': 'laya', 'action': 'prepare', 'message': 'Laya 적용 상태를 확인합니다.'})
     selected, seen = [], set()
+    from .local_ai import has_review_context
     for source in sources:
         text = source.get('text', '')
         key = text[:4000]
-        if text.strip() and key not in seen and source.get('scope_quality') != 'overlapping' and len(selected) < MAX_ITEMS:
+        if text.strip() and has_review_context(source) and key not in seen and source.get('scope_quality') != 'overlapping':
             selected.append(source); seen.add(key)
     session = LayaSession(timeout_seconds)
+    results = []
     async def work():
-        if not selected: return []
-        return await session.analyze([s['text'][:4000] for s in selected])
+        deadline = time.monotonic() + session.timeout_seconds
+        for start in range(0, len(selected), MAX_ITEMS):
+            if stop and stop.is_set(): break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0: break
+            session.timeout_seconds = remaining
+            batch = selected[start:start + MAX_ITEMS]
+            replies = await session.analyze([s['text'][:4000] for s in batch])
+            if len(replies) != len(batch): raise ValueError('Laya 결과 개수 오류')
+            results.extend(replies)
+            emit({'kind': 'phase', 'stage': 'laya', 'action': 'progress',
+                  'message': f'Laya 문맥 검토 {len(results)}/{len(selected)}개'})
+            # A missing model or exhausted worker should not be retried for
+            # every remaining batch. Completed earlier batches remain usable.
+            if all(r.get('status') != 'completed' for r in replies): break
+        return results
     task = asyncio.create_task(work())
     try:
         while not task.done():
@@ -162,47 +180,52 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
                 task.cancel()
                 break
             await asyncio.wait({task}, timeout=.1)
-        results = await task if not task.cancelled() else []
+        if not task.cancelled(): await task
     except asyncio.CancelledError:
-        results = []
         if not (stop and stop.is_set()): raise
     except Exception:
-        results = [unavailable('inference_failed') for _ in selected]
+        results.extend(unavailable('inference_failed') for _ in selected[len(results):])
     finally:
         if not task.done(): task.cancel()
         await asyncio.gather(task, return_exceptions=True)
         await session.close()
     by_text = {s['text'][:4000]: r for s, r in zip(selected, results)}
+    remaining_reason = 'budget_or_cancelled' if stop and stop.is_set() else 'time_budget'
+    if results and all(r.get('status') != 'completed' for r in results[-MAX_ITEMS:]):
+        remaining_reason = results[-1].get('reason', remaining_reason)
     for source in sources:
-        source.setdefault('local_ai', {})['laya'] = by_text.get(source.get('text','')[:4000], unavailable('budget_or_cancelled'))
+        source.setdefault('local_ai', {})['laya'] = (by_text.get(source.get('text','')[:4000], unavailable(remaining_reason))
+            if has_review_context(source) else unavailable('insufficient_scope'))
     completed = sum(r['status'] == 'completed' for r in results)
     omitted = sum(s['local_ai']['laya']['status'] != 'completed' for s in sources)
     summary = {'status': 'completed' if completed and not omitted else 'partial' if completed else 'unavailable',
-               'analyzed': completed, 'unique_selected': len(selected), 'item_limit': MAX_ITEMS,
+               'analyzed': completed, 'unique_selected': len(selected), 'batch_size': MAX_ITEMS,
                'omitted': omitted, 'paid_requests': 0}
     if not completed and results:
         summary['reason'] = results[0].get('reason', 'inference_failed')
     emit({'kind': 'phase', 'stage': 'laya', 'action': 'complete' if completed else 'skipped',
-          'message': f'Laya {completed}개 문맥 검토' if completed else 'Laya 미적용 · 기존 탐지 결과 유지'})
+          'message': f'Laya {completed}개 문맥 검토 · 미검토 {omitted}개' if completed else 'Laya 미적용 · 기존 탐지 결과 유지'})
     return summary
 
 
-async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_SECONDS):
-    packets = report.get('evidence_packets', [])
+async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_SECONDS, candidates=True):
+    from .local_ai import analysis_packets, has_review_context
+    packets = analysis_packets(report)
     evidence = [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]
     keys = {(r.get('url'), r.get('scope_location', r.get('location'))) for r in evidence}
     def relevant(packet):
+        if not has_review_context(packet): return False
         if packet.get('scope_quality') == 'overlapping' or not packet.get('text','').strip(): return False
         if (packet.get('url'), packet.get('location')) in keys: return True
         if packet.get('scope_quality') == 'semantic' or packet.get('source_kind') == 'image_ocr':
             return len(packet['text'].strip()) >= 8
         if len(packet['text'].strip()) < 12: return False
-        signal = packet.get('local_ai', {}).get('text', {})
-        return signal.get('feature_count', 0) > 0
-    # Preserve original evidence order; use existing ML only for routing uncertain fragments.
+        # Unknown RF vocabulary is a reason for independent review, not a veto.
+        return len(packet['text'].strip()) >= 30
+    # Fill detection gaps before spending the remaining budget on known rows.
     def priority(packet):
         score = packet.get('local_ai', {}).get('text', {}).get('score')
-        return ((packet.get('url'), packet.get('location')) not in keys,
+        return ((packet.get('url'), packet.get('location')) in keys,
                 packet.get('source_kind') != 'image_ocr',
                 packet.get('scope_quality') == 'overlapping', abs((.5 if score is None else score)-.5))
     selected = sorted([p for p in packets if relevant(p)], key=priority)
@@ -219,4 +242,7 @@ async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds
                       p['location'] == row.get('scope_location', row.get('location'))), None)
         if match: row.setdefault('local_ai', {}).update(match['local_ai'])
     report.setdefault('local_ai', {})['laya'] = summary
+    if candidates:
+        from .local_ai import add_model_candidates
+        add_model_candidates(report, 'laya')
     return summary

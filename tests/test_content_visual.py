@@ -35,6 +35,44 @@ def sample():
 
 
 class ContentVisualTests(unittest.TestCase):
+    def test_explicit_financial_ad_is_not_relabelled_by_unrelated_photo_score(self):
+        _, image, analysis = sample()
+        image['lines'] = [{'text': '무료투자강의! 인원 제한 1,000명! 가입하기', 'confidence': .98}]
+        self.assertEqual(image_candidates(image, analysis), [])
+        self.assertEqual(analysis['scores']['drugs'], .9)
+
+    def test_corroborated_drug_ad_survives_other_commercial_signals(self):
+        from chickadee.candidates import analyze_candidate
+        _, image, analysis = sample()
+        image['text'] = '필로폰 판매 문의 20% 할인'
+        self.assertIn('DRUGS', [r['category'] for r in analyze_candidate(image['text'])])
+        self.assertEqual(image_candidates(image, analysis), [])
+
+    def test_photo_scores_alone_never_assert_gambling_advertising(self):
+        _, image, analysis = sample()
+        for score in (.575, .753, .99):
+            with self.subTest(score=score):
+                analysis['scores'] = dict(zip(TOPICS, [.1, score, .1]))
+                analysis['thresholds']['gambling'] = .48
+                rows = image_candidates(image, analysis)
+                self.assertEqual([r['category'] for r in rows], ['IMAGE_REVIEW'])
+                self.assertNotIn('도박 이미지', rows[0]['evidence_text'])
+                self.assertEqual(rows[0]['local_ai']['content_visual']['scores']['gambling'], score)
+
+    @async_test
+    async def test_direct_image_uses_ocr_before_resolving_photo_topic(self):
+        from chickadee.content_analysis import analyze_content
+        from chickadee.runtime import environment
+        data, _, analysis = sample()
+        ocr = {'status': 'completed', 'lines': [
+            {'text': '무료투자강의! 인원 제한 1,000명! 가입하기', 'confidence': .98}]}
+        with patch('chickadee.content_analysis.analyze_photo', new_callable=AsyncMock, return_value=analysis), \
+             patch('chickadee.content_analysis.OCRSession.recognize', new_callable=AsyncMock, return_value=ocr), \
+             patch('chickadee.content_analysis.review_sources', new_callable=AsyncMock):
+            value = await analyze_content('', data, environment('standard'), Event())
+        self.assertEqual(value['image']['ad_candidates'], [])
+        self.assertEqual([r['category'] for r in value['sources'][0]['ad_candidates']], ['INVESTMENT'])
+
     @async_test
     async def test_photo_pixels_are_collected_when_ocr_switch_is_off(self):
         from chickadee.scanner import _State,_inspect_images,_ocr_summary,ScanConfig
@@ -63,7 +101,7 @@ class ContentVisualTests(unittest.TestCase):
              patch('chickadee.content_visual.ContentSession.recognize',new_callable=AsyncMock,return_value=analysis) as worker:
             await enrich_content_images(report,{image['relative_path']:data})
         worker.assert_awaited_once();self.assertEqual(report['content_visual']['analyzed'],1)
-        self.assertEqual(report['ad_candidates'][0]['category'],'DRUGS')
+        self.assertEqual(report['ad_candidates'][0]['category'],'IMAGE_REVIEW')
         self.assertEqual(report['ad_candidates'][0]['source_kind'],'image_visual')
         self.assertEqual(report['ocr_images'][0]['recognition_status'],'unreadable')
 
@@ -74,7 +112,7 @@ class ContentVisualTests(unittest.TestCase):
         with patch('chickadee.content_visual.model_contract',return_value={}), \
              patch('chickadee.content_visual.ContentSession.recognize',new_callable=AsyncMock,return_value=analysis) as worker:
             await enrich_content_images(report,{image['relative_path']:data})
-        worker.assert_awaited_once();self.assertEqual([r['id'] for r in report['ad_candidates']],['c_00007','c_00008','c_00009'])
+        worker.assert_awaited_once();self.assertEqual([r['id'] for r in report['ad_candidates']],['c_00007','c_00008'])
 
     @async_test
     async def test_unapproved_missing_model_never_starts_inference(self):
@@ -105,8 +143,8 @@ class ContentVisualTests(unittest.TestCase):
             outcome=await scan(ScanConfig('http://127.0.0.1/',timeout_sec=60))
         with tempfile.TemporaryDirectory() as folder:
             path=outcome.save(Path(folder));loaded=ScanOutcome.load(path)
-            self.assertEqual(loaded.report['ad_candidates'][0]['category'],'DRUGS')
-            self.assertIn('DRUGS',path.with_name('result.csv').read_text(encoding='utf-8-sig'))
+            self.assertEqual(loaded.report['ad_candidates'][0]['category'],'IMAGE_REVIEW')
+            self.assertIn('IMAGE_REVIEW',path.with_name('result.csv').read_text(encoding='utf-8-sig'))
             self.assertEqual(loaded.result['findings'],[])
 
     @async_test
@@ -119,7 +157,7 @@ class ContentVisualTests(unittest.TestCase):
              patch('chickadee.content_analysis.review_sources',new_callable=AsyncMock):
             value=await analyze_content('',data,environment('standard'),Event())
         self.assertEqual(value['candidate_count'],1)
-        self.assertEqual(value['image']['ad_candidates'][0]['category'],'DRUGS')
+        self.assertEqual(value['image']['ad_candidates'][0]['category'],'IMAGE_REVIEW')
         self.assertEqual(value['image']['local_ai']['content_visual']['status'],'completed')
 
 

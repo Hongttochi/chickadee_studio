@@ -1,5 +1,23 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+test("OCR outputs follow their destinations without turning back across each other", async () => {
+  const {workflowPorts, defaultWorkflow} = await import('../src/workflow.mjs');
+  const ports = workflowPorts('ocr', 'out');
+  assert.deepEqual(ports.map(p => p.peer), ['techniques', 'candidates']);
+  assert.deepEqual(ports.map(p => p.top), [25, 75]);
+  for (const port of ports) {
+    const edge = defaultWorkflow().edges.find(e => e.source === 'ocr' && e.target === port.peer);
+    assert.equal(edge.sourceHandle, port.id);
+  }
+});
+test("collector ports follow destination order so the image path does not cross the text path", async () => {
+  const {workflowPorts, defaultWorkflow} = await import('../src/workflow.mjs');
+  const ports = workflowPorts('collector', 'out');
+  assert.deepEqual(ports.map(p => p.peer), ['techniques', 'ocr', 'candidates']);
+  assert.equal(ports.find(p => p.peer === 'ocr').top, 50);
+  const image = defaultWorkflow().edges.find(e => e.id === 'collector-ocr');
+  assert.equal(image.sourceHandle, ports.find(p => p.peer === 'ocr').id);
+});
 test("saved disconnected workflows restore the fixed pipeline", async () => {
   const { defaultWorkflow, normalizeWorkflow, branchEnabled } = await import("../src/workflow.mjs");
   const flow = defaultWorkflow();

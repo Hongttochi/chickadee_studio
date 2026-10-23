@@ -1,4 +1,6 @@
 import asyncio
+import base64
+import io
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -8,6 +10,26 @@ from chickadee.scanner import _State, _inspect_images, _ocr_summary, ScanConfig,
 
 
 class OCRBudgetTests(unittest.IsolatedAsyncioTestCase):
+    async def test_unreadable_warning_identifies_the_image(self):
+        from PIL import Image
+        buffer = io.BytesIO()
+        Image.new('RGB', (32, 32), 'white').save(buffer, format='PNG')
+        source = 'data:image/png;base64,' + base64.b64encode(buffer.getvalue()).decode()
+        state = _State()
+        state.ocr = AsyncMock()
+        state.ocr.recognize.return_value = {
+            'status': 'completed', 'lines': [], 'image_format': 'PNG',
+            'width': 32, 'height': 32, 'preview_data_url': '',
+        }
+        events = []
+        await _inspect_images(None, [{'source_url': source, 'location': 'span.service-icon',
+                                     'source_type': 'img'}], '', 'http://localhost/', state, events.append, None)
+        warning = next(e for e in events if e['kind'] == 'warning')
+        self.assertEqual(warning['image_id'], state.ocr_images[0]['id'])
+        self.assertEqual(warning['location'], 'span.service-icon')
+        self.assertIn('span.service-icon', warning['message'])
+        self.assertEqual(warning['source_url'], '(inline)')
+
     async def test_local_ocr_has_its_own_budget_without_disabling_page_timeout(self):
         session = OCRSession()
         async def read(_):

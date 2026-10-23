@@ -23,6 +23,46 @@ SIGNAL={'status':'completed','model':'Laya','version':'test-fixture', 'score':.8
 
 
 class PipelineTests(unittest.IsolatedAsyncioTestCase):
+    async def test_short_ocr_glyph_never_becomes_ad_context_even_with_photo_row(self):
+        from chickadee.local_ai import add_model_candidates
+        source = {'url':'http://example.invalid/', 'location':'img', 'source_kind':'image_ocr', 'text':'+'}
+        row = {'id':'c_00001', 'url':source['url'], 'location':'img', 'category':'IMAGE_REVIEW'}
+        report = {'evidence_packets':[source], 'ad_candidates':[row]}
+        with patch.object(LayaSession,'analyze', AsyncMock(return_value=[dict(SIGNAL)])) as infer:
+            await enrich_laya(report)
+        infer.assert_not_awaited()
+        self.assertEqual(source['local_ai']['laya']['reason'],'insufficient_scope')
+        source['local_ai']['laya'] = dict(SIGNAL)
+        add_model_candidates(report, 'laya')
+        self.assertEqual(report['ad_candidates'], [row])
+
+    async def test_retained_ocr_is_reviewed_when_exploration_packet_limit_is_full(self):
+        from chickadee.local_ai import enrich_report, analysis_packets
+        packets = [{'url': 'http://example.invalid/', 'location': f'nav-{i}', 'text': '메뉴'} for i in range(1000)]
+        image = {'id': 'im_late', 'url': 'http://example.invalid/post', 'location': 'img.post-image',
+                 'text': '새로운 상품의 무료체험 혜택을 신청하세요.', 'lines': []}
+        report = {'evidence_packets': packets, 'ocr_images': [image], 'ad_candidates': []}
+        with patch('chickadee.local_ai.text_analysis', return_value={'status': 'completed', 'score': .2}):
+            enrich_report(report)
+        self.assertEqual(image['local_ai']['text']['score'], .2)
+        with patch.object(LayaSession, 'analyze', AsyncMock(return_value=[dict(SIGNAL)])) as infer:
+            await enrich_laya(report)
+        infer.assert_awaited_once_with([image['text']])
+        self.assertEqual(image['local_ai']['laya'], SIGNAL)
+        self.assertEqual(len(report['evidence_packets']), 1000)
+        self.assertEqual(len(analysis_packets(report)), 1001)
+        self.assertEqual(report['ad_candidates'][0]['image_id'], 'im_late')
+        self.assertEqual(report['ad_candidates'][0]['category'], 'AI_CONTEXT')
+
+    async def test_existing_ocr_packet_is_not_reviewed_again_as_supplement(self):
+        from chickadee.local_ai import analysis_packets
+        packet = {'url': 'http://example.invalid/', 'location': 'img', 'text': '상품 문구',
+                  'source_kind': 'image_ocr', 'image_id': 'im_1'}
+        report = {'evidence_packets': [packet], 'ocr_images': [
+            {'id': 'im_1', 'text': '상품 문구'},
+            {'id': 'im_2', 'lines': [{'text': '잡음', 'confidence': .2}]}]}
+        self.assertEqual(analysis_packets(report), [packet])
+
     async def test_cold_start_budget_is_bounded_and_uses_remaining_scan_budget(self):
         self.assertEqual(MAX_SECONDS,120)
         self.assertEqual(LayaSession(600).timeout_seconds,120)
@@ -76,7 +116,7 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         ocr={'status':'completed','engine':'PaddleOCR','model':'fixture','lines':[{'text':'카지노 가입 보너스','confidence':.95}]}
         with patch('chickadee.content_analysis.OCRSession.recognize',AsyncMock(return_value=ocr)), patch.object(LayaSession,'analyze',side_effect=infer):
             value=await analyze_content('도서관 안내',image,environment('standard'),Event(),stages.append)
-        self.assertEqual(stages[-3:],['ml','laya','laya'])
+        self.assertEqual(stages[-3:],['laya','laya','laya'])
         self.assertEqual(stages[:2],['models','ml']) # typed text bypasses OCR
         self.assertLess(stages.index('ocr'),max(i for i,s in enumerate(stages) if s=='ml'))
         self.assertEqual(received,['도서관 안내','카지노 가입 보너스'])
@@ -86,13 +126,13 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(value['paid_requests'],0)
         self.assertEqual(set(value),{'status','sources','image','errors','runtime_environment','finished_at','paid_requests','candidate_count'})
 
-    async def test_review_is_bounded_deduplicated_and_counts_omissions(self):
+    async def test_review_batches_all_unique_sources_instead_of_stopping_at_twelve(self):
         sources=[{'text':f'본문 {n}'} for n in range(MAX_ITEMS+2)]+[{'text':'본문 0'}]
         async def infer(texts):return [dict(SIGNAL) for _ in texts]
         with patch.object(LayaSession,'analyze',side_effect=infer) as infer_mock:
             value=await review_sources(sources)
-        self.assertEqual(len(infer_mock.call_args.args[0]),MAX_ITEMS)
-        self.assertEqual(value['omitted'],2);self.assertEqual(value['status'],'partial')
+        self.assertEqual([len(call.args[0]) for call in infer_mock.call_args_list], [MAX_ITEMS, 2])
+        self.assertEqual(value['omitted'],0);self.assertEqual(value['status'],'completed')
         self.assertEqual(sources[-1]['local_ai']['laya'],SIGNAL)
 
     async def test_stop_and_worker_failure_preserve_original_evidence(self):
@@ -120,6 +160,25 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(report['findings'],before);self.assertEqual(p['text_sha256'],text_hash)
         self.assertEqual(len(report['ad_candidates']),1);self.assertEqual(row['local_ai']['laya'],SIGNAL)
         validate_local_ai({'laya':p['local_ai']['laya']})
+
+    async def test_general_ad_signal_adds_candidate_without_changing_findings(self):
+        p=packet();p['text']='새로 나온 청소기를 사용해보세요! 먼지 걱정을 줄여드립니다.'
+        p['local_ai']={'text':{'score':None,'feature_count':0}}
+        report={'evidence_packets':[p],'ad_candidates':[],'findings':[{'untouched':True}]}
+        with patch.object(LayaSession,'analyze',AsyncMock(return_value=[dict(SIGNAL)])):
+            await enrich_laya(report)
+        self.assertEqual(report['findings'],[{'untouched':True}])
+        self.assertEqual(report['ad_candidates'][0]['category'],'AI_CONTEXT')
+        self.assertTrue(report['ad_candidates'][0]['review_required'])
+        with patch.object(LayaSession,'analyze',AsyncMock(return_value=[dict(SIGNAL)])):
+            await enrich_laya(report)
+        self.assertEqual(len(report['ad_candidates']),1)
+
+    async def test_disabled_candidates_never_promotes_model_results(self):
+        report={'evidence_packets':[packet()], 'ad_candidates':[]}
+        with patch.object(LayaSession,'analyze',AsyncMock(return_value=[dict(SIGNAL)])):
+            await enrich_laya(report,candidates=False)
+        self.assertEqual(report['ad_candidates'],[])
 
     async def test_navigation_without_features_does_not_spend_review_budget(self):
         body=packet();body['local_ai']={'text':{'score':None,'feature_count':0}}
