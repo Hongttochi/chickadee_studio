@@ -126,6 +126,13 @@ def verify(value, directory):
                     if file_digest(stream, 'sha256').hexdigest() != model['sha256']:
                         raise ValueError('ZIP local AI model SHA256 mismatch: ' + model['path'])
         if tuple(map(int, value.split('.'))) >= (0, 10, 12):
+            runtime = json.loads((ROOT / 'desktop/vendor-runtime.json').read_text(encoding='utf-8'))
+            with archive.open(prefix + 'ChickadeeRuntime.exe') as stream:
+                if file_digest(stream, 'sha256').hexdigest() != runtime['executable_sha256']:
+                    raise ValueError('Compatibility host differs from the original upstream runtime')
+            with archive.open(prefix + 'resources/chickadee.ico') as stream:
+                if file_digest(stream, 'sha256').hexdigest() != runtime['icon_sha256']:
+                    raise ValueError('Compatibility app icon differs from the pinned Chickadee icon')
             for kind in ('ocr', 'content'):
                 folder = ROOT / ('chickadee/data/ai-models/' + kind)
                 meta = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))

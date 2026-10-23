@@ -41,6 +41,14 @@ def main():
                 APP / 'resources/laya/ChickadeeLaya.exe', APP / 'resources/laya-model/manifest.json']
     if not all(p.is_file() for p in required):
         raise RuntimeError('Build scripts/build-desktop.ps1 first.')
+    runtime = json.loads((DESKTOP / 'vendor-runtime.json').read_text(encoding='utf-8'))
+    upstream = DESKTOP / 'node_modules/electron/dist/electron.exe'
+    if not upstream.is_file(): upstream = ROOT / 'artifacts/vendor-runtime' / runtime['version'] / 'electron.exe'
+    if not upstream.is_file() or sha256(upstream.read_bytes()).hexdigest() != runtime['executable_sha256']:
+        raise RuntimeError('Verified upstream runtime is required for compatibility startup.')
+    # Preserve the upstream bytes/reputation. Do not edit icons, resources or fuses.
+    shutil.copy2(upstream, APP / 'ChickadeeRuntime.exe')
+    shutil.copy2(DESKTOP / 'assets/app.ico', APP / 'resources/chickadee.ico')
     count = frontend_licenses()
     shutil.copytree(DESKTOP / 'licenses', APP / 'licenses', dirs_exist_ok=True)
     for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md', 'agent-extension.md', 'inspection-agent.md', 'content-analysis.md', 'windows-signing.md']:
@@ -54,6 +62,8 @@ def main():
     (APP / 'README_FIRST.txt').write_text(
         f'Chickadee Studio {VERSION} / Windows x64\n\n'
         'ZIP 전체를 새 폴더에 압축 해제한 다음 Chickadee.exe를 실행하세요.\n'
+        'Windows 앱 제어 정책으로 실행이 차단되면 같은 폴더의 ChickadeeRuntime.exe를 실행하세요.\n'
+        '호환 실행기는 공식 Electron 원본 파일이며 같은 앱·모델을 실행합니다. 보안 설정을 바꾸지 않습니다.\n'
         'resources 등 함께 있는 폴더를 유지하세요. Python/Node.js/Docker 설치는 필요하지 않습니다.\n'
         'URL 입력 → 검사 실행. 로컬 예제는 실행 옆 화살표 메뉴 → 데모 검사.\n'
         '일시정지·재개, 검토 상태·메모·일괄 처리, Ctrl K 빠른 명령을 지원합니다.\n'

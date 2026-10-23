@@ -134,6 +134,14 @@ jobs:
           $env:PLAYWRIGHT_BROWSERS_PATH = (Resolve-Path '../.venv/Lib/site-packages/playwright/driver/package/.local-browsers').Path
           node tests/recovery-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test unmodified upstream compatibility host
+        working-directory: desktop
+        run: |
+          $env:CHICKADEE_PACKAGED_EXE = Join-Path (Split-Path $env:CHICKADEE_PACKAGED_EXE -Parent) 'ChickadeeRuntime.exe'
+          node tests/ocr-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/login-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload smoke test screenshots
         if: failure()
         uses: actions/upload-artifact@v4
