@@ -94,6 +94,13 @@ def authentication_navigation(url: str) -> bool:
                {'login', 'signin', 'signup', 'register', 'join'} for key, value in parse_qsl(parts.query))
 
 
+def image_document_key(url):
+    """The same verified image may have inline/download presentation switches."""
+    parts = urlsplit(url)
+    return origin(url), parts.path or '/', tuple(sorted((key, value) for key, value in
+        parse_qsl(parts.query, keep_blank_values=True) if key.casefold() not in {'inline', 'download', 'attachment'}))
+
+
 def is_loopback(url: str) -> bool:
     host = urlsplit(url).hostname
     if host == "localhost":
@@ -267,6 +274,7 @@ class _State:
     ocr: OCRSession = field(default_factory=OCRSession)
     image_context: object = None
     image_cache: dict = field(default_factory=dict)
+    image_resource_keys: set = field(default_factory=set)
     image_requests: int = 0
     image_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     image_bytes: int = 0
@@ -608,9 +616,16 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                 if site in state.stopped_origins:
                     break
                 _, _, url = heapq.heappop(queue)
+                state.remaining = len(queue)
                 key = visit_key(url)
                 state.pending_urls.pop(key, None)
                 if key in visited:
+                    continue
+                if image_document_key(url) in state.image_resource_keys:
+                    visited.add(key)
+                    state.trace.page(url, 'skipped', emit, parents.get(key))
+                    emit({'kind': 'phase', 'stage': 'collector', 'action': 'image_resource', 'url': url,
+                          'message': '이미지 수집 경로에서 처리한 첨부파일입니다. 문서 방문을 생략합니다.'})
                     continue
                 visited.add(key)
                 attempts += 1
@@ -717,7 +732,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         except ValueError:
                             continue
                         if origin(candidate) == site and urlsplit(candidate).path.startswith(profile.path_prefix) and candidate_key not in queued and candidate_key not in visited:
-                            if not readonly_navigation(candidate) or authentication_navigation(candidate):
+                            if not readonly_navigation(candidate) or authentication_navigation(candidate) or image_document_key(candidate) in state.image_resource_keys:
                                 continue
                             if Path(urlsplit(candidate).path).suffix.lower() in {".pdf", ".zip", ".exe", ".hwp", ".hwpx", ".docx", ".xlsx", ".png", ".jpg", ".mp4"}:
                                 continue
@@ -1094,7 +1109,10 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         state.ocr_images.append(record)
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
-            digest = hashlib.sha256(data).hexdigest()
+            metadata = image_metadata(data)
+            digest = metadata['image_sha256']
+            if not source.startswith('data:'):
+                state.image_resource_keys.add(image_document_key(source))
             previous = next((item for item in state.ocr_images[:-1] if item.get('image_sha256') == digest and
                 (item.get('image_role') != 'interface' or record['image_role'] == 'interface')), None)
             if previous:
@@ -1116,7 +1134,6 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
                 continue
             # Image bytes belong to the photo model as well. OCR success must
             # never be the condition for retaining the image for classification.
-            metadata=image_metadata(data)
             record.update(metadata)
             state.image_assets[metadata['relative_path']]=data
             if not state.ocr_enabled or state.ocr_disabled:

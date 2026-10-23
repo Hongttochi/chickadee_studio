@@ -189,6 +189,7 @@
     if (literal) addLink(literal[2] || literal[4]);
   }
   const images = [];
+  const uniqueImageSources = new Set();
   let imageReferenceBytes = 0;
   let imagesTruncated = false;
   const imageContent = el => !!el.closest('article, [role="article"], [data-post-id], [data-comment-id], .post-content, .board-content, .view-content, .comment-content');
@@ -199,7 +200,10 @@
     for (const match of style(el).backgroundImage.matchAll(/url\(["']?([^"')]+)["']?\)/g)) sources.push(match[1]);
     for (const src of sources) {
       if (!src) continue;
-      if (src.length > 2800000 || images.length >= 12 || imageReferenceBytes + src.length > 6000000) { imagesTruncated = true; continue; }
+      if (src.length > 2800000 || images.length >= 500 ||
+          (!uniqueImageSources.has(src) && uniqueImageSources.size >= 50) ||
+          imageReferenceBytes + src.length > 6000000) { imagesTruncated = true; continue; }
+      uniqueImageSources.add(src);
       imageReferenceBytes += src.length;
       const box = el.getBoundingClientRect();
       const inContent = imageContent(el);

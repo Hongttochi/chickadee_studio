@@ -47,7 +47,9 @@ def main():
     if not upstream.is_file() or sha256(upstream.read_bytes()).hexdigest() != runtime['executable_sha256']:
         raise RuntimeError('Verified upstream runtime is required for compatibility startup.')
     # Preserve the upstream bytes/reputation. Do not edit icons, resources or fuses.
-    shutil.copy2(upstream, APP / 'ChickadeeRuntime.exe')
+    compatibility = APP / 'ChickadeeRuntime.exe'
+    if not compatibility.is_file() or sha256(compatibility.read_bytes()).hexdigest() != runtime['executable_sha256']:
+        shutil.copy2(upstream, compatibility)
     shutil.copy2(DESKTOP / 'assets/app.ico', APP / 'resources/chickadee.ico')
     count = frontend_licenses()
     shutil.copytree(DESKTOP / 'licenses', APP / 'licenses', dirs_exist_ok=True)

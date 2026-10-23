@@ -73,8 +73,19 @@ jobs:
       - name: Desktop unit tests
         working-directory: desktop
         run: npm test
+      - name: Restore unchanged verified Laya CPU runtime
+        id: laya-runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          .\.venv\Scripts\python.exe scripts/reuse_laya_runtime.py --version $env:APP_VERSION
+          if ($LASTEXITCODE -eq 2) { "LAYA_RUNTIME_REUSED=0" >> $env:GITHUB_ENV; exit 0 }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "LAYA_RUNTIME_REUSED=1" >> $env:GITHUB_ENV
       - name: Build Windows app and bundled engine
-        run: ./scripts/build-desktop.ps1 -SkipInstall
+        run: |
+          if ($env:LAYA_RUNTIME_REUSED -eq '1') { ./scripts/build-desktop.ps1 -SkipInstall -SkipLaya }
+          else { ./scripts/build-desktop.ps1 -SkipInstall }
       - name: Record signature status without requiring signing
         run: |
           ./scripts/verify-windows-signatures.ps1 -AppDirectory "artifacts/electron-$env:APP_VERSION/win-unpacked"
