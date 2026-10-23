@@ -240,7 +240,7 @@ GROQ_API_KEY=YOUR_GROQ_API_KEY
 .\ChickadeeRuntime.exe --groq-env-file 'C:\심사설정\.env'
 ```
 
-심사용 비공개 자료의 `.env`와 `Groq_실행.cmd`를 실행본과 같은 폴더에 두고 `Groq_실행.cmd`를 더블클릭하면 경로 입력 없이 연결합니다. 위 명령은 수동 실행 방법입니다. 키 교체 후 앱을 다시 실행하며 재빌드는 필요하지 않습니다. 키를 불러오는 것만으로 API 요청이 발생하지 않습니다.
+심사용 비공개 자료에는 `.env`를 별도 첨부합니다. 해당 파일의 `GROQ_API_KEY=` 뒤에 있는 값을 복사한 뒤 **설정 → AI 연결 → API 키 등록**에 직접 입력합니다. 위 명령은 외부 파일을 연결하는 선택 방법입니다. 키를 등록하는 것만으로 API 요청이 발생하지 않습니다.
 
 ![Groq 키 설정](docs/assets/demos/14-settings-groq.png)
 
