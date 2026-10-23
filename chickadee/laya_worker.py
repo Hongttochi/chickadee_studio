@@ -90,19 +90,26 @@ class Reader:
 def main():
     protocol=os.fdopen(os.dup(sys.stdout.fileno()),'w',encoding='utf8',buffering=1)
     os.dup2(sys.stderr.fileno(),sys.stdout.fileno())
-    try:
+    persistent='--persistent' in sys.argv
+    reader=None
+    while True:
         line=sys.stdin.buffer.readline(600_001)
-        if len(line)>600_000: raise ValueError('Laya 입력 크기 초과')
-        texts=json.loads(line)['texts']
-        if not isinstance(texts,list) or not 1<=len(texts)<=12 or any(not isinstance(t,str) or not 0<len(t)<=4000 for t in texts):
-            raise ValueError('Laya 입력 오류')
-        reader=Reader(os.environ['CHICKADEE_LAYA_MODEL_DIR'])
-        results=[reader.analyze(t) for t in texts]
-    except Exception:
-        count=len(texts) if 'texts' in locals() and isinstance(texts,list) and len(texts)<=12 else 0
-        results=[{'status':'unavailable','model':'Laya','reason':'model_or_runtime_unavailable',
-                  'message':'Laya 모델 또는 실행 환경을 확인하세요.','paid_requests':0} for _ in range(count)]
-    protocol.write(json.dumps({'results':results},ensure_ascii=True)+'\n')
+        if not line: break
+        texts=None
+        try:
+            if len(line)>600_000: raise ValueError('Laya 입력 크기 초과')
+            texts=json.loads(line)['texts']
+            if not isinstance(texts,list) or not 1<=len(texts)<=12 or any(not isinstance(t,str) or not 0<len(t)<=4000 for t in texts):
+                raise ValueError('Laya 입력 오류')
+            if reader is None: reader=Reader(os.environ['CHICKADEE_LAYA_MODEL_DIR'])
+            results=[reader.analyze(t) for t in texts]
+        except Exception:
+            count=len(texts) if isinstance(texts,list) and len(texts)<=12 else 0
+            results=[{'status':'unavailable','model':'Laya','reason':'model_or_runtime_unavailable',
+                      'message':'Laya 모델 또는 실행 환경을 확인하세요.','paid_requests':0} for _ in range(count)]
+        protocol.write(json.dumps({'results':results},ensure_ascii=True)+'\n')
+        protocol.flush()
+        if not persistent: break
 
 
 if __name__=='__main__':main()

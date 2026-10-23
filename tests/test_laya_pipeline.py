@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, patch
 
 from chickadee.content_analysis import analyze_content
 from chickadee.inspection import validate_inspection, validate_local_ai
-from chickadee.laya_review import LayaSession, enrich_laya, review_sources, unavailable, MAX_ITEMS, MAX_SECONDS
+from chickadee.laya_review import LayaSession, enrich_laya, review_sources, unavailable, BATCH_SIZE, MAX_SECONDS
 from chickadee.laya_worker import verified_bundle, QUESTIONS
 from chickadee.runtime import environment
 from tests.test_inspection_agent import packet
@@ -34,7 +34,7 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
             stale=Path(temp)/'laya.json';stale.write_text(json.dumps({'format':1,'python':'missing-development-python'}))
             with patch.dict(os.environ,{'CHICKADEE_LAYA_MODEL_DIR':temp,'CHICKADEE_LAYA_WORKER':str(worker),'CHICKADEE_LAYA_CONFIG':str(stale)},clear=True), patch('chickadee.runtime.memory_info',return_value={'available_bytes':8*1024**3}), patch('asyncio.create_subprocess_exec',side_effect=OSError('fixture')) as spawn:
                 value=await LayaSession().analyze(['한국어 본문'])
-            self.assertEqual(spawn.call_args.args,(str(worker),))
+            self.assertEqual(spawn.call_args.args,(str(worker),'--persistent'))
             self.assertEqual(value[0]['reason'],'inference_failed')
 
     async def test_missing_model_does_not_start_worker_or_call_paid_api(self):
@@ -76,7 +76,8 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         ocr={'status':'completed','engine':'PaddleOCR','model':'fixture','lines':[{'text':'카지노 가입 보너스','confidence':.95}]}
         with patch('chickadee.content_analysis.OCRSession.recognize',AsyncMock(return_value=ocr)), patch.object(LayaSession,'analyze',side_effect=infer):
             value=await analyze_content('도서관 안내',image,environment('standard'),Event(),stages.append)
-        self.assertEqual(stages[-3:],['ml','laya','laya'])
+        self.assertEqual(stages[-1],'laya')
+        self.assertGreaterEqual(stages.count('laya'),2)
         self.assertEqual(stages[:2],['models','ml']) # typed text bypasses OCR
         self.assertLess(stages.index('ocr'),max(i for i,s in enumerate(stages) if s=='ml'))
         self.assertEqual(received,['도서관 안내','카지노 가입 보너스'])
@@ -86,14 +87,20 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(value['paid_requests'],0)
         self.assertEqual(set(value),{'status','sources','image','errors','runtime_environment','finished_at','paid_requests','candidate_count'})
 
-    async def test_review_is_bounded_deduplicated_and_counts_omissions(self):
-        sources=[{'text':f'본문 {n}'} for n in range(MAX_ITEMS+2)]+[{'text':'본문 0'}]
+    async def test_review_covers_every_item_in_batches_and_reuses_duplicates(self):
+        count=BATCH_SIZE*3+2
+        sources=[{'text':f'본문 {n}'} for n in range(count)]+[{'text':'본문 0'}, {'text':''}]
+        events=[]
         async def infer(texts):return [dict(SIGNAL) for _ in texts]
         with patch.object(LayaSession,'analyze',side_effect=infer) as infer_mock:
-            value=await review_sources(sources)
-        self.assertEqual(len(infer_mock.call_args.args[0]),MAX_ITEMS)
-        self.assertEqual(value['omitted'],2);self.assertEqual(value['status'],'partial')
-        self.assertEqual(sources[-1]['local_ai']['laya'],SIGNAL)
+            value=await review_sources(sources,emit=events.append)
+        self.assertEqual(infer_mock.call_count,4)
+        self.assertEqual(sum(len(call.args[0]) for call in infer_mock.call_args_list),count)
+        self.assertEqual(value['omitted'],0);self.assertEqual(value['status'],'completed')
+        self.assertIsNone(value['item_limit']);self.assertEqual(value['covered'],count+1)
+        self.assertEqual(value['skipped_empty'],1)
+        self.assertEqual(sources[-2]['local_ai']['laya'],SIGNAL)
+        self.assertEqual([e['processed'] for e in events if e.get('action')=='progress'],[12,24,36,38])
 
     async def test_stop_and_worker_failure_preserve_original_evidence(self):
         stop=Event();started=asyncio.Event();closed=asyncio.Event()
@@ -121,15 +128,26 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(report['ad_candidates']),1);self.assertEqual(row['local_ai']['laya'],SIGNAL)
         validate_local_ai({'laya':p['local_ai']['laya']})
 
-    async def test_navigation_without_features_does_not_spend_review_budget(self):
+    async def test_all_nonempty_sources_are_reviewed_even_without_rf_features(self):
         body=packet();body['local_ai']={'text':{'score':None,'feature_count':0}}
         heading={**deepcopy(body),'id':'heading','location':'h1','text':'게시글 001','scope_quality':'element'}
         report={'evidence_packets':[heading,body],'local_ai':{}}
-        with patch.object(LayaSession,'analyze',AsyncMock(return_value=[dict(SIGNAL)])) as infer:
+        with patch.object(LayaSession,'analyze',AsyncMock(side_effect=lambda texts:[dict(SIGNAL) for _ in texts])) as infer:
             await enrich_laya(report)
-        self.assertEqual(infer.call_args.args[0],[body['text']])
-        self.assertEqual(heading['local_ai']['laya']['reason'],'insufficient_scope')
-        self.assertEqual(report['local_ai']['laya']['status'],'partial')
+        self.assertEqual(infer.call_args.args[0],[heading['text'],body['text']])
+        self.assertEqual(heading['local_ai']['laya']['status'],'completed')
+        self.assertEqual(report['local_ai']['laya']['status'],'completed')
+
+    async def test_cancellation_keeps_completed_batches_and_marks_only_remainder(self):
+        sources=[{'text':f'원문 {n}'} for n in range(BATCH_SIZE*2)]
+        stop=Event()
+        async def infer(texts):
+            stop.set();return [dict(SIGNAL) for _ in texts]
+        with patch.object(LayaSession,'analyze',side_effect=infer):value=await review_sources(sources,stop=stop)
+        self.assertEqual(value['analyzed'],BATCH_SIZE)
+        self.assertEqual(value['omitted'],BATCH_SIZE)
+        self.assertEqual(sources[0]['local_ai']['laya']['status'],'completed')
+        self.assertEqual(sources[-1]['local_ai']['laya']['status'],'unavailable')
 
 
 class BundleTests(unittest.TestCase):

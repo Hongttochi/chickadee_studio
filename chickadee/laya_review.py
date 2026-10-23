@@ -1,4 +1,4 @@
-"""Bounded offline Laya review, isolated from the scanner and its public I/O."""
+"""Offline Laya review of every collected text, with a persistent CPU worker."""
 import asyncio
 import json
 import os
@@ -8,8 +8,9 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-MAX_ITEMS = 12
+BATCH_SIZE = 12
 MAX_SECONDS = 120
+MAX_REVIEW_SECONDS = 1800
 
 
 def configuration():
@@ -42,7 +43,7 @@ def configuration():
 def unavailable(reason='model_not_validated'):
     messages = {'model_not_validated': '검증한 Laya 모델을 적용하지 않았습니다.',
         'insufficient_scope': '문맥 검토에 필요한 원문 범위가 부족합니다.',
-        'budget_or_cancelled': '검토 한도 또는 사용자 중단으로 처리하지 않았습니다.',
+        'budget_or_cancelled': '검사 제한시간 또는 사용자 중단으로 처리하지 않았습니다.',
         'time_budget': '남은 검사 시간이 없어 검토를 생략했습니다.',
         'insufficient_memory': 'Laya 검토에 필요한 메모리가 부족합니다.',
         'runtime_unavailable': '로컬 Laya 실행 환경을 찾지 못했습니다.',
@@ -55,7 +56,7 @@ def analysis_reserve(total_seconds):
     """Leave time for a shipped model instead of letting crawling consume its entire budget."""
     try:
         folder, _ = configuration()
-        return min(MAX_SECONDS, total_seconds*.4) if folder and (Path(folder)/'manifest.json').is_file() else 0
+        return min(MAX_REVIEW_SECONDS, total_seconds*.4) if folder and (Path(folder)/'manifest.json').is_file() else 0
     except (OSError, ValueError, TypeError):
         return 0
 
@@ -67,7 +68,7 @@ class LayaSession:
         self.timeout_seconds = min(MAX_SECONDS, max(0, timeout_seconds))
 
     async def analyze(self, texts):
-        if not texts or len(texts) > MAX_ITEMS or any(not isinstance(t, str) or not 0 < len(t) <= 4000 for t in texts):
+        if not texts or len(texts) > BATCH_SIZE or any(not isinstance(t, str) or not 0 < len(t) <= 4000 for t in texts):
             raise ValueError('Laya 입력 크기 오류')
         if not self.timeout_seconds:
             return [unavailable('time_budget') for _ in texts]
@@ -81,32 +82,33 @@ class LayaSession:
         available = memory_info()['available_bytes']
         # Measured bundled CPU peak: 2.78 GiB working set, about 2.04 GiB
         # additional available memory. Keep a reserve and monitor it while loading.
-        if available is not None and available < 2.75 * GIB:
+        if self.process is None and available is not None and available < 2.75 * GIB:
             return [unavailable('insufficient_memory') for _ in texts]
         bundled_worker = os.environ.get('CHICKADEE_LAYA_WORKER')
         if bundled_worker:
             if not Path(bundled_worker).is_absolute() or not Path(bundled_worker).is_file():
                 return [unavailable('runtime_unavailable') for _ in texts]
-            args = [bundled_worker]
+            args = [bundled_worker, '--persistent']
         elif executable:
             if not Path(executable).is_absolute() or not Path(executable).is_file():
                 return [unavailable('runtime_unavailable') for _ in texts]
             # The external Python cannot import modules embedded in a frozen engine.
-            args = [executable, str(Path(__file__).with_name('laya_worker.py'))]
+            args = [executable, str(Path(__file__).with_name('laya_worker.py')), '--persistent']
         else:
-            args = [sys.executable, '--laya-worker'] if getattr(sys, 'frozen', False) else [sys.executable, '-m', 'chickadee.laya_worker']
+            args = [sys.executable, '--laya-worker', '--persistent'] if getattr(sys, 'frozen', False) else [sys.executable, '-m', 'chickadee.laya_worker', '--persistent']
         env = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'HF_HUB_OFFLINE': '1',
                'TRANSFORMERS_OFFLINE': '1', 'TOKENIZERS_PARALLELISM': 'false', 'USE_TF': '0',
                'CHICKADEE_LAYA_MODEL_DIR': folder}
         reply = None
         try:
-            self.process = await asyncio.create_subprocess_exec(*args, stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit=100_000,
-                cwd=str(ROOT), env=env,
-                **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
-            async def drain():
-                while await self.process.stderr.read(4096): pass
-            self.stderr_task = asyncio.create_task(drain())
+            if self.process is None:
+                self.process = await asyncio.create_subprocess_exec(*args, stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit=100_000,
+                    cwd=str(ROOT), env=env,
+                    **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
+                async def drain():
+                    while await self.process.stderr.read(4096): pass
+                self.stderr_task = asyncio.create_task(drain())
             self.process.stdin.write((json.dumps({'texts': texts}, ensure_ascii=True)+'\n').encode())
             await self.process.stdin.drain()
             reply = asyncio.create_task(self.process.stdout.readline())
@@ -123,16 +125,18 @@ class LayaSession:
             from .inspection import validate_local_ai
             if len(results) != len(texts): raise ValueError('Laya 결과 개수 오류')
             for item in results: validate_local_ai({'laya': item})
+            if any(item['status'] != 'completed' for item in results): await self.close()
             return results
         except asyncio.TimeoutError:
+            await self.close()
             return [unavailable('timeout') for _ in texts]
         except (OSError, ValueError, KeyError, TypeError):
+            await self.close()
             return [unavailable('inference_failed') for _ in texts]
         finally:
             if reply is not None and not reply.done():
                 reply.cancel()
                 await asyncio.gather(reply, return_exceptions=True)
-            await self.close()
 
     async def close(self):
         if self.process:
@@ -142,19 +146,38 @@ class LayaSession:
             self.process = None
 
 
-async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_SECONDS):
-    """One review per unique evidence text, bounded; never remove deterministic findings."""
+async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_REVIEW_SECONDS):
+    """Review every nonempty source; batch size bounds memory, never coverage."""
     emit({'kind': 'phase', 'stage': 'laya', 'action': 'prepare', 'message': 'Laya 적용 상태를 확인합니다.'})
     selected, seen = [], set()
     for source in sources:
         text = source.get('text', '')
-        key = text[:4000]
-        if text.strip() and key not in seen and source.get('scope_quality') != 'overlapping' and len(selected) < MAX_ITEMS:
+        key = text
+        if text.strip() and key not in seen:
             selected.append(source); seen.add(key)
     session = LayaSession(timeout_seconds)
+    results = []
+    deadline = time.monotonic() + max(0, timeout_seconds)
+    failure_reason = 'budget_or_cancelled'
     async def work():
-        if not selected: return []
-        return await session.analyze([s['text'][:4000] for s in selected])
+        nonlocal failure_reason
+        for start in range(0, len(selected), BATCH_SIZE):
+            if stop and stop.is_set(): break
+            remaining = max(0, deadline-time.monotonic())
+            if not remaining:
+                failure_reason = 'time_budget'
+                break
+            session.timeout_seconds = min(MAX_SECONDS, remaining)
+            batch = selected[start:start+BATCH_SIZE]
+            values = await session.analyze([s['text'][:4000] for s in batch])
+            if len(values) != len(batch): raise ValueError('Laya 결과 개수 오류')
+            results.extend(values)
+            emit({'kind':'phase', 'stage':'laya', 'action':'progress',
+                  'processed':len(results), 'total':len(selected),
+                  'message':f'Laya 문맥 분석 {len(results)}/{len(selected)}'})
+            if any(value['status'] != 'completed' for value in values):
+                failure_reason = next(value.get('reason','inference_failed') for value in values if value['status'] != 'completed')
+                break
     task = asyncio.create_task(work())
     try:
         while not task.done():
@@ -162,23 +185,26 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
                 task.cancel()
                 break
             await asyncio.wait({task}, timeout=.1)
-        results = await task if not task.cancelled() else []
+        if not task.cancelled(): await task
     except asyncio.CancelledError:
-        results = []
         if not (stop and stop.is_set()): raise
     except Exception:
-        results = [unavailable('inference_failed') for _ in selected]
+        failure_reason = 'inference_failed'
     finally:
         if not task.done(): task.cancel()
         await asyncio.gather(task, return_exceptions=True)
         await session.close()
-    by_text = {s['text'][:4000]: r for s, r in zip(selected, results)}
+    by_text = {s['text']: r for s, r in zip(selected, results)}
     for source in sources:
-        source.setdefault('local_ai', {})['laya'] = by_text.get(source.get('text','')[:4000], unavailable('budget_or_cancelled'))
+        text=source.get('text','')
+        source.setdefault('local_ai', {})['laya'] = by_text.get(text, unavailable(failure_reason if text.strip() else 'insufficient_scope'))
     completed = sum(r['status'] == 'completed' for r in results)
-    omitted = sum(s['local_ai']['laya']['status'] != 'completed' for s in sources)
-    summary = {'status': 'completed' if completed and not omitted else 'partial' if completed else 'unavailable',
-               'analyzed': completed, 'unique_selected': len(selected), 'item_limit': MAX_ITEMS,
+    eligible = [s for s in sources if s.get('text','').strip()]
+    omitted = sum(s['local_ai']['laya']['status'] != 'completed' for s in eligible)
+    summary = {'status': 'completed' if not omitted else 'partial' if completed else 'unavailable',
+               'analyzed': completed, 'unique_selected': len(selected), 'item_limit': None,
+               'batch_size': BATCH_SIZE, 'source_items':len(sources), 'eligible_items':len(eligible),
+               'covered':len(eligible)-omitted, 'skipped_empty':len(sources)-len(eligible),
                'omitted': omitted, 'paid_requests': 0}
     if not completed and results:
         summary['reason'] = results[0].get('reason', 'inference_failed')
@@ -187,36 +213,24 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
     return summary
 
 
-async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_SECONDS):
+async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_REVIEW_SECONDS):
     packets = report.get('evidence_packets', [])
     evidence = [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]
-    keys = {(r.get('url'), r.get('scope_location', r.get('location'))) for r in evidence}
-    def relevant(packet):
-        if packet.get('scope_quality') == 'overlapping' or not packet.get('text','').strip(): return False
-        if (packet.get('url'), packet.get('location')) in keys: return True
-        if packet.get('scope_quality') == 'semantic' or packet.get('source_kind') == 'image_ocr':
-            return len(packet['text'].strip()) >= 8
-        if len(packet['text'].strip()) < 12: return False
-        signal = packet.get('local_ai', {}).get('text', {})
-        return signal.get('feature_count', 0) > 0
-    # Preserve original evidence order; use existing ML only for routing uncertain fragments.
-    def priority(packet):
-        score = packet.get('local_ai', {}).get('text', {}).get('score')
-        return ((packet.get('url'), packet.get('location')) not in keys,
-                packet.get('source_kind') != 'image_ocr',
-                packet.get('scope_quality') == 'overlapping', abs((.5 if score is None else score)-.5))
-    selected = sorted([p for p in packets if relevant(p)], key=priority)
+    # Include output rows even when the collection snapshot did not retain a packet.
+    key=lambda row:(row.get('url'),row.get('scope_location',row.get('location')))
+    by_location={key(p):p for p in packets}
+    selected=list(packets)
+    for row in evidence:
+        if key(row) not in by_location:
+            source={'url':row.get('url'),'location':key(row)[1],
+                    'text':row.get('evidence_text',''),'local_ai':row.setdefault('local_ai',{})}
+            selected.append(source);by_location[key(row)]=source
     summary = await review_sources(selected, stop=stop, emit=emit, timeout_seconds=timeout_seconds)
-    for packet in packets:
-        if not relevant(packet): packet.setdefault('local_ai', {})['laya'] = unavailable('insufficient_scope')
-    summary['omitted'] = sum(p['local_ai']['laya']['status'] != 'completed' for p in packets)
-    if summary['status'] == 'completed' and summary['omitted']: summary['status'] = 'partial'
     images = {i['id']: i for i in report.get('ocr_images', [])}
     for packet in packets:
         if packet.get('image_id') in images: images[packet['image_id']].setdefault('local_ai', {}).update(packet['local_ai'])
     for row in [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]:
-        match = next((p for p in reversed(packets) if p['url'] == row.get('url') and
-                      p['location'] == row.get('scope_location', row.get('location'))), None)
+        match = by_location.get(key(row))
         if match: row.setdefault('local_ai', {}).update(match['local_ai'])
     report.setdefault('local_ai', {})['laya'] = summary
     return summary

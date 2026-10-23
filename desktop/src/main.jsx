@@ -591,7 +591,7 @@ function App() {
   const openSettings = (section = "general") => { setSettingsTab(typeof section === "string" ? section : "general"); settingsReturnView.current = view === "settings" ? settingsReturnView.current : view; setView("settings"); };
   const [profile, setProfile] = useState("default"),
     [maxPages, setMaxPages] = useState(1000),
-    [timeout, setTimeoutValue] = useState(1000);
+    [timeout, setTimeoutValue] = useState(1800);
   const [scanInterval, setScanInterval] = useState(0.5);
   const [livePreview, setLivePreview] = useState(true),
     [outputRoot, setOutputRoot] = useState(""),
