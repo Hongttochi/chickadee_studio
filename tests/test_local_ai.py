@@ -15,6 +15,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LocalAITests(unittest.TestCase):
+    def test_positive_ad_context_can_replace_neutral_photo_review(self):
+        item = packet()
+        item['local_ai'] = {'laya': {'status':'completed', 'label':'ad_context', 'review_priority':'high'}}
+        report = {'evidence_packets':[item], 'ad_candidates':[
+            {'id':'c_00007', 'url':item['url'], 'location':item['location'],
+             'category':'IMAGE_REVIEW', 'source_kind':'image_visual'}]}
+        local_ai.add_model_candidates(report, 'laya')
+        self.assertEqual(len(report['ad_candidates']),1)
+        self.assertEqual(report['ad_candidates'][0]['category'],'AI_CONTEXT')
+        self.assertEqual(report['ad_candidates'][0]['id'],'c_00007')
+
     def test_test_site_disclosure_is_not_repeated_as_an_ai_advertisement(self):
         item=packet();item['text']='본 사이트는 행정안전부 주최 공공 웹사이트 불법광고 탐지 도구 개발 공모전 참가를 위해 제작한 테스트 사이트입니다.'
         report={'evidence_packets':[item],'ad_candidates':[]}

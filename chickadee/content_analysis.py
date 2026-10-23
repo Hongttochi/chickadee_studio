@@ -5,6 +5,7 @@ import hashlib
 import time
 
 from .candidates import analyze_candidate
+from .ad_context import commercial_support
 from .detection import analyze
 from .image_ocr import OCRSession, inline_image, recognized_text, unreadable_message
 from .local_ai import prepare_models, text_analysis, visual_analysis
@@ -54,9 +55,6 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
                 image['local_ai'] = {'visual': {'status': 'unavailable', 'message': '지원하지 않거나 손상된 이미지입니다.'}}
                 errors.append('이미지 특징 분석 실패')
             image['local_ai']['content_visual'] = await analyze_photo(pixels)
-            if image['local_ai']['content_visual']['status']=='completed':
-                image['ad_candidates']=image_candidates({'id':'provided_image','url':'http://provided.invalid/',
-                    'location':'provided_image','text':''},image['local_ai']['content_visual'])
             if not runtime['features']['ocr_enabled']:
                 image['ocr'] = {'status': 'skipped', 'reason': 'economy' if runtime['effective_mode'] == 'economy' else 'unavailable'}
             else:
@@ -80,9 +78,21 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
                     source['local_ai'].update(image['local_ai'])
                     sources.append(source)
                 else: errors.append('PaddleOCR 이미지 문자 인식 실패')
+        if image and image['local_ai']['content_visual']['status'] == 'completed':
+            image['ad_candidates'] = image_candidates({'id': 'provided_image', 'url': 'http://provided.invalid/',
+                'location': 'provided_image', 'text': image.get('ocr', {}).get('text', '')},
+                image['local_ai']['content_visual'])
         if any(source['local_ai']['text']['status'] != 'completed' for source in sources): errors.append('로컬 문자 모델 분석 미완료')
         await review_sources(sources, stop=stop, emit=lambda event: progress(event['stage']),
                              timeout_seconds=max(0, 148-(time.monotonic()-started)))
+        for source in sources:
+            signal = source.get('local_ai', {}).get('laya', {})
+            if not source['ad_candidates'] and signal.get('status') == 'completed' and signal.get('label') == 'ad_context':
+                from .detection import is_editorial_context
+                if not is_editorial_context(source['text']) and commercial_support(source['text']):
+                    source['ad_candidates'].append({'category': 'AI_CONTEXT', 'matched_keywords': [],
+                        'reasons': ['문맥 모델에서 일반 광고를 포함한 상업적 홍보 신호를 확인했습니다.'],
+                        'review_required': True})
         return {'status': 'partial' if errors or image and image['ocr']['status'] != 'completed' else 'completed',
                 'sources': sources, 'image': image, 'errors': errors, 'runtime_environment': runtime,
                 'finished_at': datetime.now().astimezone().isoformat(), 'paid_requests': 0,

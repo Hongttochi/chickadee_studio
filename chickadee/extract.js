@@ -99,6 +99,18 @@
     return result;
   }
   const elements = [];
+  const commentScope = '[data-comment-id], [data-reply-id], [itemprop="comment"], .comment, .comment-item, .comment_item, .reply, .reply-item, .reply_item';
+  const contentScope = commentScope + ', [role="article"], article, [data-post-id]';
+  const sourceRole = el => {
+    if (el.closest(commentScope)) return 'comment';
+    if (el.closest('.post-title,.board-title,.entry-title,.article-title,[data-role="title"],[itemprop="headline"]') ||
+        (el.closest('h1') && el.closest('article,[role="article"],[data-post-id]'))) return 'title';
+    return el.closest('h1,h2,h3,h4,h5,h6') ? 'heading' : 'body';
+  };
+  const isInterfaceImage = el => !!el.closest('nav,[role="navigation"],[role="search"],.logo,.brand,.site-logo,.brand-logo') ||
+    (!!el.closest('header,footer') && !el.closest(contentScope)) ||
+    el.getAttribute('aria-hidden') === 'true' || el.getAttribute('role') === 'presentation' ||
+    (!el.closest(contentScope) && !!el.closest('h1,h2,h3,h4,h5,h6') && el.getAttribute('alt') === '');
   // Build text from DOM text nodes, excluding executable/style source. Also
   // aggregate actual text-owner visibility: a white parent must not make a
   // black, explicitly styled child look like hidden text.
@@ -147,7 +159,7 @@
     if (elements.length >= limit) { truncated = true; break; }
     const visibility = {transparent: info.count > 0 && info.transparent,
       offscreen: info.count > 0 && info.offscreen};
-    const scope = el.closest('[data-comment-id], [role="article"], article, [data-post-id]');
+    const scope = el.closest(contentScope);
     const anchor = el.closest('a[href]');
     let relatedContentUrl = null;
     if (anchor) {
@@ -161,7 +173,8 @@
       location: selector(el), text, direct_text: direct, reasons: info.reasons,
       text_breaks: info.breaks,
       content_scope: scope ? selector(scope) : null,
-      nested_content_scopes: scope === el ? el.querySelectorAll('[data-comment-id], [role="article"], article, [data-post-id]').length : 0,
+      source_role: sourceRole(el),
+      nested_content_scopes: scope === el ? el.querySelectorAll(contentScope).length : 0,
       link_targets: [...new Set((scope === el ? [...el.querySelectorAll('a[href]')].slice(0, 20) :
         anchor ? [anchor] : []).map(a => a.href).filter(href => /^https?:/.test(href)))],
       related_content_url: relatedContentUrl,
@@ -215,7 +228,9 @@
          (!!el.closest('nav, [role="navigation"], button, [role="button"]') && Math.max(box.width, box.height) <= 96) ||
          (el.tagName === 'IMG' && /^(?:.*\s)?(?:logo|로고)$/i.test(el.alt.trim()) && Math.max(box.width, box.height) <= 240));
       images.push({source_url: src, location: selector(el), computed_style: appearance(el).style,
-        image_role: interfaceImage ? 'interface' : inContent ? 'content' : 'unspecified',
+        source_role: sourceRole(el),
+        interface_image: isInterfaceImage(el) || (el.tagName !== 'IMG' && !el.closest(contentScope) && !el.closest('a[href]')),
+        image_role: (interfaceImage || isInterfaceImage(el)) ? 'interface' : inContent ? 'content' : 'unspecified',
         transparent: appearance(el).transparent, offscreen: appearance(el).offscreen,
         link_targets: el.closest('a[href]') ? [el.closest('a[href]').href] : [],
         source_type: el.tagName === 'IMG' ? 'img' : 'background'});

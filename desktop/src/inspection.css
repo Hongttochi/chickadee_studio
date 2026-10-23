@@ -62,10 +62,9 @@
 .evidence-capture-note { font-size: 12px; color: var(--text-muted, #707984); line-height: 1.6; }
 .evidence-capture details p { overflow-wrap: anywhere; font-size: 11px; }
 
-.evidence-capture-frame { position: relative; }
-.evidence-capture-frame .evidence-capture-zoom { position: absolute; bottom: 10px; right: 10px; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; min-height: 32px; padding: 0; border: 1px solid #ffffff45; border-radius: 5px; background: #252a32e6; color: #fff; cursor: pointer; box-shadow: 0 1px 4px #0002; }
-.evidence-capture-frame .evidence-capture-zoom:hover { background: #151a22; }
-.evidence-capture-zoom:focus-visible { outline: 2px solid #397ec0; outline-offset: 3px; }
+.evidence-capture-frame { display:block; width:100%; height:auto; min-height:0; padding:0; border:0; border-radius:0; background:transparent; cursor:zoom-in; text-align:left; }
+.evidence-capture-frame .evidence-capture-image { display:block; }
+.evidence-capture-frame:focus-visible { outline:2px solid #397ec0; outline-offset:3px; }
 
 .inspection-graph .react-flow__node-boundary { width: 160px; }
 .boundary-node .observed-node-tile { border-radius: 38px; width: 76px; height: 76px; }

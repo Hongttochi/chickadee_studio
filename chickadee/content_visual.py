@@ -59,19 +59,27 @@ def validate_analysis(value):
 
 def image_candidates(image, analysis):
     validate_analysis(analysis)
-    result=[]
-    for topic in TOPICS:
-        score=analysis['scores'][topic]
-        if score < analysis['thresholds'][topic]: continue
-        category,label=LABELS[topic]
-        result.append({'url':image['url'], 'location':image['location'], 'scope_location':image['location'],
-            'category':category, 'source_kind':'image_visual', 'image_id':image['id'],
-            'observed_at':image.get('observed_at') or datetime.now().astimezone().isoformat(),
-            'evidence_text':image.get('text') or label, 'matched_keywords':[], 'review_required':True,
-            'reasons':[f'사진 분류 모델에서 {label} 신호를 확인했습니다. 점수 {score:.3f}.',
-                       '이미지 분류 신호이며 광고 여부는 원문과 함께 검토합니다.'],
-            'local_ai':{'content_visual':analysis}})
-    return result
+    if image.get('interface_image'):
+        return []
+    from .candidates import analyze_candidate
+    from .image_ocr import recognized_text
+    text = image.get('text') or recognized_text(image)['text']
+    text_categories = {hit['category'] for hit in analyze_candidate(text)}
+    # Typed text evidence is already surfaced by the text classifier. A photo
+    # score alone does not establish advertising or a harmful topic.
+    if text_categories:
+        return []
+    topics = [topic for topic in TOPICS if analysis['scores'][topic] >= analysis['thresholds'][topic]]
+    if not topics:
+        return []
+    return [{'url':image['url'], 'location':image['location'], 'scope_location':image['location'],
+             'observed_at':image.get('observed_at') or datetime.now().astimezone().isoformat(),
+             'category':'IMAGE_REVIEW', 'source_kind':'image_visual', 'image_id':image['id'],
+             'evidence_text':text or '문자 근거 없는 이미지 · 검토 필요',
+             'visual_topics':topics, 'matched_keywords':[], 'review_required':True,
+             'reasons':['사진 모델의 단독 신호로 남긴 이미지 검토 항목입니다.',
+                        '광고 여부와 도박·성인·마약 주제는 확인되지 않았습니다.'],
+             'local_ai':{'content_visual':analysis}}]
 
 
 class ContentSession:
@@ -138,6 +146,9 @@ async def enrich_content_images(report, assets, *, candidates=True, timeout_seco
                 summary['flagged']=len(flagged)
                 if candidates:
                     for row in signals:
+                        if any(r.get('source_kind') == 'image_visual' and
+                               r.get('local_ai', {}).get('content_visual', {}).get('image_sha256') == digest for r in rows):
+                            continue
                         match=next((r for r in rows if r['url']==row['url'] and r.get('image_id')==row['image_id'] and r['category']==row['category']),None)
                         if match:match.setdefault('local_ai',{})['content_visual']=analysis
                         else:rows.append({'id':f'c_{number:05d}',**row});number+=1

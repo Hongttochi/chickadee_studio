@@ -13,6 +13,7 @@ import math
 from pathlib import Path
 import re
 import unicodedata
+from .ad_context import commercial_support
 
 DATA = Path(__file__).resolve().parent / 'data'
 
@@ -131,9 +132,72 @@ def visual_analysis(pixels):
             'review_priority': 'high' if score >= .5 else 'standard'}
 
 
+def has_review_context(source):
+    text = source.get('text', '')
+    return (source.get('source_kind') != 'image_ocr' or
+            (len(text.strip()) >= 8 and sum(c.isalnum() for c in text) >= 4))
+
+
+def analysis_packets(report):
+    """Review retained OCR even when the bounded exploration trace is full.
+
+    Supplemental scopes reference image observations; they do not expand or
+    mutate the persisted exploration graph and its packet limit.
+    """
+    packets = list(report.get('evidence_packets', []))
+    image_ids = {p.get('image_id') for p in packets if p.get('source_kind') == 'image_ocr'}
+    for image in report.get('ocr_images', []):
+        if image.get('id') in image_ids:
+            continue
+        from .image_ocr import recognized_text
+        text = image.get('text') or recognized_text(image)['text']
+        if not text.strip():
+            continue
+        packets.append({'url': image['url'], 'location': image['location'], 'text': text[:4000],
+                        'source_kind': 'image_ocr', 'image_id': image['id'], 'scope_quality': 'element',
+                        'source_role': image.get('source_role'),
+                        'local_ai': image.setdefault('local_ai', {})})
+        image_ids.add(image['id'])
+    return packets
+
+
+def add_model_candidates(report, kind):
+    """Surface positive model observations as review rows, preserving typed hits."""
+    from .detection import is_editorial_context
+    rows = report.setdefault('ad_candidates', [])
+    number = max((int(r['id'][2:]) for r in rows if r.get('id', '').startswith('c_') and r['id'][2:].isdigit()), default=0) + 1
+    existing = {(r.get('url'), r.get('scope_location', r.get('location')))
+                for r in [*rows, *report.get('evidence_details', {}).values()]
+                if r.get('category') != 'IMAGE_REVIEW'}
+    for packet in analysis_packets(report):
+        signal = packet.get('local_ai', {}).get(kind, {})
+        key = packet['url'], packet['location']
+        if (signal.get('status') != 'completed' or signal.get('label') != 'ad_context'
+                or signal.get('review_priority') != 'high' or key in existing
+                or not has_review_context(packet)
+                or not commercial_support(packet['text'])
+                or packet.get('scope_quality') == 'overlapping' or is_editorial_context(packet['text'])):
+            continue
+        snapshot = packet.get('last_snapshot_id') or packet.get('snapshot_id')
+        neutral = next((r for r in rows if r.get('category') == 'IMAGE_REVIEW' and
+                        (r.get('url'), r.get('scope_location', r.get('location'))) == key), None)
+        if neutral:
+            rows.remove(neutral)
+        rows.append({'id': neutral['id'] if neutral else f'c_{number:05d}', 'url': packet['url'], 'location': packet['location'],
+                     'scope_location': packet['location'], 'evidence_text': packet['text'],
+                     'category': 'AI_CONTEXT', 'review_required': True, 'matched_keywords': [],
+                     'reasons': ['문맥 모델에서 광고·상업적 홍보 신호를 확인했습니다. 일반 광고를 포함한 검토 후보입니다.'],
+                     'source_kind': packet.get('source_kind', 'dom_text'), 'image_id': packet.get('image_id'),
+                     'source_role': packet.get('source_role'),
+                     'screenshot_id': snapshot, 'local_ai': packet['local_ai'],
+                     'observed_at': packet.get('observed_at')})
+        existing.add(key)
+        number += 1
+
+
 def enrich_report(report, *, candidates=True):
     """Attach reproducible ML observations to packets and existing evidence rows."""
-    packets = report.get('evidence_packets', [])
+    packets = analysis_packets(report)
     analyzed, priority = 0, 0
     images = {image['id']: image for image in report.get('ocr_images', [])}
     screens = report.get('screenshots', {})
@@ -150,7 +214,8 @@ def enrich_report(report, *, candidates=True):
         if packet.get('image_id') in images: images[packet['image_id']]['local_ai'] = packet['local_ai']
         analyzed += text.get('status') == 'completed'
         priority += text.get('review_priority') == 'high'
-        if (candidates and text.get('review_priority') == 'high' and packet.get('scope_quality') != 'overlapping'
+        if (candidates and text.get('review_priority') == 'high' and has_review_context(packet)
+                and commercial_support(packet['text']) and packet.get('scope_quality') != 'overlapping'
                 and not any(c.get('url') == packet['url'] and c.get('scope_location', c.get('location')) == packet['location']
                             for c in [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()])):
             from .detection import is_editorial_context
@@ -161,6 +226,7 @@ def enrich_report(report, *, candidates=True):
                     'category': 'AI_CONTEXT', 'review_required': True, 'matched_keywords': [],
                     'reasons': ['학습한 문자 문맥 모델에서 광고 유사 문맥을 분류했습니다.'],
                     'source_kind': packet.get('source_kind', 'dom_text'), 'image_id': packet.get('image_id'),
+                    'source_role': packet.get('source_role'),
                     'screenshot_id': snapshot, 'local_ai': packet['local_ai'], 'observed_at': packet.get('observed_at')})
                 candidate_number += 1
     for row in [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]:

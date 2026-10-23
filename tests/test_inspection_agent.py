@@ -59,13 +59,19 @@ class InspectionTests(unittest.TestCase):
         self.assertTrue(any(p['source_kind'] == 'image_ocr' for p in trace.packets.values()))
 
     def test_late_post_keeps_reserved_capacity_after_navigation(self):
-        trace = InspectionTrace(); trace.MAX_PACKETS = 5
-        for i in range(8):
+        trace = InspectionTrace(); trace.MAX_PACKETS = 10
+        for i in range(12):
             trace.capture([{'location': f'nav#{i}', 'text': '일반 메뉴', 'direct_text': '일반 메뉴'}], 'https://example.invalid/', '', lambda _: None)
-        self.assertEqual(len(trace.packets), 4)
+        self.assertEqual(len(trace.packets), 8)
         trace.capture([element()], 'https://example.invalid/post', '', lambda _: None)
-        self.assertEqual(len(trace.packets), 5)
+        self.assertEqual(len(trace.packets), 9)
         self.assertTrue(any('카지노' in p['text'] for p in trace.packets.values()))
+        trace.capture([element()], 'https://example.invalid/another-post', '', lambda _: None)
+        self.assertEqual(len(trace.packets), 9)
+        trace.capture([{**element(), 'source_kind': 'image_ocr', 'image_id': 'im_late'}],
+                      'https://example.invalid/late-image', '', lambda _: None)
+        self.assertEqual(len(trace.packets), 10)
+        self.assertTrue(any(p.get('image_id') == 'im_late' for p in trace.packets.values()))
     def test_unicode_source_spans_and_normal_controls(self):
         for text in ('caꜱino join now', 'cɑsino join now', 'caѕinο join now'):
             result = analyze(text)

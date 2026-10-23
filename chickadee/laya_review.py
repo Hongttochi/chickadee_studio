@@ -213,8 +213,9 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
     return summary
 
 
-async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_REVIEW_SECONDS):
-    packets = report.get('evidence_packets', [])
+async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_REVIEW_SECONDS, candidates=True):
+    from .local_ai import analysis_packets
+    packets = analysis_packets(report)
     evidence = [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]
     # Include output rows even when the collection snapshot did not retain a packet.
     key=lambda row:(row.get('url'),row.get('scope_location',row.get('location')))
@@ -233,4 +234,7 @@ async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds
         match = by_location.get(key(row))
         if match: row.setdefault('local_ai', {}).update(match['local_ai'])
     report.setdefault('local_ai', {})['laya'] = summary
+    if candidates:
+        from .local_ai import add_model_candidates
+        add_model_candidates(report, 'laya')
     return summary
