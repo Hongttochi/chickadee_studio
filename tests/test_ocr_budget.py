@@ -33,7 +33,7 @@ class OCRBudgetTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(session._since)
 
     async def test_collection_limit_is_skipped_once_instead_of_ocr_failure(self):
-        state = _State(image_origins={origin('http://127.0.0.1:8765')}, image_requests=200)
+        state = _State(image_origins={origin('http://127.0.0.1:8765')}, image_requests=2000)
         images = [{'location': 'img#one', 'source_url': 'http://127.0.0.1:8765/a.png', 'source_type': 'img'},
                   {'location': 'img#two', 'source_url': 'http://127.0.0.1:8765/b.png', 'source_type': 'img'}]
         events = []

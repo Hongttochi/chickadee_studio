@@ -8,6 +8,7 @@ import platform
 import struct
 import sys
 import zlib
+from .image_ocr import MAX_UNIQUE_IMAGES
 
 MODES = ('auto', 'standard', 'economy')
 GIB = 1024**3
@@ -61,7 +62,9 @@ def environment(mode='auto'):
                          'logical_cpus': cores, **memory},
             'features': {'required_detection': True, 'text_ai': features['text'], 'visual_ai': features['visual'],
                          'ocr_available': features['ocr'], 'ocr_enabled': effective == 'standard' and features['ocr']},
-            'ocr_max_images': 50 if memory['available_bytes'] is None or memory['available_bytes'] >= 3*GIB else 10,
+            # Images are processed sequentially. A smaller count does not reduce
+            # model resident memory, but silently drops later post attachments.
+            'ocr_max_images': MAX_UNIQUE_IMAGES if effective == 'standard' else 10,
             'inference_device': 'cpu', 'paid_requests': 0}
 
 

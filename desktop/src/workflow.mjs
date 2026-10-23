@@ -92,11 +92,12 @@ export const edgeFor = (source, target) => ({
     labelShowBg: false, labelStyle: { fill: "#a8afb7", fontSize: 11 },
   } : {}),
 });
-export function ocrDetectionCount(records = []) {
-  return records.filter(record => record.source_kind === "image_ocr" || record.image_id ||
-    (record.evidence_sources || record._detail?.evidence_sources || []).some(source => source.source_kind === "image_ocr" || source.image_id)).length;
+export function hasOCREvidence(record) {
+  return record.source_kind === "image_ocr" || record._detail?.source_kind === "image_ocr" ||
+    [...(record.evidence_sources || []), ...(record._detail?.evidence_sources || [])]
+      .some(source => source.source_kind === "image_ocr");
 }
-export function ocrPresentation(summary, detected = 0) {
+export function ocrPresentation(summary) {
   if (!summary) return null;
   if (summary.enabled === false) return {state:"disabled",caption:"사용 안 함"};
   if (summary.status === "no_images") return {state:"skipped",caption:"이미지 없음"};
@@ -104,8 +105,8 @@ export function ocrPresentation(summary, detected = 0) {
   const missing=(summary.failed||0)+(summary.unreadable||0)+(summary.skipped||0);
   const readable=Math.max(0,(summary.completed||0)-(summary.unreadable||0));
   if (missing) return {state: readable ? "partial" : summary.failed || summary.unreadable ? "error" : "skipped",
-    caption:`${detected}건 감지 · 문자 추출 ${Math.max(0,(summary.completed||0)-(summary.unreadable||0))}장 · 미확인 ${missing}장`};
-  return {state:"done",caption:`${detected}건 감지 · 문자 추출 ${summary.completed||0}장`};
+    caption:`${summary.completed||0}장 처리 · 문자 추출 ${readable}장 · 미확인 ${missing}장`};
+  return {state:"done",caption:`${summary.completed||0}장 처리 · 문자 추출 ${readable}장`};
 }
 export const defaultWorkflow = () => ({
   version: 3,

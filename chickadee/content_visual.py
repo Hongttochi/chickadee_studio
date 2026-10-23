@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from datetime import datetime
 
 DATA = Path(__file__).resolve().parent/'data/ai-models/content'
 TOPICS = ('sexual_content', 'gambling', 'drugs')
@@ -65,6 +66,7 @@ def image_candidates(image, analysis):
         category,label=LABELS[topic]
         result.append({'url':image['url'], 'location':image['location'], 'scope_location':image['location'],
             'category':category, 'source_kind':'image_visual', 'image_id':image['id'],
+            'observed_at':image.get('observed_at') or datetime.now().astimezone().isoformat(),
             'evidence_text':image.get('text') or label, 'matched_keywords':[], 'review_required':True,
             'reasons':[f'사진 분류 모델에서 {label} 신호를 확인했습니다. 점수 {score:.3f}.',
                        '이미지 분류 신호이며 광고 여부는 원문과 함께 검토합니다.'],
@@ -112,12 +114,13 @@ async def enrich_content_images(report, assets, *, candidates=True, timeout_seco
     try: contract=await asyncio.to_thread(model_contract)
     except Exception: summary.update(reason='invalid_model');return
     if contract is None: summary.update(reason='validated_model_not_installed');return
-    worker=ContentSession(); cache={};deadline=time.monotonic()+max(0,timeout_seconds)
+    worker=ContentSession(); cache={};flagged=set();deadline=time.monotonic()+max(0,timeout_seconds)
     rows=report.setdefault('ad_candidates',[])
     number=max((int(r['id'][2:]) for r in rows if r.get('id','').startswith('c_') and r['id'][2:].isdigit()),default=0)+1
     summary['status']='completed'
     try:
         for image in images:
+            if image.get('image_role') == 'interface':continue
             if stop is not None and stop.is_set():summary['status']='cancelled';break
             if time.monotonic()>=deadline:summary['status']='partial';break
             path=image.get('relative_path');data=assets.get(path)
@@ -131,7 +134,8 @@ async def enrich_content_images(report, assets, *, candidates=True, timeout_seco
                 analysis=cache[digest]
                 image.setdefault('local_ai',{})['content_visual']=analysis
                 signals=image_candidates(image,analysis)
-                summary['flagged']+=bool(signals)
+                if signals:flagged.add(digest)
+                summary['flagged']=len(flagged)
                 if candidates:
                     for row in signals:
                         match=next((r for r in rows if r['url']==row['url'] and r.get('image_id')==row['image_id'] and r['category']==row['category']),None)

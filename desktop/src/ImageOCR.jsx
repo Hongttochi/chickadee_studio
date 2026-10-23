@@ -16,6 +16,8 @@ export default function ImageOCR({ image }) {
     <div className="image-ocr-lines">{(image.lines || []).map((line, index) => <button type="button" key={index} aria-pressed={selected === index} onClick={() => setSelected(index)}>
       <span>{line.text}</span><small>{Math.round(line.confidence * 100)}%</small>
     </button>)}</div>
-    <details><summary>이미지 정보</summary><p>{image.source_url}</p><p>{image.model} · {image.width} × {image.height}</p><p className="mono">SHA-256 {image.image_sha256}</p></details>
+    <details><summary>이미지 정보</summary><p>{image.source_url}</p><p>{image.model} · {image.width} × {image.height}</p><p className="mono">SHA-256 {image.image_sha256}</p>
+      {image.occurrences?.length > 1 && <details><summary>발견 위치 {image.occurrences.length}곳</summary>{image.occurrences.map((item,index)=><p key={index}>{item.url}<br />{item.location}</p>)}</details>}
+    </details>
   </section>;
 }

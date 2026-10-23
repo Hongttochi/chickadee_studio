@@ -21,7 +21,8 @@ from .authentication import AuthenticationRequired, LoginRedirect, is_login_url,
 from . import __version__
 from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
-from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text, unreadable_message, image_metadata
+from .image_ocr import (OCRSession, fetch_image, inline_image, recognized_text, unreadable_message,
+                        image_metadata, MAX_IMAGE_REQUESTS, MAX_IMAGE_BYTES)
 from .local_ai import enrich_report, visual_analysis, prepare_models
 from .content_visual import enrich_content_images, model_contract as photo_model_contract
 from .laya_review import enrich_laya, analysis_reserve
@@ -131,13 +132,13 @@ class ScanConfig:
     ocr_candidates: bool = True
     detect_techniques: bool = True
     detect_candidates: bool = True
-    ocr_max_images: int = 50
+    ocr_max_images: int = 1000
     runtime_mode: str = 'standard'
     interactive_login: bool = False
 
     def __post_init__(self):
         normalize_url(self.entry_url)
-        if type(self.ocr_enabled) is not bool or type(self.ocr_max_images) is not int or not 1 <= self.ocr_max_images <= 50:
+        if type(self.ocr_enabled) is not bool or type(self.ocr_max_images) is not int or not 1 <= self.ocr_max_images <= 1000:
             raise ValueError('OCR 실행·이미지 한도 설정 오류')
         if self.runtime_mode not in ('standard', 'economy'): raise ValueError('실행 환경 모드 오류')
         if not self.allow_network and not is_loopback(self.entry_url):
@@ -270,7 +271,7 @@ class _State:
     ocr_disabled: bool = False
     photo_enabled: bool = False
     ocr_enabled: bool = True
-    ocr_max_images: int = 50
+    ocr_max_images: int = 1000
     ocr_skipped: int = 0
     ocr_limit_reported: bool = False
     image_limit_reported: bool = False
@@ -1021,13 +1022,13 @@ async def _fetch_image_bounded(url, state):
             raise ValueError('HTTP 429 수신으로 이미지 요청 중단')
         if url in state.image_cache:
             return state.image_cache[url]
-        if state.image_requests >= min(200, max(50, state.ocr_max_images * 4)) or state.image_bytes >= 20_000_000:
+        if state.image_requests >= min(MAX_IMAGE_REQUESTS, max(50, state.ocr_max_images * 4)) or state.image_bytes >= MAX_IMAGE_BYTES:
             raise ImageBudgetExceeded('이미지 수집 한도 도달')
         state.image_requests += 1
         try:
             cookies = await state.image_context.cookies([url]) if state.image_context else []
             cookie_header = '; '.join(c['name'] + '=' + c['value'] for c in cookies)
-            data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, 20_000_000 - state.image_bytes), cookie_header)
+            data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, MAX_IMAGE_BYTES - state.image_bytes), cookie_header)
         except HTTPError as error:
             if error.code == 429:
                 parts = urlsplit(url)
@@ -1053,6 +1054,7 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
     if not state.ocr_enabled and not state.photo_enabled:
         _record_skipped_images(images, prefix, page_url, state)
         return elements
+    images = sorted(images, key=lambda image: (image.get('image_role') != 'content', image.get('image_role') == 'interface'))
     for index, image in enumerate(images):
         if len(state.ocr_images) >= OCR_MAX_OBSERVATIONS or (state.ocr_disabled and not state.photo_enabled):
             state.ocr_skipped += len(images) - index
@@ -1072,27 +1074,25 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         state.ocr_seen.add(source_key)
         record = {'id': 'im_' + str(len(state.ocr_images) + 1), 'url': page_url, 'location': location,
                   'source_url': '(inline)' if source.startswith('data:') else source[:2000],
-                  'source_type': image['source_type'], 'status': 'failed', 'lines': [], '_source_key': source_key}
+                  'source_type': image['source_type'], 'image_role': image.get('image_role', 'unspecified'),
+                  'status': 'failed', 'lines': [], '_source_key': source_key,
+                  'occurrences': [{'url': page_url, 'location': location, 'source_type': image['source_type'],
+                                   'source_url': '(inline)' if source.startswith('data:') else source[:2000]}]}
         state.ocr_images.append(record)
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
             digest = hashlib.sha256(data).hexdigest()
             previous = next((item for item in state.ocr_images[:-1] if item.get('image_sha256') == digest and
-                item.get('source_url') == record['source_url'] and item.get('location') == location and
-                item.get('source_type') == record['source_type'] and item.get('url') != page_url and item.get('text')), None) if not prefix else None
+                (item.get('image_role') != 'interface' or record['image_role'] == 'interface')), None)
             if previous:
                 # Repeated site branding shares immutable image evidence. Each
                 # page still gets its own DOM/CSS observation and classifications.
                 state.ocr_images.pop()
                 state.ocr_references[source_key] = previous
+                previous.setdefault('occurrences', []).extend(record['occurrences'])
                 state.ocr_reused += 1
-                elements.append(_ocr_element(image, previous))
-                continue
-            if digest in state.ocr_cache and not recognized_text(state.ocr_cache[digest]).get('text') and not state.photo_enabled:
-                # Repeated unreadable logos must not crowd later content images
-                # out of the bounded evidence list. The first observation remains.
-                state.ocr_images.pop()
-                state.ocr_skipped += 1
+                if previous.get('text'):
+                    elements.append(_ocr_element(image, previous))
                 continue
             if digest not in state.ocr_cache and len(state.ocr_cache) >= state.ocr_max_images:
                 state.ocr_images.pop()

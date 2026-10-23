@@ -11,3 +11,5 @@ desktop/electron/** text eol=crlf
 desktop/package.json text eol=crlf
 desktop/src/shortcuts.mjs text eol=crlf
 desktop/licenses/*.txt text eol=crlf
+# Inference graph and dictionary bytes are verified against the model manifest.
+chickadee/data/ai-models/ocr/inference.* -text -whitespace

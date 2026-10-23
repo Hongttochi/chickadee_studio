@@ -12,6 +12,10 @@ import urllib.request
 import hashlib
 import io
 
+MAX_UNIQUE_IMAGES = 1000
+MAX_IMAGE_REQUESTS = 2000
+MAX_IMAGE_BYTES = 100_000_000
+
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args, **_kwargs): return None

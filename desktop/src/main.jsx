@@ -1,4 +1,5 @@
 import UpdateSettings from "./UpdateSettings.jsx";
+import { sortDetections, pathTreeRows } from "./result-list.mjs";
 import React, {
   useState,
   useId,
@@ -98,7 +99,7 @@ import {
   branchEnabled,
   restoreWorkflowLayout,
   ocrPresentation,
-  ocrDetectionCount,
+  hasOCREvidence,
 } from "./workflow.mjs";
 import "./style.css";
 import "./theme.css";
@@ -576,6 +577,8 @@ function App() {
   const detailRecord = selectedRecord || lastSelectedRecord.current;
   const [pending, setPending] = useState([]),
     [pageFilter, setPageFilter] = useState("visited");
+  const [recordOrder, setRecordOrder] = useState("newest");
+  const [collapsedPaths, setCollapsedPaths] = useState(() => new Set());
   const [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
     [eventFilter, setEventFilter] = useState("all"),
@@ -588,8 +591,8 @@ function App() {
   const settingsReturnView = useRef("workflow");
   const openSettings = (section = "general") => { setSettingsTab(typeof section === "string" ? section : "general"); settingsReturnView.current = view === "settings" ? settingsReturnView.current : view; setView("settings"); };
   const [profile, setProfile] = useState("default"),
-    [maxPages, setMaxPages] = useState(100),
-    [timeout, setTimeoutValue] = useState(300);
+    [maxPages, setMaxPages] = useState(1000),
+    [timeout, setTimeoutValue] = useState(1000);
   const [scanInterval, setScanInterval] = useState(0.5);
   const [livePreview, setLivePreview] = useState(true),
     [outputRoot, setOutputRoot] = useState(""),
@@ -694,7 +697,7 @@ function App() {
     setReviewData(value.reviews || { revision: 0, items: {} });
     setSelectedIds(new Set());
     setRecords([
-      ...value.result.findings,
+      ...value.result.findings.map(record => ({ ...record, _detail: value.report.evidence_details?.[record.id] })),
       ...(value.report.ad_candidates || []),
     ]);
     setPages(
@@ -960,8 +963,7 @@ function App() {
           branchEnabled(flow, node.id);
         const layaSkipped = node.id === "laya" && (outcome?.report.local_ai?.laya?.status === "unavailable" || events.findLast(event => event.kind === "phase" && event.stage === "laya")?.action === "skipped");
         const layaReason = outcome?.report.local_ai?.laya?.reason || outcome?.report.evidence_packets?.find(packet => packet.local_ai?.laya?.reason === "insufficient_memory")?.local_ai.laya.reason;
-        const ocrDetected = node.id === "ocr" ? ocrDetectionCount(records) : 0;
-        const ocr = node.id === "ocr" ? ocrPresentation(outcome?.report.ocr_summary, ocrDetected) : null;
+        const ocr = node.id === "ocr" ? ocrPresentation(outcome?.report.ocr_summary) : null;
         const state = layaSkipped ? "skipped" : !enabled
           ? "disabled"
           : ocr?.state || (active === node.id
@@ -978,7 +980,7 @@ function App() {
             ? `${pages.length}페이지 방문`
             : node.id === "collector"
               ? `${discovered}개 URL 발견`
-              : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? `${ocrDetected}건 감지 · ${Object.keys(ocrLive).length}장 처리` : node.id === "techniques"
+              : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? `${Object.keys(ocrLive).length}장 처리` : node.id === "techniques"
                 ? `${findings.length}건 발견`
                 : node.id === "laya"
                   ? layaSkipped ? ({insufficient_memory:"메모리 부족",timeout:"처리 시간 초과",time_budget:"검사 시간 부족",runtime_unavailable:"실행 환경 확인 필요"}[layaReason] || "분석 미완료") : outcome?.report.local_ai?.laya ? `${outcome.report.local_ai.laya.analyzed}개 검토 · ${outcome.report.local_ai.laya.omitted}개 미확인` : "로컬 문맥 검토"
@@ -1279,7 +1281,7 @@ function App() {
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, [shortcuts, running, load, openSettings]);
-  const filteredRecords = records.filter(
+  const filteredRecords = sortDetections(records.filter(
     (record) =>
       (reviewFilter === "all" ||
         (reviewData.items[record.id]?.status || "unreviewed") ===
@@ -1297,7 +1299,7 @@ function App() {
         .join(" ")
         .toLowerCase()
         .includes(search.toLowerCase()),
-  );
+  ), recordOrder);
   const filteredEvents = events.filter(
     (event) =>
       eventFilter === "all" ||
@@ -1943,6 +1945,13 @@ function App() {
                       action: () => setReviewFilter(id),
                     }))}
                   />
+                  <ActionMenu
+                    label="정렬 방식"
+                    triggerText={recordOrder === "newest" ? "최신순" : "오래된순"}
+                    items={[["newest", "최신순"], ["oldest", "오래된순"]].map(([id, label]) => ({ label,
+                      selected: recordOrder === id, action: () => setRecordOrder(id),
+                    }))}
+                  />
                   <Button
                     icon="Download"
                     disabled={!outcome || running}
@@ -2075,6 +2084,7 @@ function App() {
                             >
                               <TypeBadgeContent type={record.technique || record.category} />
                             </button>
+                            {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}
                           </td>
                           <td className="evidence-cell">
                             {record.evidence_text}
@@ -2186,15 +2196,26 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(pageFilter === "pending" ? pending : pages)
-                      .filter((page) =>
-                        page.url
-                          .toLowerCase()
-                          .includes(pageSearch.toLowerCase()),
-                      )
-                      .map((page, index) => (
+                    {pathTreeRows(pageFilter === "pending" ? pending : pages, collapsedPaths, pageSearch)
+                      .map((row) => { if (row.kind === "group") return (
+                        <tr className="path-group-row" key={row.key}>
+                          <td colSpan={6}>
+                            <button className="path-group-toggle" style={{paddingLeft: 12 + row.depth * 16}}
+                              aria-label={`${row.label} 경로 ${row.expanded ? "접기" : "펼치기"}`}
+                              aria-expanded={row.expanded}
+                              onClick={() => setCollapsedPaths(previous => {
+                                const next = new Set(previous);
+                                if (next.has(row.key)) next.delete(row.key); else next.add(row.key);
+                                return next;
+                              })}>
+                              <Icon name={row.expanded ? "ChevronDown" : "ChevronRight"} size={14} />
+                              <span>{row.label}</span><small>{row.count}</small>
+                            </button>
+                          </td>
+                        </tr>
+                      ); const page = row.page; return (
                         <tr
-                          key={index}
+                          key={row.key}
                           onClick={() =>
                             setSelectedEvent(
                               pageFilter === "pending"
@@ -2210,7 +2231,7 @@ function App() {
                               {page.http_status || "—"}
                             </span>
                           </td>
-                          <td className="path-cell">
+                          <td className="path-cell" style={{paddingLeft: 12 + row.depth * 16}}>
                             <Icon name="CornerDownRight" size={14} />
                             <span title={page.url}>
                               {relativeUrl(page.url)}
@@ -2231,7 +2252,7 @@ function App() {
                               : "—"}
                           </td>
                         </tr>
-                      ))}
+                      ); })}
                   </tbody>
                 </table>
                 {!(pageFilter === "pending" ? pending : pages).length && (
@@ -2791,6 +2812,7 @@ function RecordDetail({
         <span className={`type-badge ${record.technique ? "purple" : "amber"}`} data-type={record.technique || record.category}>
           <TypeBadgeContent type={record.technique || record.category} />
         </span>
+        {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}
 
         <div className="review-control">
           <span

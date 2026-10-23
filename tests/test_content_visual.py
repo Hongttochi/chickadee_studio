@@ -36,6 +36,37 @@ def sample():
 
 class ContentVisualTests(unittest.TestCase):
     @async_test
+    async def test_repeated_blank_images_with_photo_model_do_not_starve_later_content(self):
+        from chickadee.scanner import _State,_inspect_images
+        data,_,_=sample();state=_State(ocr_enabled=False,photo_enabled=True)
+        source='data:image/png;base64,'+base64.b64encode(data).decode()
+        for page in range(40):
+            await _inspect_images(None,[{'location':'img#logo','source_url':source,'source_type':'img'}],
+                '',f'http://127.0.0.1/{page}',state,lambda _:None,None)
+        content=Path('tests/fixtures/ocr/promotion.png').read_bytes()
+        await _inspect_images(None,[{'location':'article img','source_type':'img','image_role':'content',
+            'source_url':'data:image/png;base64,'+base64.b64encode(content).decode()}],
+            '', 'http://127.0.0.1/post',state,lambda _:None,None)
+        self.assertEqual(len(state.ocr_images),2)
+        self.assertEqual(len(state.image_assets),2)
+        self.assertEqual(state.ocr_reused,39)
+        self.assertEqual(len(state.ocr_images[0]['occurrences']),40, 'Reuse must preserve every observed page location')
+
+    @async_test
+    async def test_content_images_have_priority_when_unique_image_budget_is_reached(self):
+        from chickadee.scanner import _State,_inspect_images
+        data,_,_=sample();state=_State(ocr_enabled=False,photo_enabled=True,ocr_max_images=1)
+        content=Path('tests/fixtures/ocr/promotion.png').read_bytes()
+        images=[{'location':'img#logo','source_type':'img','image_role':'interface',
+                 'source_url':'data:image/png;base64,'+base64.b64encode(data).decode()},
+                {'location':'article img','source_type':'img','image_role':'content',
+                 'source_url':'data:image/png;base64,'+base64.b64encode(content).decode()}]
+        await _inspect_images(None,images,'','http://127.0.0.1/',state,lambda _:None,None)
+        self.assertEqual(state.ocr_images[0]['location'],'article img')
+        self.assertEqual(state.ocr_images[0]['image_role'],'content')
+        self.assertEqual(state.ocr_skipped,2)  # one OCR-off image and one over-budget image
+
+    @async_test
     async def test_photo_pixels_are_collected_when_ocr_switch_is_off(self):
         from chickadee.scanner import _State,_inspect_images,_ocr_summary,ScanConfig
         data,_,_=sample();state=_State(ocr_enabled=False,photo_enabled=True)
@@ -75,6 +106,17 @@ class ContentVisualTests(unittest.TestCase):
              patch('chickadee.content_visual.ContentSession.recognize',new_callable=AsyncMock,return_value=analysis) as worker:
             await enrich_content_images(report,{image['relative_path']:data})
         worker.assert_awaited_once();self.assertEqual([r['id'] for r in report['ad_candidates']],['c_00007','c_00008','c_00009'])
+        self.assertEqual(report['content_visual']['flagged'],1, 'Counts use unique images, like analyzed')
+
+    @async_test
+    async def test_interface_icons_are_not_classified_as_content_photos(self):
+        data,image,analysis=sample();image['image_role']='interface'
+        report={'ocr_images':[image],'ad_candidates':[]}
+        with patch('chickadee.content_visual.model_contract',return_value={}), \
+             patch('chickadee.content_visual.ContentSession.recognize',new_callable=AsyncMock) as worker:
+            await enrich_content_images(report,{image['relative_path']:data})
+        worker.assert_not_awaited();self.assertEqual(report['ad_candidates'],[])
+        self.assertEqual(report['content_visual']['analyzed'],0)
 
     @async_test
     async def test_unapproved_missing_model_never_starts_inference(self):

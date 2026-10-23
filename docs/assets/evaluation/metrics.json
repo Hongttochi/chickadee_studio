@@ -61,29 +61,32 @@
     }
   },
   "ocr_comparison": {
-    "scope": "43 fixed Latin-script regions from 16 images; zero Korean regions; single visual transcription reference",
+    "scope": "한국어 실제 이미지 8장의 문자 영역 20곳, 287자. 소규모 문자 인식 점검이며 전체 OCR 정확도가 아님.",
     "baseline": {
-      "regions": 43,
-      "source_images": 16,
-      "character_errors": 13,
-      "reference_characters": 1229,
-      "cer": 0.010577705451586655,
-      "exact_match": 0.7906976744186046,
-      "casefold_exact_match": 0.8372093023255814,
+      "regions": 20,
+      "source_images": 8,
+      "character_errors": 30,
+      "reference_characters": 287,
+      "cer": 0.10452961672473868,
+      "exact_match": 0.2,
+      "casefold_exact_match": 0.2,
       "normalization": "NFC and collapse whitespace; case and punctuation retained; CER may exceed 1",
-      "korean_regions": 0
+      "korean_regions": 20
     },
     "trained": {
-      "regions": 43,
-      "source_images": 16,
-      "character_errors": 36,
-      "reference_characters": 1229,
-      "cer": 0.029292107404393815,
-      "exact_match": 0.4418604651162791,
-      "casefold_exact_match": 0.5581395348837209,
+      "regions": 20,
+      "source_images": 8,
+      "character_errors": 10,
+      "reference_characters": 287,
+      "cer": 0.03484320557491289,
+      "exact_match": 0.55,
+      "casefold_exact_match": 0.55,
       "normalization": "NFC and collapse whitespace; case and punctuation retained; CER may exceed 1",
-      "korean_regions": 0
-    }
+      "korean_regions": 20
+    },
+    "references_sha256": "ccf7b4ffe777eb2b973f0b8c4615aced73955630874fbe16787a3e5066a8e221",
+    "trained_weights_sha256": "c1d0c3538f1fe7a91432f805f222e448e92fe8d79d551e9d8cd53a535a56f80c",
+    "selection_split": "synthetic validation only; real references excluded from training"
   },
   "app_model_changed": true,
   "additional_korean_candidates": {
@@ -212,5 +215,30 @@
       ]
     }
   },
-  "model_change_scope": "Korean Laya model pack enabled; existing OCR and RF weights retained"
+  "model_change_scope": "Korean Laya model pack enabled; existing OCR and RF weights retained",
+  "ocr_latin_previous": {
+    "scope": "43 fixed Latin-script regions from 16 images; zero Korean regions; single visual transcription reference",
+    "baseline": {
+      "regions": 43,
+      "source_images": 16,
+      "character_errors": 13,
+      "reference_characters": 1229,
+      "cer": 0.010577705451586655,
+      "exact_match": 0.7906976744186046,
+      "casefold_exact_match": 0.8372093023255814,
+      "normalization": "NFC and collapse whitespace; case and punctuation retained; CER may exceed 1",
+      "korean_regions": 0
+    },
+    "trained": {
+      "regions": 43,
+      "source_images": 16,
+      "character_errors": 36,
+      "reference_characters": 1229,
+      "cer": 0.029292107404393815,
+      "exact_match": 0.4418604651162791,
+      "casefold_exact_match": 0.5581395348837209,
+      "normalization": "NFC and collapse whitespace; case and punctuation retained; CER may exceed 1",
+      "korean_regions": 0
+    }
+  }
 }

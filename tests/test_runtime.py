@@ -20,6 +20,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse(auto['features']['ocr_enabled'])
         self.assertEqual(standard['effective_mode'], 'standard')
         self.assertTrue(standard['features']['ocr_enabled'])
+        self.assertEqual(standard['ocr_max_images'], 1000, 'Standard mode must not silently drop later attachments')
         with self.assertRaises(ValueError): environment('max-gpu')
 
     def test_unknown_memory_is_not_invented(self):
@@ -32,6 +33,7 @@ class RuntimeTests(unittest.TestCase):
     def test_mode_persistence_and_running_scan_guard(self):
         with tempfile.TemporaryDirectory() as directory:
             bridge = DesktopBridge(directory, lambda _: None)
+            self.assertEqual(bridge.runtime_mode, 'standard')
             result = bridge.command('runtime-configure', {'mode': 'economy'})
             self.assertFalse(result['features']['ocr_enabled'])
             self.assertEqual(DesktopBridge(directory, lambda _: None).runtime_mode, 'economy')

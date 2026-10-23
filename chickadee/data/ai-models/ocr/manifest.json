@@ -1,0 +1,46 @@
+{
+  "model": "korean_PP-OCRv5_mobile_rec",
+  "checkpoint_sha256": "23b52ab2a5e97992c239963118669b2c073c31fb309d4b6692b30ab7724a84fc",
+  "dataset": "9a7317574aea2792d9370c81cf65c63f5eb9e2fc37cc529b51b20610d7d57446",
+  "files": [
+    {
+      "name": "inference.json",
+      "sha256": "54c2a68c6132b4e78b93e162aa069c1ae521c316264d2e28bafeb3cfd91d66c5",
+      "bytes": 214476
+    },
+    {
+      "name": "inference.pdiparams",
+      "sha256": "c1d0c3538f1fe7a91432f805f222e448e92fe8d79d551e9d8cd53a535a56f80c",
+      "bytes": 13342671
+    },
+    {
+      "name": "inference.yml",
+      "sha256": "98caa094dcaef3e9983e8b182af42486f638f1314d2af3342ea41fd62f0bf62e",
+      "bytes": 95732
+    }
+  ],
+  "approved_for_app": true,
+  "version": "korean-rec-20261023",
+  "license": "Apache-2.0",
+  "training": {
+    "source": "Korean synthetic text; validation selected independently on separate text/font/template groups",
+    "validation_samples": 2000,
+    "validation_exact_match": 0.9044999954775,
+    "validation_normalized_edit_similarity": 0.9899510198637647,
+    "epochs": 10,
+    "early_stopping": true
+  },
+  "validation": {
+    "passed": true,
+    "scope": "20 previously sealed Korean text regions from 8 real images. Small development audit; recognition only, not overall OCR accuracy.",
+    "regions": 20,
+    "source_images": 8,
+    "reference_characters": 287,
+    "official_character_errors": 30,
+    "trained_character_errors": 10,
+    "official_cer": 0.10452961672473868,
+    "trained_cer": 0.03484320557491289,
+    "full_pipeline_fixtures": 4,
+    "full_pipeline_passed": true
+  }
+}
