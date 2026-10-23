@@ -47,7 +47,16 @@ const http = require('node:http');
     assert.equal(report.runtime_environment.effective_mode, 'economy');
     assert.equal(report.ocr_summary.enabled, false);
     assert.equal(report.ocr_summary.skipped, 1);
-    assert.equal(report.ocr_images.length, 0);
+    assert.equal(report.ocr_summary.completed, 0);
+    assert.ok(report.ocr_images.every(image => image.recognition_status === 'skipped' && image.lines.length === 0));
+    // OCR is disabled independently of the CPU photo classifier. Retained
+    // pixels are image evidence, not evidence that OCR ran in economy mode.
+    if (packaged || report.content_visual?.status === 'completed') {
+      assert.equal(report.ocr_images.length, 1);
+      assert.equal(report.content_visual.analyzed, 1);
+      assert.equal(report.content_visual.failed, 0);
+      assert.equal(report.ocr_images[0].local_ai.content_visual.status, 'completed');
+    }
     assert.ok(report.local_ai.text_analyzed > 0);
     assert.ok(report.local_ai.visual_analyzed > 0);
     await page.getByRole('button', { name: '설정', exact: true }).click();
