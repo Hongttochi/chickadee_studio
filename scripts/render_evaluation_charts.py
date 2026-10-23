@@ -77,17 +77,17 @@ def text_models(metrics, fonts, destination):
 
 def ocr_models(metrics, fonts, destination):
     fig = Figure(1600, 650, fonts)
-    fig.text(64, 48, '라틴 문자 인식 지표', 36, True)
-    fig.text(64, 104, '실제 이미지 16장  /  문자 영역 43개  /  정답 문구 1,229자', 22, color=MUTED)
+    fig.text(64, 48, '한국어 문자 인식 점검', 36, True)
+    fig.text(64, 104, '한국어 실제 이미지 8장  /  문자 영역 20곳  /  정답 문구 287자', 22, color=MUTED)
     fig.text(390, 180, '문자 오류율 CER (낮을수록 우수)', 24, True)
-    x, width, maximum = 390, 940, 0.04
+    x, width, maximum = 390, 940, 0.12
     for tick in range(5):
         px = x + width * tick / 4
         fig.line(px, 230, px, 408)
-        fig.text(px, 431, f'{tick:.0f}%', 20, color=MUTED, anchor='mt')
+        fig.text(px, 431, f'{tick * 3:.0f}%', 20, color=MUTED, anchor='mt')
     for i, (key, label, color) in enumerate([
-        ('baseline', '기존 OCR', '#13836D'),
-        ('trained', '추가 학습 OCR', '#6B7C8F'),
+        ('baseline', '기존 OCR', '#6B7C8F'),
+        ('trained', '추가 학습 OCR', '#2563EB'),
     ]):
         y = 260 + i * 100
         value = metrics['ocr_comparison'][key]['cer']
@@ -96,9 +96,9 @@ def ocr_models(metrics, fonts, destination):
         fig.rect(x, y, width * value / maximum, 36, color)
         fig.text(x + width * value / maximum + 20, y + 18, f'{value * 100:.2f}%', 28, True, anchor='lm')
     fig.line(64, 494, 1536, 494)
-    fig.text(64, 519, '라틴 문자 인식 지표로, 한국어 성능 표는 아닙니다.', 21, color=MUTED)
-    fig.text(64, 558, '정답 문구를 직접 읽어 작성한 자료입니다. 기존 모델 13자, 추가 학습 모델 36자 오류.', 21, color=MUTED)
-    fig.text(64, 597, '서비스의 이미지 문자 추출에는 한국어 PaddleOCR를 사용합니다.', 21, color=MUTED)
+    fig.text(64, 519, '한국어 실제 이미지 8장 · 문자 영역 20곳 · 정답 문구 287자', 21, color=MUTED)
+    fig.text(64, 558, '소규모 문자 인식 점검입니다. 전체 한국어 OCR 정확도나 문자 영역 검출률이 아닙니다.', 21, color=MUTED)
+    fig.text(64, 597, '동일한 전처리 기준: 기존 모델 30자 오류 → 한국어 추가 학습 모델 10자 오류', 21, color=MUTED)
     fig.save(destination / 'ocr-comparison.png')
 
 

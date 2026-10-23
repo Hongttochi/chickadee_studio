@@ -9,7 +9,7 @@ import re
 
 SCREENSHOT_MAX_COUNT = 64
 SCREENSHOT_MAX_BYTES = 8_000_000
-OCR_MAX_OBSERVATIONS = 250
+OCR_MAX_OBSERVATIONS = 2000
 
 
 def fingerprint(value):
@@ -93,7 +93,7 @@ class InspectionTrace:
             # Even semantic DOM scopes cannot consume the final OCR reserve.
             capacity = 1. if element.get('source_kind') == 'image_ocr' else .9 if element.get('content_scope') else .8
             if key not in self.packets and (
-                    len(self.packets) >= max(1, int(self.MAX_PACKETS * capacity)) or
+                    len(self.packets) >= max(1, math.ceil(self.MAX_PACKETS * capacity)) or
                     self.packet_bytes >= self.MAX_PACKET_BYTES * capacity):
                 self.truncated = True
                 continue

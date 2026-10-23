@@ -1,6 +1,7 @@
 import UpdateSettings from "./UpdateSettings.jsx";
 import { advertisingGroup, normalizeCandidates } from "./advertising-groups.mjs";
 import { groupPageRecords, pageReview, expandPageIds, evidenceRole } from "./page-records.mjs";
+import { sortDetections } from "./result-list.mjs";
 import React, {
   useState,
   useId,
@@ -103,9 +104,9 @@ import {
   branchEnabled,
   restoreWorkflowLayout,
   ocrPresentation,
-  ocrDetectionCount,
   workflowPorts,
   workflowRoute,
+  hasOCREvidence,
 } from "./workflow.mjs";
 import "./style.css";
 import "./theme.css";
@@ -600,6 +601,7 @@ function App() {
   }, [selectedRecord]);
   const [pending, setPending] = useState([]),
     [pageFilter, setPageFilter] = useState("visited");
+  const [recordOrder, setRecordOrder] = useState("newest");
   const [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
     [eventFilter, setEventFilter] = useState("all"),
@@ -612,8 +614,8 @@ function App() {
   const settingsReturnView = useRef("workflow");
   const openSettings = (section = "general") => { setSettingsTab(typeof section === "string" ? section : "general"); settingsReturnView.current = view === "settings" ? settingsReturnView.current : view; setView("settings"); };
   const [profile, setProfile] = useState("default"),
-    [maxPages, setMaxPages] = useState(100),
-    [timeout, setTimeoutValue] = useState(300);
+    [maxPages, setMaxPages] = useState(1000),
+    [timeout, setTimeoutValue] = useState(1000);
   const [scanInterval, setScanInterval] = useState(0.5);
   const [livePreview, setLivePreview] = useState(true),
     [outputRoot, setOutputRoot] = useState(""),
@@ -720,7 +722,7 @@ function App() {
     setReviewData(value.reviews || { revision: 0, items: {} });
     setSelectedIds(new Set());
     setRecords([
-      ...value.result.findings,
+      ...value.result.findings.map(record => ({ ...record, _detail: value.report.evidence_details?.[record.id] })),
       ...normalizeCandidates(value.report.ad_candidates || [], value.report.ocr_images || []),
     ]);
     setPages(
@@ -986,8 +988,7 @@ function App() {
           branchEnabled(flow, node.id);
         const layaSkipped = node.id === "laya" && (outcome?.report.local_ai?.laya?.status === "unavailable" || events.findLast(event => event.kind === "phase" && event.stage === "laya")?.action === "skipped");
         const layaReason = outcome?.report.local_ai?.laya?.reason || outcome?.report.evidence_packets?.find(packet => packet.local_ai?.laya?.reason === "insufficient_memory")?.local_ai.laya.reason;
-        const ocrDetected = node.id === "ocr" ? ocrDetectionCount(records) : 0;
-        const ocr = node.id === "ocr" ? ocrPresentation(outcome?.report.ocr_summary, ocrDetected) : null;
+        const ocr = node.id === "ocr" ? ocrPresentation(outcome?.report.ocr_summary) : null;
         const state = layaSkipped ? "skipped" : !enabled
           ? "disabled"
           : ocr?.state || (active === node.id
@@ -1004,7 +1005,7 @@ function App() {
             ? `${pages.length}페이지 방문`
             : node.id === "collector"
               ? `${discovered}개 URL 발견`
-              : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? `${ocrDetected}건 감지 · ${Object.keys(ocrLive).length}장 처리` : node.id === "techniques"
+              : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? `${Object.keys(ocrLive).length}장 처리` : node.id === "techniques"
                 ? `${findings.length}건 발견`
                 : node.id === "laya"
                   ? layaSkipped ? ({insufficient_memory:"메모리 부족",timeout:"처리 시간 초과",time_budget:"검사 시간 부족",runtime_unavailable:"실행 환경 확인 필요"}[layaReason] || "분석 미완료") : outcome?.report.local_ai?.laya ? `${outcome.report.local_ai.laya.analyzed}개 검토 · ${outcome.report.local_ai.laya.omitted}개 미확인` : "로컬 문맥 검토"
@@ -1310,7 +1311,7 @@ function App() {
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, [shortcuts, running, load, openSettings]);
-  const filteredRecords = records.filter(
+  const filteredRecords = sortDetections(records.filter(
     (record) =>
       (reviewFilter === "all" ||
         pageReview(record, reviewData.items).status ===
@@ -1330,7 +1331,7 @@ function App() {
         .join(" ")
         .toLowerCase()
         .includes(search.toLowerCase()),
-  );
+  ), recordOrder);
   const filteredEvents = events.filter(
     (event) =>
       eventFilter === "all" ||
@@ -1978,6 +1979,13 @@ function App() {
                       action: () => setReviewFilter(id),
                     }))}
                   />
+                  <ActionMenu
+                    label="정렬 방식"
+                    triggerText={recordOrder === "newest" ? "최신순" : "오래된순"}
+                    items={[["newest", "최신순"], ["oldest", "오래된순"]].map(([id, label]) => ({ label,
+                      selected: recordOrder === id, action: () => setRecordOrder(id),
+                    }))}
+                  />
                   <Button
                     icon="Download"
                     disabled={!outcome || running}
@@ -2121,6 +2129,7 @@ function App() {
                             </div>
                           </td>
                           <td className="evidence-cell">
+                            {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}{" "}
                             {record.evidence_text}
                           </td>
                           <td className="url-cell" title={record.url}>
@@ -2870,6 +2879,7 @@ function RecordDetail({
             {additionalTypes.map(type => <span key={type} className={`type-badge ${record.techniques?.includes(type) ? "purple" : "amber"}`} data-type={type}><TypeBadgeContent type={type} /></span>)}
           </div>
         </details>}
+        {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}
 
         <div className="review-control">
           <span

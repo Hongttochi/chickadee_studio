@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from datetime import datetime
 
 DATA = Path(__file__).resolve().parent/'data/ai-models/content'
 TOPICS = ('sexual_content', 'gambling', 'drugs')
@@ -72,6 +73,7 @@ def image_candidates(image, analysis):
     if not topics:
         return []
     return [{'url':image['url'], 'location':image['location'], 'scope_location':image['location'],
+             'observed_at':image.get('observed_at') or datetime.now().astimezone().isoformat(),
              'category':'IMAGE_REVIEW', 'source_kind':'image_visual', 'image_id':image['id'],
              'evidence_text':text or '문자 근거 없는 이미지 · 검토 필요',
              'visual_topics':topics, 'matched_keywords':[], 'review_required':True,
@@ -120,12 +122,13 @@ async def enrich_content_images(report, assets, *, candidates=True, timeout_seco
     try: contract=await asyncio.to_thread(model_contract)
     except Exception: summary.update(reason='invalid_model');return
     if contract is None: summary.update(reason='validated_model_not_installed');return
-    worker=ContentSession(); cache={};deadline=time.monotonic()+max(0,timeout_seconds)
+    worker=ContentSession(); cache={};flagged=set();deadline=time.monotonic()+max(0,timeout_seconds)
     rows=report.setdefault('ad_candidates',[])
     number=max((int(r['id'][2:]) for r in rows if r.get('id','').startswith('c_') and r['id'][2:].isdigit()),default=0)+1
     summary['status']='completed'
     try:
         for image in images:
+            if image.get('image_role') == 'interface':continue
             if stop is not None and stop.is_set():summary['status']='cancelled';break
             if time.monotonic()>=deadline:summary['status']='partial';break
             path=image.get('relative_path');data=assets.get(path)
@@ -139,7 +142,8 @@ async def enrich_content_images(report, assets, *, candidates=True, timeout_seco
                 analysis=cache[digest]
                 image.setdefault('local_ai',{})['content_visual']=analysis
                 signals=image_candidates(image,analysis)
-                summary['flagged']+=bool(signals)
+                if signals:flagged.add(digest)
+                summary['flagged']=len(flagged)
                 if candidates:
                     for row in signals:
                         if any(r.get('source_kind') == 'image_visual' and

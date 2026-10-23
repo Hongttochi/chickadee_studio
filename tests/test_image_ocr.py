@@ -41,6 +41,7 @@ class ImageOCRTests(unittest.TestCase):
             state = _State(); state.ocr_max_images = 2
             sample = deepcopy(next(i for i in self.outcome.report['ocr_images'] if i['status'] == 'completed' and i.get('text')))
             sample['preview_data_url'] = 'data:image/png;base64,AA=='
+            sample.pop('occurrences', None)  # Worker output does not contain scanner observation metadata.
             state.ocr = AsyncMock()
             state.ocr.recognize.return_value = sample
             inline = 'data:image/png;base64,' + base64.b64encode(self.ad).decode()
@@ -50,7 +51,8 @@ class ImageOCRTests(unittest.TestCase):
             await _inspect_images(None, images, '', self.url, state, lambda _: None, None)
             self.assertEqual(state.ocr.recognize.await_count, 2)
             self.assertEqual(len(state.ocr_cache), 2)
-            self.assertEqual(len(state.ocr_images), 6)
+            self.assertEqual(len(state.ocr_images), 2)
+            self.assertEqual(len(state.ocr_images[0]['occurrences']), 5)
             self.assertEqual(state.ocr_skipped, 0)
         with event_loop_runner() as runner:
             runner.run(scenario())
@@ -104,12 +106,13 @@ class ImageOCRTests(unittest.TestCase):
     def test_real_korean_image_only_detection_and_boxes(self):
         report = self.outcome.report
         images = [image for image in report['ocr_images'] if image['status'] == 'completed']
-        self.assertGreaterEqual(len(images), 5, report['errors'])
+        self.assertGreaterEqual(len(images), 2, report['errors'])
         ads = [c for c in report['ad_candidates'] if c.get('source_kind') == 'image_ocr']
         self.assertGreaterEqual(len(ads), 4)
         self.assertTrue(any(' >>> ' in c['location'] for c in ads))
-        self.assertTrue(any(i['source_type'] == 'background' for i in images))
-        self.assertTrue(any(i['source_url'] == '(inline)' for i in images))
+        occurrences = [o for image in images for o in image.get('occurrences', [image])]
+        self.assertTrue(any(i['source_type'] == 'background' for i in occurrences))
+        self.assertTrue(any(i['source_url'] == '(inline)' for i in occurrences))
         benign_ids = {i['id'] for i in images if i['source_url'].endswith('/benign.png')}
         self.assertTrue(benign_ids)
         self.assertFalse(any(c['image_id'] in benign_ids for c in ads))

@@ -125,6 +125,27 @@ def verify(value, directory):
                 with archive.open(name) as stream:
                     if file_digest(stream, 'sha256').hexdigest() != model['sha256']:
                         raise ValueError('ZIP local AI model SHA256 mismatch: ' + model['path'])
+        if tuple(map(int, value.split('.'))) >= (0, 10, 12):
+            runtime = json.loads((ROOT / 'desktop/vendor-runtime.json').read_text(encoding='utf-8'))
+            with archive.open(prefix + 'ChickadeeRuntime.exe') as stream:
+                if file_digest(stream, 'sha256').hexdigest() != runtime['executable_sha256']:
+                    raise ValueError('Compatibility host differs from the original upstream runtime')
+            with archive.open(prefix + 'resources/chickadee.ico') as stream:
+                if file_digest(stream, 'sha256').hexdigest() != runtime['icon_sha256']:
+                    raise ValueError('Compatibility app icon differs from the pinned Chickadee icon')
+            for kind in ('ocr', 'content'):
+                folder = ROOT / ('chickadee/data/ai-models/' + kind)
+                meta = json.loads((folder / 'manifest.json').read_text(encoding='utf-8'))
+                target = prefix + 'resources/engine/_internal/chickadee/data/ai-models/' + kind + '/'
+                if json.loads(archive.read(target + 'manifest.json')) != meta or not meta.get('approved_for_app'):
+                    raise ValueError('ZIP approved model metadata differs: ' + kind)
+                entries = meta['files'] if kind == 'ocr' else [{'name':'model.pdparams', 'sha256':meta['sha256']}]
+                for model in entries:
+                    name = target + model['name']
+                    if name not in files: raise ValueError('ZIP model file missing: ' + name)
+                    with archive.open(name) as stream:
+                        if file_digest(stream, 'sha256').hexdigest() != model['sha256']:
+                            raise ValueError('ZIP approved model SHA256 mismatch: ' + name)
         if tuple(map(int, value.split('.'))) >= (0, 10, 11):
             laya = prefix + 'resources/laya-model/'
             if prefix+'resources/laya/ChickadeeLaya.exe' not in files:

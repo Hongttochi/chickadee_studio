@@ -60,7 +60,7 @@ class DesktopBridge:
         try:
             self.runtime_mode = json.loads(self.runtime_path.read_text(encoding='utf-8'))['mode']
             if self.runtime_mode not in MODES: raise ValueError('runtime mode')
-        except (OSError, ValueError, KeyError, TypeError): self.runtime_mode = 'auto'
+        except (OSError, ValueError, KeyError, TypeError): self.runtime_mode = 'standard'
         self.runtime_worker = None
         self.runtime_stop = Event()
         self.ocr_check = {'status': 'not_run'}

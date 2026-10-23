@@ -73,8 +73,19 @@ jobs:
       - name: Desktop unit tests
         working-directory: desktop
         run: npm test
+      - name: Restore unchanged verified Laya CPU runtime
+        id: laya-runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          .\.venv\Scripts\python.exe scripts/reuse_laya_runtime.py --version $env:APP_VERSION
+          if ($LASTEXITCODE -eq 2) { "LAYA_RUNTIME_REUSED=0" >> $env:GITHUB_ENV; exit 0 }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "LAYA_RUNTIME_REUSED=1" >> $env:GITHUB_ENV
       - name: Build Windows app and bundled engine
-        run: ./scripts/build-desktop.ps1 -SkipInstall
+        run: |
+          if ($env:LAYA_RUNTIME_REUSED -eq '1') { ./scripts/build-desktop.ps1 -SkipInstall -SkipLaya }
+          else { ./scripts/build-desktop.ps1 -SkipInstall }
       - name: Record signature status without requiring signing
         run: |
           ./scripts/verify-windows-signatures.ps1 -AppDirectory "artifacts/electron-$env:APP_VERSION/win-unpacked"
@@ -83,6 +94,16 @@ jobs:
         run: .\.venv\Scripts\python.exe scripts/package-desktop.py
       - name: Verify release files
         run: python scripts/release.py verify --directory artifacts
+      # Preserve the completed build even if a later runtime test fails.
+      # Publishing still requires the entire windows-build job to succeed.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-candidate
+          path: |
+            artifacts/Chickadee-Studio-${{ needs.version.outputs.app_version }}-win-x64.zip
+            artifacts/Chickadee-Studio-${{ needs.version.outputs.app_version }}-win-x64.zip.sha256
+          compression-level: 0
+          if-no-files-found: error
       - name: Test Windows ZIP extraction
         run: |
           $ErrorActionPreference = 'Stop'
@@ -124,14 +145,14 @@ jobs:
           $env:PLAYWRIGHT_BROWSERS_PATH = (Resolve-Path '../.venv/Lib/site-packages/playwright/driver/package/.local-browsers').Path
           node tests/recovery-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-release-assets
-          path: |
-            artifacts/Chickadee-Studio-${{ needs.version.outputs.app_version }}-win-x64.zip
-            artifacts/Chickadee-Studio-${{ needs.version.outputs.app_version }}-win-x64.zip.sha256
-          compression-level: 0
-          if-no-files-found: error
+      - name: Test unmodified upstream compatibility host
+        working-directory: desktop
+        run: |
+          $env:CHICKADEE_PACKAGED_EXE = Join-Path (Split-Path $env:CHICKADEE_PACKAGED_EXE -Parent) 'ChickadeeRuntime.exe'
+          node tests/ocr-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/login-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload smoke test screenshots
         if: failure()
         uses: actions/upload-artifact@v4
@@ -159,7 +180,7 @@ jobs:
           python-version: '3.12'
       - uses: actions/download-artifact@v4
         with:
-          name: windows-release-assets
+          name: windows-build-candidate
           path: release-assets
       - name: Verify downloaded release files
         run: python scripts/release.py verify --directory release-assets

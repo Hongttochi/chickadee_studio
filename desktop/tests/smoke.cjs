@@ -121,6 +121,13 @@ async function waitForHistory(page, count) {
     });
     await page.getByRole("button", { name: /^탐지 내역/ }).click();
     assert.equal(await page.locator("tbody tr").count(), 14);
+    const firstNewest = await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label');
+    await page.getByRole('button', {name:'정렬 방식',exact:true}).click();
+    await page.getByRole('menuitemradio',{name:'오래된순',exact:true}).click();
+    assert.notEqual(await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label'),firstNewest);
+    await page.getByRole('button', {name:'정렬 방식',exact:true}).click();
+    await page.getByRole('menuitemradio',{name:'최신순',exact:true}).click();
+    assert.equal(await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label'),firstNewest);
     await page.locator("tbody tr").first().click();
     await page.locator(".review-note-details > summary").click();
     await page
@@ -174,6 +181,7 @@ async function waitForHistory(page, count) {
     assert.ok(bytes.subarray(0, 3).equals(Buffer.from([239, 187, 191])));
     await page.getByRole("button", { name: "탐색 경로", exact: true }).click();
     assert.equal(await page.locator("tbody tr").count(), 4);
+    assert.equal(await page.locator('.path-group-toggle').count(), 0);
     await page.getByRole("button", { name: "진행 기록", exact: true }).click();
     await page.screenshot({
       path: path.join(artifacts, "electron-activity.png"),

@@ -1,7 +1,7 @@
 # Windows 빠른 실행
 
 1. [최신 릴리스](https://github.com/orqan137/chickadee_studio/releases/latest)의 Windows x64 ZIP을 내려받아 전부 압축 해제합니다.
-2. `Chickadee.exe`를 더블클릭합니다. `resources` 등 함께 들어 있는 파일과 폴더를 유지합니다.
+2. `Chickadee.exe`를 더블클릭합니다. Windows 앱 제어 정책으로 차단되면 같은 폴더의 `ChickadeeRuntime.exe`를 실행합니다. 같은 앱·모델을 실행하는 공식 원본 호스트이며 보안 설정은 변경하지 않습니다. `resources` 등 함께 들어 있는 파일과 폴더를 유지합니다. 이전 버전이 열려 있으면 먼저 종료합니다.
 3. 검사할 URL을 입력하고 **검사 실행**을 누릅니다. 실행 옆 화살표 메뉴의 **데모 검사**로 로컬 예제를 먼저 확인할 수도 있습니다.
 4. 결과는 기본적으로 `문서/Chickadee/results` 아래 실행별 폴더에 저장됩니다. **결과 폴더**에서 실제 위치를 확인합니다.
 

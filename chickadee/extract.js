@@ -107,7 +107,7 @@
         (el.closest('h1') && el.closest('article,[role="article"],[data-post-id]'))) return 'title';
     return el.closest('h1,h2,h3,h4,h5,h6') ? 'heading' : 'body';
   };
-  const interfaceImage = el => !!el.closest('nav,[role="navigation"],[role="search"],.logo,.brand,.site-logo,.brand-logo') ||
+  const isInterfaceImage = el => !!el.closest('nav,[role="navigation"],[role="search"],.logo,.brand,.site-logo,.brand-logo') ||
     (!!el.closest('header,footer') && !el.closest(contentScope)) ||
     el.getAttribute('aria-hidden') === 'true' || el.getAttribute('role') === 'presentation' ||
     (!el.closest(contentScope) && !!el.closest('h1,h2,h3,h4,h5,h6') && el.getAttribute('alt') === '');
@@ -202,22 +202,35 @@
     if (literal) addLink(literal[2] || literal[4]);
   }
   const images = [];
+  const uniqueImageSources = new Set();
   let imageReferenceBytes = 0;
   let imagesTruncated = false;
-  const imageElements = all.slice(0, 5000).sort((a, b) =>
-    Number(!!b.closest('article, [role="article"], [data-post-id], [data-comment-id]')) -
-    Number(!!a.closest('article, [role="article"], [data-post-id], [data-comment-id]')));
+  const imageContent = el => !!el.closest('article, [role="article"], [data-post-id], [data-comment-id], .post-content, .board-content, .view-content, .comment-content');
+  const imageElements = all.slice(0, 5000).sort((a, b) => Number(imageContent(b)) - Number(imageContent(a)));
   for (const el of imageElements) {
     if (contentRoots && !contentRoots.some(root => root === el || root.contains(el))) continue;
     const sources = el.tagName === 'IMG' ? [el.currentSrc || el.src || el.getAttribute('data-src')] : [];
     for (const match of style(el).backgroundImage.matchAll(/url\(["']?([^"')]+)["']?\)/g)) sources.push(match[1]);
     for (const src of sources) {
       if (!src) continue;
-      if (src.length > 2800000 || images.length >= 12 || imageReferenceBytes + src.length > 6000000) { imagesTruncated = true; continue; }
+      if (src.length > 2800000 || images.length >= 500 ||
+          (!uniqueImageSources.has(src) && uniqueImageSources.size >= 50) ||
+          imageReferenceBytes + src.length > 6000000) { imagesTruncated = true; continue; }
+      uniqueImageSources.add(src);
       imageReferenceBytes += src.length;
+      const box = el.getBoundingClientRect();
+      const inContent = imageContent(el);
+      // UI sprites and small navigation icons are not content photographs.
+      // Large banners and hidden/offscreen elements remain analysis targets.
+      const visible = !appearance(el).transparent && !appearance(el).offscreen;
+      const interfaceImage = !inContent && visible && box.width > 0 && box.height > 0 &&
+        ((el.tagName !== 'IMG' && ['inline', 'inline-block'].includes(style(el).display) && Math.max(box.width, box.height) <= 96) ||
+         (!!el.closest('nav, [role="navigation"], button, [role="button"]') && Math.max(box.width, box.height) <= 96) ||
+         (el.tagName === 'IMG' && /^(?:.*\s)?(?:logo|로고)$/i.test(el.alt.trim()) && Math.max(box.width, box.height) <= 240));
       images.push({source_url: src, location: selector(el), computed_style: appearance(el).style,
         source_role: sourceRole(el),
-        interface_image: interfaceImage(el) || (el.tagName !== 'IMG' && !el.closest(contentScope) && !el.closest('a[href]')),
+        interface_image: isInterfaceImage(el) || (el.tagName !== 'IMG' && !el.closest(contentScope) && !el.closest('a[href]')),
+        image_role: (interfaceImage || isInterfaceImage(el)) ? 'interface' : inContent ? 'content' : 'unspecified',
         transparent: appearance(el).transparent, offscreen: appearance(el).offscreen,
         link_targets: el.closest('a[href]') ? [el.closest('a[href]').href] : [],
         source_type: el.tagName === 'IMG' ? 'img' : 'background'});

@@ -13,6 +13,25 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def recognition_folder(official, folder=None):
+    """Only use bundled, approved inference files with exact hashes; no download."""
+    folder = Path(folder) if folder is not None else Path(__file__).resolve().parent / 'data/ai-models/ocr'
+    manifest = folder / 'manifest.json'
+    if not manifest.is_file(): return official, 'PP-OCRv5 mobile / Korean'
+    meta = json.loads(manifest.read_text(encoding='utf-8'))
+    if not meta.get('approved_for_app'): return official, 'PP-OCRv5 mobile / Korean'
+    if meta.get('model') != 'korean_PP-OCRv5_mobile_rec' or meta.get('validation', {}).get('passed') is not True:
+        raise ValueError('검증된 한국어 문자 인식 모델이 필요합니다.')
+    files = meta.get('files', [])
+    if {item['name'] for item in files} != {'inference.json', 'inference.pdiparams', 'inference.yml'}:
+        raise ValueError('한국어 문자 인식 파일 목록 오류')
+    for item in files:
+        path = folder / item['name']
+        if not path.is_file() or path.stat().st_size != item['bytes'] or hashlib.sha256(path.read_bytes()).hexdigest() != item['sha256']:
+            raise ValueError('한국어 문자 인식 모델 무결성 오류')
+    return folder, 'PP-OCRv5 mobile / Korean adapted'
+
+
 class PaddleTextReader:
     DETECT_LIMIT = 960
     DETECT_MAX_SCALE = 1.5
@@ -29,17 +48,17 @@ class PaddleTextReader:
             file = models / item['path']
             if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest() != item['sha256']:
                 raise ValueError('OCR 모델 파일 검증 실패. scripts/prepare_ocr_models.py를 실행하세요.')
-        def predictor(name):
-            folder = models / name
+        def predictor(folder):
             config = inference.Config(str(folder / 'inference.json'), str(folder / 'inference.pdiparams'))
             config.disable_gpu()
             config.set_cpu_math_library_num_threads(2)
             config.disable_mkldnn()
             config.disable_glog_info()
             return inference.create_predictor(config)
-        self.det = predictor('PP-OCRv5_mobile_det')
-        self.rec = predictor('korean_PP-OCRv5_mobile_rec')
-        config = yaml.safe_load((models / 'korean_PP-OCRv5_mobile_rec/inference.yml').read_text(encoding='utf-8'))
+        rec_folder, self.model_name = recognition_folder(models / 'korean_PP-OCRv5_mobile_rec')
+        self.det = predictor(models / 'PP-OCRv5_mobile_det')
+        self.rec = predictor(rec_folder)
+        config = yaml.safe_load((rec_folder / 'inference.yml').read_text(encoding='utf-8'))
         self.chars = [''] + config['PostProcess']['character_dict'] + [' ']
 
     def run(self, model, value):
@@ -125,7 +144,7 @@ class PaddleTextReader:
         while buffer.tell() > 200_000:
             preview.thumbnail((max(64, preview.width // 2), max(64, preview.height // 2)))
             buffer = io.BytesIO(); preview.save(buffer, format='JPEG', quality=45)
-        return {'engine': 'PaddleOCR', 'model': 'PP-OCRv5 mobile / Korean', 'width': w, 'height': h,
+        return {'engine': 'PaddleOCR', 'model': self.model_name, 'width': w, 'height': h,
                 'image_format': image_format,
                 'preview_data_url': 'data:image/jpeg;base64,' + base64.b64encode(buffer.getvalue()).decode('ascii'),
                 'preview_sha256': hashlib.sha256(buffer.getvalue()).hexdigest(),

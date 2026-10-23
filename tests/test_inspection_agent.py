@@ -48,6 +48,16 @@ def grok_stub(payload, _key, _timeout):
 
 
 class InspectionTests(unittest.TestCase):
+    def test_semantic_posts_leave_the_final_ocr_slot(self):
+        trace = InspectionTrace(); trace.MAX_PACKETS = 10
+        for i in range(12):
+            trace.capture([element(f'게시글 문구 {i}')], f'https://example.invalid/{i}', '', lambda _: None)
+        self.assertEqual(len(trace.packets), 9)
+        trace.capture([element('이미지 속 문구', source_kind='image_ocr')],
+                      'https://example.invalid/image', '', lambda _: None)
+        self.assertEqual(len(trace.packets), 10)
+        self.assertTrue(any(p['source_kind'] == 'image_ocr' for p in trace.packets.values()))
+
     def test_late_post_keeps_reserved_capacity_after_navigation(self):
         trace = InspectionTrace(); trace.MAX_PACKETS = 10
         for i in range(12):

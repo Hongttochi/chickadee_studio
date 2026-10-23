@@ -1743,6 +1743,11 @@
 .record-panel .record-body { padding: 16px; }
 .record-overview { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
 .record-overview .review-control { display: flex; gap: 6px; margin: 0 0 0 auto; }
+.ocr-source-badge { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 5px; border: 1px solid #d5ddec; border-radius: 2px; color: #4d6080; background: #f1f4f9; font-size: 10px; font-weight: 600; line-height: 16px; vertical-align: middle; }
+.record-overview .ocr-source-badge { margin-left: 0; }
+.results-layout .list-toolbar > .action-menu { flex: 0 0 auto; }
+.results-layout .list-toolbar .menu-trigger { white-space: nowrap; flex: 0 0 auto; min-width: 80px; }
+.evidence-cell .ocr-source-badge { margin: 0 6px 0 0; }
 .record-overview .menu-trigger { width: 26px; height: 28px; min-height: 28px; border: 0; background: transparent; color: #687583; padding: 0; }
 .record-panel .record-body > label { display: block; margin: 18px 0 8px; color: #505b67; font-size: 12px; font-weight: 600; letter-spacing: 0; }
 .record-panel .record-body blockquote { margin: 0; padding: 12px 14px; background: #fff; border: 1px solid #e2e6ea; border-radius: 4px; color: #303b47; font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
