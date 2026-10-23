@@ -3,6 +3,7 @@ import asyncio
 from urllib.parse import parse_qsl, urljoin, urlsplit
 
 from .scanner import ScanConfig, is_loopback, navigation_priority, normalize_url, origin, scan
+from .async_runtime import event_loop_runner
 
 
 def exploration_options(packet, report, entry_url):
@@ -48,4 +49,5 @@ def collect_page(option, entry_url, timeout, stop, emit, *, ocr_enabled=True, oc
                         page_timeout_sec=max(.5, min(20, timeout)), settle_ms=100,
                         allow_network=not is_loopback(entry_url), retries=0, interval_sec=0,
                         follow_links=False, capture_previews=False)
-    return asyncio.run(scan(config, stop=stop, emit=emit))
+    with event_loop_runner() as runner:
+        return runner.run(scan(config, stop=stop, emit=emit))

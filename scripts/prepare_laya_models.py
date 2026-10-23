@@ -47,7 +47,7 @@ def prepare(destination, source=None):
         source.mkdir(parents=True, exist_ok=True)
         archive = download('laya-config.zip', source)
         with zipfile.ZipFile(archive) as z:
-            if sum(i.file_size for i in z.infolist()) > 20_000_000:
+            if len(z.infolist()) > 100 or sum(i.file_size for i in z.infolist()) > 100_000_000:
                 raise ValueError('Laya config archive too large')
             for item in z.infolist():
                 relative = Path(item.filename)

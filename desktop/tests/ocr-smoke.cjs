@@ -50,10 +50,15 @@ const http = require('node:http');
     assert.ok(report.local_ai.text_analyzed > 0);
     assert.ok(report.local_ai.visual_analyzed > 0);
     assert.equal(report.local_ai.paid_requests, 0);
-    assert.equal(report.local_ai.laya.status, 'unavailable');
-    assert.equal(report.local_ai.laya.analyzed, 0);
-    assert.equal(report.evidence_packets[0].local_ai.laya.status, 'unavailable');
-    assert.ok(!await page.locator('.react-flow__node[data-id="laya"] .flow-node.done').count());
+    await page.getByRole('button', {name:'검사 구성',exact:true}).click();
+    if (packaged || process.env.CHICKADEE_LAYA_WORKER) {
+      assert.ok(report.local_ai.laya.analyzed > 0, JSON.stringify(report.local_ai.laya));
+    } else {
+      assert.equal(report.local_ai.laya.status, 'unavailable');
+      assert.equal(report.local_ai.laya.analyzed, 0);
+      assert.equal(report.evidence_packets[0].local_ai.laya.status, 'unavailable');
+      assert.ok(!await page.locator('.react-flow__node[data-id="laya"] .flow-node.done').count());
+    }
     await page.screenshot({ path: path.join(root, 'artifacts/pipeline-ocr-ml-laya.png') });
     assert.equal(report.ad_candidates[0].source_kind, 'image_ocr');
     assert.ok(report.ad_candidates[0].evidence_text.includes('카지노'));
@@ -62,6 +67,7 @@ const http = require('node:http');
     assert.equal(image.width, 900);
     assert.equal(image.lines.length, 2);
     await fs.access(path.join(path.dirname(resultPath), image.relative_path));
+    await page.getByRole('button', {name:/^탐지 내역/}).click();
     await page.getByRole('button', { name: /^광고 의심/ }).first().click();
     await page.locator('tbody tr .evidence-cell').first().click();
     await page.getByAltText('OCR로 검사한 게시글 이미지', { exact: true }).waitFor();
@@ -78,6 +84,7 @@ const http = require('node:http');
     const count = requests;
     await page.getByRole('button', { name: '검사 기록', exact: true }).click();
     await page.locator('tbody tr').first().click();
+    await page.getByRole('button', {name:/^탐지 내역/}).click();
     await page.getByRole('button', { name: /^광고 의심/ }).first().click();
     await page.locator('tbody tr .evidence-cell').first().click();
     await page.getByAltText('OCR로 검사한 게시글 이미지', { exact: true }).waitFor();

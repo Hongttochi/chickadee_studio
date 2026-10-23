@@ -311,7 +311,9 @@ class Application:
         self._busy(True)
         def work():
             try:
-                outcome = asyncio.run(scan(config, self.stop, self.events.put))
+                from .async_runtime import event_loop_runner
+                with event_loop_runner() as runner:
+                    outcome = runner.run(scan(config, self.stop, self.events.put))
                 path = outcome.save(self.folder)
                 self.events.put({"kind": "done", "outcome": outcome, "path": path})
             except Exception as exc:

@@ -5,6 +5,7 @@ import sys
 
 from .demo import DemoSite
 from .scanner import ScanConfig, output_directory, scan
+from .async_runtime import event_loop_runner
 
 
 def main():
@@ -45,7 +46,8 @@ def main():
             elif args.verbose and sys.stdout and event['kind'] == 'page_complete':
                 page = event['page']
                 print(f"  links={page['links_discovered']} queued={page['links_queued']} elements={page['elements_examined']} candidates=+{page['candidates_added']} elapsed={page['elapsed_sec']:.2f}s", flush=True)
-        outcome = asyncio.run(scan(config, emit=emit))
+        with event_loop_runner() as runner:
+            outcome = runner.run(scan(config, emit=emit))
         path = outcome.save(args.output_dir)
         if sys.stdout:
             print(f"{outcome.report['status']}: {len(outcome.result['findings'])} findings, {outcome.report.get('candidate_count', 0)} review candidates -> {path}")

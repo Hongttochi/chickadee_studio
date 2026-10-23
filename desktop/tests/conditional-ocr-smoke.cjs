@@ -37,6 +37,7 @@ const {pathToFileURL}=require('node:url');
   }
   const text=await run('text',1);
   assert.equal(text.ocr_summary.status,'no_images');assert.equal(text.ocr_summary.images,0);
+  await page.getByRole('button',{name:'검사 구성',exact:true}).click();
   await page.locator('.react-flow__node[data-id="ocr"] .flow-node.skipped').waitFor();
   assert.equal(await page.locator('.react-flow__node[data-id="ocr"] .node-caption').innerText(),'이미지 없음');
   assert.equal(await page.locator('.react-flow__node[data-id="ocr"] .flow-node.done').count(),0);
@@ -48,6 +49,7 @@ const {pathToFileURL}=require('node:url');
   const resultFolder=path.dirname(state.history[0].path);
   const extra=JSON.parse(await fs.readFile(path.join(resultFolder,'result_extra.json'),'utf8'));
   assert.ok(extra.findings.some(r=>r.technique==='ETC'&&r.evidence_text.includes('카지노')&&r.is_violation===false));
+  await page.getByRole('button',{name:'검사 구성',exact:true}).click();
   await page.locator('.react-flow__node[data-id="ocr"] .flow-node.done').waitFor();
   assert.equal(await page.locator('.react-flow__node[data-id="ocr"] .node-caption').innerText(),'문자 추출 1장');
   await page.screenshot({path:path.join(root,'artifacts/pipeline-image-only.png')});

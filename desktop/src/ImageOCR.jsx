@@ -12,6 +12,7 @@ export default function ImageOCR({ image }) {
         {(image.lines || []).map((line, index) => <polygon key={index} points={line.box.map(([x, y]) => `${x},${y}`).join(" ")} className={selected === index ? "selected" : ""} />)}
       </svg>
     </div>}
+    {image.message && <p role="status">{image.message}</p>}
     <div className="image-ocr-lines">{(image.lines || []).map((line, index) => <button type="button" key={index} aria-pressed={selected === index} onClick={() => setSelected(index)}>
       <span>{line.text}</span><small>{Math.round(line.confidence * 100)}%</small>
     </button>)}</div>

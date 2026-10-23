@@ -86,6 +86,7 @@ async function waitForHistory(page, count) {
       .locator(".scan-status strong")
       .filter({ hasText: "검사 완료" })
       .waitFor({ timeout: 90000 });
+    await page.getByRole("button", { name: "검사 구성", exact: true }).click();
     await page.getByRole("button", { name: "미리보기·진행 기록", exact: true }).click();
     await page.locator(".preview-image img").waitFor();
     const firstPreview = await page

@@ -6,7 +6,7 @@ import time
 
 from .candidates import analyze_candidate
 from .detection import analyze
-from .image_ocr import OCRSession, inline_image, recognized_text
+from .image_ocr import OCRSession, inline_image, recognized_text, unreadable_message
 from .local_ai import prepare_models, text_analysis, visual_analysis
 from .laya_review import review_sources
 
@@ -63,7 +63,7 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
                     observation = recognized_text(result)
                     image['ocr'].update(observation)
                     image['ocr']['recognition_status'] = 'readable' if observation['text'].strip() else 'unreadable'
-                    if image['ocr']['recognition_status'] == 'unreadable': errors.append('이미지에서 신뢰할 수 있는 문구를 읽지 못했습니다.')
+                    if image['ocr']['recognition_status'] == 'unreadable': errors.append(unreadable_message(result))
                     progress('ml')
                     source = await asyncio.to_thread(text_result, observation['text'], 'image_ocr')
                     source['truncated'] = observation['text_truncated']
