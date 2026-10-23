@@ -2084,9 +2084,9 @@ function App() {
                             >
                               <TypeBadgeContent type={record.technique || record.category} />
                             </button>
-                            {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}
                           </td>
                           <td className="evidence-cell">
+                            {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}{" "}
                             {record.evidence_text}
                           </td>
                           <td className="url-cell" title={record.url}>

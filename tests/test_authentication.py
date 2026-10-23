@@ -37,6 +37,27 @@ class LoginTests(unittest.IsolatedAsyncioTestCase):
     async def test_skipped_login_is_not_a_clean_scan(self):
         await self.run_site(skip=True)
 
+    async def test_unchanged_authentication_is_bounded_instead_of_prompting_forever(self):
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def do_GET(self):
+                self.send_response(200);self.send_header('Content-Type','text/html');self.end_headers()
+                self.wfile.write(b'<form><input type="password"></form>')
+        server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        control=ScanControl();events=[]
+        def emit(event):
+            events.append(event)
+            if event['kind']=='login_required':control.login.complete(event['request_id'],[])
+        try:
+            with patch('chickadee.scanner.prepare_models'),patch('chickadee.scanner.enrich_report',side_effect=lambda report,**kw:report.update(local_ai={})):
+                result=await scan(ScanConfig(f'http://127.0.0.1:{server.server_port}/private',interactive_login=True,
+                    page_timeout_sec=10,settle_ms=0,ocr_enabled=False,interval_sec=0),emit=emit,control=control)
+            self.assertEqual(sum(e['kind']=='login_required' for e in events),2)
+            self.assertEqual(result.report['page_diagnostics'][0]['status'],'authentication_required')
+            self.assertEqual(result.report['status'],'failed')  # No protected content was collected.
+        finally:server.shutdown();server.server_close();thread.join()
+
     async def run_site(self,skip):
         class Handler(BaseHTTPRequestHandler):
             def log_message(self,*args): pass
@@ -44,7 +65,7 @@ class LoginTests(unittest.IsolatedAsyncioTestCase):
                 if self.path=='/private' and 'sid=authenticated' not in self.headers.get('Cookie',''):
                     self.send_response(302);self.send_header('Location','/login');self.end_headers();return
                 self.send_response(200);self.send_header('Content-Type','text/html');self.end_headers()
-                self.wfile.write(b'<form><input type="password"></form>' if self.path=='/login' else b'<article>Public content</article>')
+                self.wfile.write(b'<form><input type="password"></form>' if self.path=='/login' else b'<article>Public content</article><a href="/login">Login</a>')
         server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         control=ScanControl(); events=[]; workers=[]
@@ -71,6 +92,7 @@ class LoginTests(unittest.IsolatedAsyncioTestCase):
             else:
                 self.assertEqual(outcome.report['status'],'completed',outcome.report['errors'])
                 self.assertTrue(outcome.report['pages_scanned'][0].endswith('/private'))
+                self.assertEqual(sum(e['kind']=='login_required' for e in events),1)
             self.assertNotIn('authenticated',json.dumps(events))
         finally:
             await asyncio.gather(*workers,return_exceptions=True)

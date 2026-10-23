@@ -85,6 +85,15 @@ def readonly_navigation(url: str) -> bool:
                    for key, value in parse_qsl(parts.query))
 
 
+def authentication_navigation(url: str) -> bool:
+    """Authentication forms are handoff targets, not discovered content pages."""
+    parts = urlsplit(url)
+    if re.search(r'/(?:login|logon|signin|sign-in|sso|authorize|join|signup|register)(?:/|\.(?:do|php|asp|aspx|jsp|html?)$|$)', parts.path, re.I):
+        return True
+    return any(key.casefold() in {'action', 'act', 'mode', 'cmd'} and value.casefold() in
+               {'login', 'signin', 'signup', 'register', 'join'} for key, value in parse_qsl(parts.query))
+
+
 def is_loopback(url: str) -> bool:
     host = urlsplit(url).hostname
     if host == "localhost":
@@ -666,6 +675,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         return await _inspect_dynamic(page, config, profile, rules, site, script, state, emit, check_login)
 
                     async def inspect():
+                        login_attempts = 0
                         while True:
                             try:
                                 return await inspect_once()
@@ -680,6 +690,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                                     raise
                                 if not config.interactive_login or not control:
                                     raise AuthenticationRequired('로그인 필요로 미수집') from None
+                                if login_attempts >= 2:
+                                    raise AuthenticationRequired('로그인 상태를 확인하지 못했습니다. 반복 요청을 중단하고 미수집으로 기록합니다.') from None
                                 try:
                                     if config.allow_network or is_loopback(icon_url):
                                         identity['favicon'] = await asyncio.to_thread(fetch_favicon, icon_url)
@@ -689,6 +701,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                                 if decision.get('skip'):
                                     raise AuthenticationRequired('사용자가 로그인 페이지를 건너뛰었습니다. 인증 필요로 미수집') from None
                                 await context.add_cookies(decision['cookies'])
+                                login_attempts += 1
                                 state.image_cache.clear()
                                 visited.discard(visit_key(page.url))
                     links = await active_timeout(inspect(), config.page_timeout_sec, control.login if control else None,
@@ -704,7 +717,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                         except ValueError:
                             continue
                         if origin(candidate) == site and urlsplit(candidate).path.startswith(profile.path_prefix) and candidate_key not in queued and candidate_key not in visited:
-                            if not readonly_navigation(candidate):
+                            if not readonly_navigation(candidate) or authentication_navigation(candidate):
                                 continue
                             if Path(urlsplit(candidate).path).suffix.lower() in {".pdf", ".zip", ".exe", ".hwp", ".hwpx", ".docx", ".xlsx", ".png", ".jpg", ".mp4"}:
                                 continue

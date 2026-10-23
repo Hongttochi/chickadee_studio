@@ -3,10 +3,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 import unittest
 
-from chickadee.scanner import ScanConfig, navigation_priority, readonly_navigation, scan
+from chickadee.scanner import ScanConfig, navigation_priority, readonly_navigation, authentication_navigation, scan
 
 
 class NavigationTests(unittest.TestCase):
+    def test_authentication_endpoints_are_not_content_but_articles_about_login_are(self):
+        for path in ('/parents/login/index.do', '/signin', '/member/signup.php', '/account?mode=login'):
+            self.assertTrue(authentication_navigation('https://example.test'+path))
+        self.assertFalse(authentication_navigation('https://example.test/articles/login-guide.html'))
+        self.assertFalse(authentication_navigation('https://example.test/board/view.do?title=login'))
+
     def test_write_and_destructive_endpoints_are_not_followed(self):
         for url in ('https://example.invalid/board/write.do', 'https://example.invalid/logout',
                     'https://example.invalid/board?mode=delete', 'https://example.invalid/board?act=update'):
@@ -22,7 +28,7 @@ class NavigationTests(unittest.TestCase):
             def do_GET(self):
                 if self.path == '/':
                     body = ''.join(f'<a href="/menu{i}">메뉴</a>' for i in range(6))
-                    body += '<a href="/board/index.do">게시판</a><a href="http://[">잘못된 주소</a>'
+                    body += '<a href="/board/index.do">게시판</a><a href="http://[">잘못된 주소</a><a href="/parents/login/index.do">로그인</a><a href="/member/signup.php">회원가입</a>'
                 elif self.path == '/board/index.do':
                     body = '<article><a href="/board/view.do?board_idx=7">카지노 가입 보너스</a></article>'
                     body += '<button data-url="/board/view.do?board_idx=8">다음 글</button>'
@@ -68,4 +74,5 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual(len(candidates), 3)
         self.assertEqual({c['url'].split('=')[-1] for c in candidates}, {'7', '8', '9'})
         self.assertFalse(any('/write' in u for u in outcome.report['pages_scanned']))
+        self.assertFalse(any(authentication_navigation(u) for u in outcome.report['pages_scanned']))
         self.assertGreater(navigation_priority(self.base+'/login/'), navigation_priority(self.base+'/board/'))
