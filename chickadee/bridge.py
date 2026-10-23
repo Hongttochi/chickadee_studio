@@ -559,7 +559,10 @@ class DesktopBridge:
                 value = self.emit(event)
                 # Persist a complete process timeline without huge image payloads.
                 if event['kind'] != 'preview' and len(events) < 100000:
-                    events.append({k: v for k, v in value.items() if k != 'screenshot'})
+                    saved = {k: v for k, v in value.items() if k != 'screenshot'}
+                    events.append(saved)
+                    with (folder/'events.jsonl').open('ab') as log:
+                        log.write((json.dumps(saved,ensure_ascii=False)+'\n').encode('utf-8'))
             observe({'kind': 'started', 'url': config.entry_url, 'folder': str(folder)})
             # Initialize the event loop before constructing the coroutine so an
             # OS startup failure does not leak an unawaited scan coroutine.

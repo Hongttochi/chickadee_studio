@@ -111,6 +111,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/conditional-ocr-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/content-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/groq-env-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/login-smoke.cjs

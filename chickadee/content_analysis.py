@@ -63,7 +63,9 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
                     observation = recognized_text(result)
                     image['ocr'].update(observation)
                     image['ocr']['recognition_status'] = 'readable' if observation['text'].strip() else 'unreadable'
-                    if image['ocr']['recognition_status'] == 'unreadable': errors.append(unreadable_message(result))
+                    if image['ocr']['recognition_status'] == 'unreadable':
+                        image['ocr']['message'] = unreadable_message(result)
+                        errors.append(image['ocr']['message'])
                     progress('ml')
                     source = await asyncio.to_thread(text_result, observation['text'], 'image_ocr')
                     source['truncated'] = observation['text_truncated']
@@ -75,14 +77,14 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
                 else: errors.append('PaddleOCR 이미지 문자 인식 실패')
         if any(source['local_ai']['text']['status'] != 'completed' for source in sources): errors.append('로컬 문자 모델 분석 미완료')
         await review_sources(sources, stop=stop, emit=lambda event: progress(event['stage']),
-                             timeout_seconds=max(0, 58-(time.monotonic()-started)))
+                             timeout_seconds=max(0, 148-(time.monotonic()-started)))
         return {'status': 'partial' if errors or image and image['ocr']['status'] != 'completed' else 'completed',
                 'sources': sources, 'image': image, 'errors': errors, 'runtime_environment': runtime,
                 'finished_at': datetime.now().astimezone().isoformat(), 'paid_requests': 0,
                 'candidate_count': sum(len(source['ad_candidates']) for source in sources)}
     task = asyncio.create_task(work())
     try:
-        async with asyncio.timeout(60):
+        async with asyncio.timeout(150):
             while not task.done():
                 if stop.is_set(): raise asyncio.CancelledError()
                 await asyncio.wait({task}, timeout=.1)
