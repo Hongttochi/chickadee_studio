@@ -132,7 +132,7 @@ Select **전체 검토 시작** to review collected evidence. Groq prioritizes p
 | Key input | Password field in AI settings |
 | External key file | `GROQ_API_KEY`, selected through `--groq-env-file` |
 
-Keys are not stored in scan results or reports. Partial reviews and unreviewed counts are preserved when limits are reached.
+Users register their own Groq key in AI connection settings. Input is masked. The app keeps the key only in the current process session and does not persist it to disk, scan results or reports. Requests use HTTPS. This is session-only handling, not encrypted storage. An explicitly selected external `.env` remains a plaintext file. Partial reviews and unreviewed counts are preserved when limits are reached.
 
 ![Groq review and report](docs/assets/demos/03-groq-report.png)
 
