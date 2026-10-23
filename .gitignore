@@ -8,6 +8,7 @@ build/
 dist/
 *.spec
 !scripts/engine.spec
+!scripts/laya.spec
 node_modules/
 desktop/dist/
 

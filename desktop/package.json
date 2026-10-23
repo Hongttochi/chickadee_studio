@@ -1,6 +1,6 @@
 {
   "name": "chickadee-desktop",
-  "version": "0.10.10",
+  "version": "0.10.11",
   "description": "Chickadee visual website inspection workspace",
   "author": "Chickadee contributors",
   "license": "Apache-2.0",
@@ -30,7 +30,7 @@
     "appId": "org.chickadee.inspector",
     "productName": "Chickadee",
     "directories": {
-      "output": "../artifacts/electron-0.10.10"
+      "output": "../artifacts/electron-0.10.11"
     },
     "files": [
       "dist/**/*",
@@ -43,15 +43,32 @@
     ],
     "extraResources": [
       {
-        "from": "../artifacts/engine-0.10.10/ChickadeeEngine",
+        "from": "../artifacts/engine-0.10.11/ChickadeeEngine",
         "to": "engine"
+      },
+      {
+        "from": "../artifacts/laya-0.10.11/ChickadeeLaya",
+        "to": "laya"
+      },
+      {
+        "from": "../artifacts/laya-model",
+        "to": "laya-model"
       }
     ],
     "win": {
       "target": "dir",
       "signAndEditExecutable": false,
-      "signExts": [".dll", ".pyd", ".node"],
-      "signtoolOptions": { "signingHashAlgorithms": ["sha256"], "rfc3161TimeStampServer": "http://timestamp.digicert.com" },
+      "signExts": [
+        ".dll",
+        ".pyd",
+        ".node"
+      ],
+      "signtoolOptions": {
+        "signingHashAlgorithms": [
+          "sha256"
+        ],
+        "rfc3161TimeStampServer": "http://timestamp.digicert.com"
+      },
       "icon": "assets/app.ico"
     },
     "mac": {

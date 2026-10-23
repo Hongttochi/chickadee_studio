@@ -61,11 +61,13 @@ Laya는 원문이 같은 영역을 중복 추론하지 않고, 사이트 검사�
 
 ### 로컬 Laya 연결
 
-[한국어 문맥 모델 팩](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1)은 Laya Multilingual 전체 모델을 한국어 자료로 학습한 가중치입니다. 원문만으로 판단 가능한 자료와 출처 문맥이 필요한 자료를 구분해 독립 검증했으며, 실제 앱에서 문맥 8개의 처리를 확인했습니다. 결과와 해시는 [공개 평가 수치](assets/evaluation/metrics.json)에 있습니다.
+Windows 실행본에는 학습한 한국어 Laya 모델과 독립 CPU 실행 파일이 함께 포함됩니다. ZIP 전체를 압축 해제한 뒤 실행하면 별도 Python·모델 설치 없이 ML 다음에 Laya 분석을 수행합니다. macOS에서는 Windows 실행 파일을 사용할 수 없으며, 소스 실행에 맞는 Python과 CPU 라이브러리를 설치해야 합니다.
 
-모델 팩에서 `laya-config.zip`, `best.safetensors`, `model.safetensors`, `SHA256SUMS.txt`를 내려받습니다. 설정 ZIP을 `laya` 폴더에 압축 해제한 뒤 `best.safetensors`는 그 폴더에, `model.safetensors`는 `base/` 아래에 넣습니다. 전체 모델과 설정에는 약 1.9GB의 공간이 필요하며 실행 환경 설치 공간은 별도입니다.
+학습한 FP32 가중치를 한 번만 읽도록 배포 묶음을 구성했습니다. 모델 해시와 독립 평가 기록을 확인한 뒤 로드하며 실행 중에는 모델을 다운로드하거나 외부 API를 호출하지 않습니다. 가용 메모리가 3GB 미만이면 해당 상태를 기록하고 OCR·RF 결과를 보존합니다.
 
-소스 개발 환경에서 다음과 같이 로컬 CPU 실행 환경을 준비하고 등록합니다.
+탐색이 전체 시간을 소진하지 않도록, 모델이 연결된 검사에서는 전체 제한시간의 40%를 최대 120초까지 최종 분석용으로 확보합니다. Laya도 남은 검사 시간 안에서 최대 120초 동안 실행하며 중단 요청은 즉시 전달합니다. 완료 알림을 놓친 화면은 저장된 검사 기록에서 결과를 복구합니다. 실제 처리하지 못한 항목을 정상으로 표시하지 않습니다.
+
+소스 개발 환경에서는 [한국어 문맥 모델 팩](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1)을 등록할 수 있습니다. 모델 팩의 `laya-config.zip`을 압축 해제하고 `best.safetensors`는 루트에, `model.safetensors`는 `base/` 아래에 넣습니다.
 
 ```powershell
 py -3.12 -m venv .venv-laya
@@ -73,11 +75,7 @@ py -3.12 -m venv .venv-laya
 .\.venv\Scripts\python.exe scripts/activate_laya.py --bundle 'C:\모델\laya' --python .\.venv-laya\Scripts\python.exe
 ```
 
-등록 후 앱을 다시 실행하면 사용자 설정 폴더의 `laya.json`에서 모델과 실행 환경을 읽습니다. Windows의 기본 위치는 `%APPDATA%/Chickadee/laya.json`입니다. 설정에는 모델 경로와 Python 경로만 저장합니다. API 키와 원문은 포함하지 않습니다.
-
-추론용 묶음은 `manifest.json`, `base/`, `best.safetensors`로 구성됩니다. 파일 크기와 SHA-256, 평가한 가중치의 해시와 보정 온도를 확인하고 경로 이탈이나 목록에 없는 모델 파일을 거부합니다. 가중치는 safetensors 형식입니다. 실행 시 사용 가능한 메모리가 3GB 미만이면 Laya를 건너뛰고 OCR과 RF 결과를 보존합니다. Laya는 검사에 남은 시간 안에서 최대 45초 동안 실행합니다. 첫 모델 로딩이 느려 제한을 넘기면 해당 상태를 기록하고 기존 결과를 보존합니다. 이 PC의 Windows 실행본 검증에서는 첫 시도가 시간 초과로 끝났고, 재실행에서는 문맥 8개를 모두 처리했습니다.
-
-환경변수로 지정하려면 `CHICKADEE_LAYA_MODEL_DIR`에 모델 폴더를, `CHICKADEE_LAYA_PYTHON`에 Python 실행 파일의 절대 경로를 설정합니다. 별도 설정 파일은 `CHICKADEE_LAYA_CONFIG`로 지정할 수 있습니다. 가중치와 실행 환경을 자동으로 다운로드하지 않으며, API 호출 없이 PC에서 실행합니다.
+위 등록은 소스 실행용입니다. Windows 배포본은 동봉한 `resources/laya-model`과 `resources/laya/ChickadeeLaya.exe`를 기본으로 사용합니다. 사용자 설정의 모델 경로와 Python 경로, `CHICKADEE_LAYA_CONFIG`는 기존 개발 환경과의 호환용으로 유지합니다.
 
 기존 사이트 검사와 직접 분석 모두 OCR 신뢰도 0.55 이상인 줄을 사용하며 4,000자에서 잘렸는지 기록합니다. 사이트 검사 근거에는 이미지 SHA-256과 OCR 엔진·모델·신뢰도 정보를 보존합니다.
 

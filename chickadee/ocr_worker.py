@@ -44,7 +44,7 @@ class PaddleTextReader:
         model.run()
         return model.get_output_handle(model.get_output_names()[0]).copy_to_cpu()
 
-    def read(self, data):
+    def read(self, data, _background='white'):
         from PIL import Image
         import pyclipper
         np, cv = self.np, self.cv
@@ -54,8 +54,15 @@ class PaddleTextReader:
             image_format = source.format
             if w * h > 8_000_000 or min(w, h) < 8 or source.format not in ('PNG', 'JPEG', 'WEBP', 'GIF'):
                 raise ValueError('지원하지 않는 이미지 형식·해상도')
-            image = np.asarray(source.convert('RGB'))[:, :, ::-1].copy()
-        ratio = min(1., 960 / max(w, h))
+            rgba = source.convert('RGBA')
+            transparent = rgba.getchannel('A').getextrema()[0] < 255
+            # Dropping alpha directly turns transparent dark lettering into a
+            # black-on-black image. Composite before passing pixels to Paddle.
+            canvas = Image.new('RGBA', source.size, _background)
+            canvas.alpha_composite(rgba)
+            image = np.asarray(canvas.convert('RGB'))[:, :, ::-1].copy()
+        # Small banners need enlarged glyphs; keep both scale and detector size bounded.
+        ratio = min(3., 1280 / max(w, h))
         dw, dh = max(32, round(w * ratio / 32) * 32), max(32, round(h * ratio / 32) * 32)
         resized = cv.resize(image, (dw, dh)).astype('float32') / 255.
         tensor = ((resized - np.array([.485, .456, .406], dtype='float32')) /
@@ -106,6 +113,8 @@ class PaddleTextReader:
             score = float(confidence[keep].mean()) if keep.any() else 0.
             if text and np.isfinite(score):
                 lines.append({'text': text[:1000], 'confidence': round(score, 4), 'box': [[round(float(v), 1) for v in point] for point in box]})
+        if transparent and _background == 'white' and not any(line['confidence'] >= .55 for line in lines):
+            return self.read(data, _background='black')
         preview = Image.fromarray(image[:, :, ::-1])
         preview.thumbnail((1600, 1600))
         buffer = io.BytesIO()

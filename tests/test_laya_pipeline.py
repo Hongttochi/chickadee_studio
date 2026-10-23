@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, patch
 
 from chickadee.content_analysis import analyze_content
 from chickadee.inspection import validate_inspection, validate_local_ai
-from chickadee.laya_review import LayaSession, enrich_laya, review_sources, unavailable, MAX_ITEMS
+from chickadee.laya_review import LayaSession, enrich_laya, review_sources, unavailable, MAX_ITEMS, MAX_SECONDS
 from chickadee.laya_worker import verified_bundle, QUESTIONS
 from chickadee.runtime import environment
 from tests.test_inspection_agent import packet
@@ -23,6 +23,19 @@ SIGNAL={'status':'completed','model':'Laya','version':'test-fixture', 'score':.8
 
 
 class PipelineTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cold_start_budget_is_bounded_and_uses_remaining_scan_budget(self):
+        self.assertEqual(MAX_SECONDS,120)
+        self.assertEqual(LayaSession(600).timeout_seconds,120)
+        self.assertEqual(LayaSession(9).timeout_seconds,9)
+
+    async def test_bundled_runtime_needs_no_external_python(self):
+        with tempfile.TemporaryDirectory() as temp:
+            worker=Path(temp)/'ChickadeeLaya.exe';worker.write_bytes(b'test-only')
+            with patch.dict(os.environ,{'CHICKADEE_LAYA_MODEL_DIR':temp,'CHICKADEE_LAYA_WORKER':str(worker)},clear=True), patch('chickadee.runtime.memory_info',return_value={'available_bytes':8*1024**3}), patch('asyncio.create_subprocess_exec',side_effect=OSError('fixture')) as spawn:
+                value=await LayaSession().analyze(['한국어 본문'])
+            self.assertEqual(spawn.call_args.args,(str(worker),))
+            self.assertEqual(value[0]['reason'],'inference_failed')
+
     async def test_missing_model_does_not_start_worker_or_call_paid_api(self):
         with patch.dict(os.environ,{},clear=True), patch('asyncio.create_subprocess_exec') as process, patch('chickadee.agent.groq_request') as paid:
             result=await LayaSession().analyze(['도서관 안내'])
@@ -134,9 +147,24 @@ class BundleTests(unittest.TestCase):
             verified_bundle(folder) # integrity gate only; fake fixture is never loaded as a model
             (folder/'base/config.json').write_text('corrupt')
             with self.assertRaises(ValueError):verified_bundle(folder)
+
             (folder/'base/config.json').write_text('{}');(folder/'base/extra.py').write_text('not executed')
             with self.assertRaises(ValueError):verified_bundle(folder)
             meta['approved']=False;(folder/'manifest.json').write_text(json.dumps(meta))
+            with self.assertRaises(ValueError):verified_bundle(folder)
+
+    def test_single_checkpoint_bundle_reuses_evaluated_weights_without_base_copy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp);meta=self.bundle(folder)
+            checkpoint=(folder/'best.safetensors').read_bytes()
+            (folder/'base/model.safetensors').write_bytes(checkpoint)
+            (folder/'best.safetensors').unlink()
+            meta.update(format=2,files=[{'path':p.relative_to(folder).as_posix(),'bytes':p.stat().st_size,
+                'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in (folder/'base').rglob('*') if p.is_file()])
+            (folder/'manifest.json').write_text(json.dumps(meta))
+            verified_bundle(folder)
+            meta['evaluation']['checkpoint_sha256']='0'*64
+            (folder/'manifest.json').write_text(json.dumps(meta))
             with self.assertRaises(ValueError):verified_bundle(folder)
 
     def test_invalid_laya_scores_rejected(self):

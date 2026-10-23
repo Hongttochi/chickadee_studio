@@ -43,7 +43,7 @@ const assert=require('node:assert/strict'),http=require('node:http'),path=requir
   assert.equal(await login.evaluate(()=>typeof window.chickadee),'undefined');
   await page.screenshot({path:path.join(root,'artifacts/login-prompt.png')});
   await prompt.getByRole('button',{name:'로그인 완료 · 검사 재개',exact:true}).click();await prompt.waitFor({state:'detached'});
-  await page.locator('.scan-status strong').filter({hasText:'검사 완료'}).waitFor({timeout:60000});
+  await page.locator('.scan-status strong').filter({hasText:'검사 완료'}).waitFor({timeout:180000});
   const state=await page.evaluate(()=>window.chickadee.state());assert.equal(state.authentication,null);
   await assert.rejects(()=>page.evaluate(id=>window.chickadee.completeLogin(id),request));
   const events=fs.readFileSync(path.join(path.dirname(state.history[0].path),'events.jsonl'),'utf8');

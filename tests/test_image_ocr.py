@@ -3,6 +3,7 @@ import asyncio
 import base64
 from copy import deepcopy
 import hashlib
+import io
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import tempfile
@@ -20,6 +21,21 @@ FIXTURES = ROOT / 'tests/fixtures/ocr'
 
 
 class ImageOCRTests(unittest.TestCase):
+    def test_transparent_korean_banner_is_read_instead_of_black_on_black(self):
+        from PIL import Image
+        with Image.open(FIXTURES/'promotion.png') as original:
+            image=original.convert('RGBA')
+            image.putdata([(0,0,0,0) if min(pixel[:3])>240 else pixel for pixel in image.getdata()])
+            buffer=io.BytesIO();image.save(buffer,format='PNG')
+        async def scenario():
+            session=OCRSession()
+            try:
+                value=await session.recognize(buffer.getvalue())
+                self.assertEqual(value['status'],'completed',value)
+                self.assertTrue(any('카지노' in line['text'] and line['confidence']>=.55 for line in value['lines']),value['lines'])
+            finally:await session.close()
+        asyncio.run(scenario())
+
     def test_repeated_logos_do_not_consume_unique_image_budget(self):
         async def scenario():
             state = _State(); state.ocr_max_images = 2

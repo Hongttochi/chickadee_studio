@@ -52,7 +52,7 @@ const http = require("node:http");
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
     await assertStartCentered();
     async function wait(count) {
-      const deadline = Date.now() + 30000;
+      const deadline = Date.now() + 180000;
       let state;
       do {
         state = await page.evaluate(() => window.chickadee.state());

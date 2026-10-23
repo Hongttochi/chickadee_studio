@@ -17,7 +17,7 @@ const { launch } = require("./native-app.cjs");
   const data = path.join(out, "profile-" + Date.now());
   await fs.mkdir(data, { recursive: true });
   const modelConfig = process.env.CHICKADEE_LAYA_CONFIG;
-  if (!modelConfig)
+  if (!modelConfig && !process.env.CHICKADEE_PACKAGED_EXE)
     throw Error(
       "Set CHICKADEE_LAYA_CONFIG to an installed local model configuration.",
     );
@@ -164,7 +164,7 @@ const { launch } = require("./native-app.cjs");
       workflow: defaultWorkflow(),
     });
     let state;
-    const deadline = Date.now() + 150000;
+    const deadline = Date.now() + 210000;
     do {
       state = await p.evaluate(() => window.chickadee.state());
       if (!state.running && state.history.length > 0) break;

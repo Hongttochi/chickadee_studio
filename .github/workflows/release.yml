@@ -35,7 +35,7 @@ jobs:
     needs: version
     if: needs.version.outputs.release_needed == 'true'
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       PLAYWRIGHT_BROWSERS_PATH: '0'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -116,6 +116,10 @@ jobs:
           node tests/login-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/runtime-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/record-service.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/recovery-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:

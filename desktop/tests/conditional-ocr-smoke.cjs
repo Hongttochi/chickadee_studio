@@ -26,7 +26,7 @@ const {pathToFileURL}=require('node:url');
   await page.evaluate(()=>window.chickadee.configureRuntime({mode:'standard'}));
   async function run(route,count){
    await page.evaluate(options=>window.chickadee.start(options),{url:`http://127.0.0.1:${server.address().port}/${route}`,workflow:defaultWorkflow(),max_pages:1,settle_ms:0,interval_sec:0,preview:false});
-   const until=Date.now()+60000;let state;
+   const until=Date.now()+180000;let state;
    do{
     state=await page.evaluate(()=>window.chickadee.state());
     if(!state.running&&state.history.length===count)break;

@@ -53,15 +53,15 @@ An open-source desktop app for detecting text obfuscation, hidden advertising an
 4. Inspect source text, locations and screenshots in **탐지 내역**, then save review states and notes.
 5. Open **결과 폴더** for JSON, CSV and reports.
 
-The Windows x64 package includes Python, Chromium, Korean OCR and local ML models. No separate Python, Node.js, Docker or GPU installation is needed. The Run scan dropdown → **데모 검사** opens the bundled offline demonstration. The interface and detailed guides are in Korean.
+The Windows x64 package includes Python, Chromium, Korean OCR, RF, the fine-tuned Laya weights and a standalone CPU runtime. No separate Python, Node.js, Docker or GPU installation is needed. The Run scan dropdown → **데모 검사** opens the bundled offline demonstration. The interface and detailed guides are in Korean.
 
-Core scanning, OCR, RF and Laya inference run locally without an API key. Laya requires the separately installed [Korean model pack](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1) and CPU runtime. Groq review is optional and uses a user-provided key.
+Core scanning, OCR, RF and Laya inference run locally without an API key. Laya is bundled and requires no separate model or Python installation in the Windows release. Groq review is optional and uses a user-provided key.
 
 ## 2. Processing pipeline
 
 ![Chickadee Studio architecture overview](docs/assets/architecture.png)
 
-The figure describes the overall design. In the current release, **text bypasses OCR**, Laya runs on CPU with the installed Korean model pack, and results are stored as local files.
+The figure describes the overall design. In the current release, **text bypasses OCR**, Laya runs on CPU with the bundled Korean model, and results are stored as local files.
 
 | Stage | Processing |
 | --- | --- |
@@ -116,7 +116,7 @@ The local backend also exposes `content.analyze` for direct image/text analysis,
 
 The bundled RF analyzes source text and OCR text to prioritize review. The statistics view shows processing counts and score distributions. The recorded local scan processed 8 Laya contexts and 1 Korean OCR image without API calls. Scores are not accuracy or legal-violation probabilities.
 
-An optional **local CPU Laya review worker** is already connected to the pipeline. It requires an explicitly installed, independently evaluated model bundle and compatible runtime. It does not download weights or make API calls. The Korean model pack has completed a separate 12-sample diagnostic evaluation and was run in the desktop pipeline. The app reads the installed local model configuration automatically. [Model pack](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1). [Local analysis configuration](docs/content-analysis.md)
+The **local CPU Laya review worker** and evaluated Korean weights are bundled in the Windows release. They run offline without downloads or API calls. The checkpoint was independently evaluated and verified against the standalone executable. Source developers can still register an external model configuration. [Local analysis configuration](docs/content-analysis.md)
 
 ![ML and OCR processing statistics](docs/assets/demos/02-statistics.png)
 
@@ -266,7 +266,7 @@ Separate Korean fixtures verify extraction, coordinates and UI rendering; these 
 
 ### 7.3 Deployment and verification
 
-The app uses Korean PaddleOCR, RF and the installed Korean Laya model pack. Laya is available as an installed local CPU model pack. BERT is retained as an evaluation reference. Groq runs only when configured and requested.
+The Windows app bundles Korean PaddleOCR, RF and the Korean Laya model with its CPU executable. BERT is retained as an evaluation reference. Groq runs only when configured and requested.
 
 [Windows package verification](https://github.com/orqan137/chickadee_studio/actions/runs/39824971344) covers extraction, launch, Korean OCR, image-free processing, login resumption and key registration. Published-file checksums, included models, ordinary Windows launch, report saving/reopening, review persistence and CSV export were also checked.
 

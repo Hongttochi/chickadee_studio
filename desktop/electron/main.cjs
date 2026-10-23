@@ -229,6 +229,22 @@ async function initialize() {
         CHICKADEE_LAYA_CONFIG:
           process.env.CHICKADEE_LAYA_CONFIG ||
           path.join(app.getPath("userData"), "laya.json"),
+        ...(app.isPackaged
+          ? {
+              CHICKADEE_LAYA_MODEL_DIR:
+                process.env.CHICKADEE_LAYA_MODEL_DIR ||
+                path.join(process.resourcesPath, "laya-model"),
+              CHICKADEE_LAYA_WORKER:
+                process.env.CHICKADEE_LAYA_WORKER ||
+                path.join(
+                  process.resourcesPath,
+                  "laya",
+                  process.platform === "win32"
+                    ? "ChickadeeLaya.exe"
+                    : "ChickadeeLaya",
+                ),
+            }
+          : {}),
       },
     },
     (event) => {

@@ -99,7 +99,7 @@ PaddleOCR가 이미지에서 읽은 문구와 글자 영역을 표시합니다. 
 
 문자 TF-IDF와 RF의 처리 영역 수와 점수 분포를 확인합니다. RF로 문자 문맥을 분류하고, 설치한 한국어 Laya로 문맥을 추가 분석합니다. 점수는 정확도나 위법 확률이 아닙니다.
 
-한국어 Laya는 로컬 CPU에서 실행합니다. 실제 앱 검사에서 문맥 8개를 분석했으며, 외부 API 호출은 없었습니다. 모델 팩과 실행 환경은 별도로 설치합니다. [Laya 설정](content-analysis.md)
+한국어 Laya는 로컬 CPU에서 실행합니다. 실제 앱 검사에서 문맥 8개를 분석했으며, 외부 API 호출은 없었습니다. Windows 실행본에는 모델과 CPU 실행 환경이 함께 포함됩니다. [Laya 설정](content-analysis.md)
 
 ![모델 처리 통계](assets/demos/02-statistics.png)
 

@@ -32,6 +32,7 @@ exports.launch = async ({ env }) => {
     [...(env.CHICKADEE_TEST_ENGINE ? [] : ["-m", "chickadee.bridge"]), "--data-dir", data],
     { cwd: root, env: { ...env, PYTHONIOENCODING: "utf-8" } },
     (event) => {
+      if (env.CHICKADEE_TEST_DROP_DONE === '1' && event.kind === 'done') return;
       if (!closing && page)
         delivery = delivery
           .then(() =>

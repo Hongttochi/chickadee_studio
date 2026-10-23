@@ -37,7 +37,8 @@ def frontend_licenses():
 
 
 def main():
-    required = [APP / 'Chickadee.exe', APP / 'resources/engine/ChickadeeEngine.exe']
+    required = [APP / 'Chickadee.exe', APP / 'resources/engine/ChickadeeEngine.exe',
+                APP / 'resources/laya/ChickadeeLaya.exe', APP / 'resources/laya-model/manifest.json']
     if not all(p.is_file() for p in required):
         raise RuntimeError('Build scripts/build-desktop.ps1 first.')
     count = frontend_licenses()
@@ -61,6 +62,7 @@ def main():
         '검사 구성은 고정 순서로 실행하며 이미지 OCR 사용 여부는 노드 설정에서 선택합니다.\n'
         '사용 안내: docs/quickstart-windows.md, docs/desktop.md\n'
         '이미지 속 한국어 문구도 자동 검사합니다. OCR 모델은 동봉되어 별도 설치가 필요하지 않습니다.\n'
+        '한국어 Laya 모델과 CPU 실행 환경도 동봉되어 별도 설치 없이 OCR → ML → Laya로 분석합니다.\n'
         '학습한 문자·화면 AI 분석은 무료 로컬 처리입니다. 근거 패널과 검사 분석 → AI 검토에서 확인하세요.\n'
         '설정 → 일반 → 실행 환경에서 자동·표준·절약 모드와 CPU·메모리를 확인합니다. 절약 모드는 이미지 OCR을 생략합니다.\n'
         'OCR 기능 확인 버튼은 인터넷 접속 없이 동봉된 한국어 모델을 시험합니다. GPU는 필수가 아닙니다.\n'

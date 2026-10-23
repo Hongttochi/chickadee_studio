@@ -8,6 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_ITEMS = 12
+MAX_SECONDS = 120
 
 
 def configuration():
@@ -46,11 +47,20 @@ def unavailable(reason='model_not_validated'):
             'message': messages.get(reason, 'Laya 검토를 완료하지 못했습니다.'), 'paid_requests': 0}
 
 
+def analysis_reserve(total_seconds):
+    """Leave time for a shipped model instead of letting crawling consume its entire budget."""
+    try:
+        folder, _ = configuration()
+        return min(MAX_SECONDS, total_seconds*.4) if folder and (Path(folder)/'manifest.json').is_file() else 0
+    except (OSError, ValueError, TypeError):
+        return 0
+
+
 class LayaSession:
-    def __init__(self, timeout_seconds=45):
+    def __init__(self, timeout_seconds=MAX_SECONDS):
         self.process = None
         self.stderr_task = None
-        self.timeout_seconds = min(45, max(0, timeout_seconds))
+        self.timeout_seconds = min(MAX_SECONDS, max(0, timeout_seconds))
 
     async def analyze(self, texts):
         if not texts or len(texts) > MAX_ITEMS or any(not isinstance(t, str) or not 0 < len(t) <= 4000 for t in texts):
@@ -67,7 +77,12 @@ class LayaSession:
         available = memory_info()['available_bytes']
         if available is not None and available < 3 * GIB:
             return [unavailable('insufficient_memory') for _ in texts]
-        if executable:
+        bundled_worker = os.environ.get('CHICKADEE_LAYA_WORKER')
+        if bundled_worker:
+            if not Path(bundled_worker).is_absolute() or not Path(bundled_worker).is_file():
+                return [unavailable('runtime_unavailable') for _ in texts]
+            args = [bundled_worker]
+        elif executable:
             if not Path(executable).is_absolute() or not Path(executable).is_file():
                 return [unavailable('runtime_unavailable') for _ in texts]
             # The external Python cannot import modules embedded in a frozen engine.
@@ -108,7 +123,7 @@ class LayaSession:
             self.process = None
 
 
-async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_seconds=45):
+async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_SECONDS):
     """One review per unique evidence text, bounded; never remove deterministic findings."""
     emit({'kind': 'phase', 'stage': 'laya', 'action': 'prepare', 'message': 'Laya 적용 상태를 확인합니다.'})
     selected, seen = [], set()
@@ -151,7 +166,7 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
     return summary
 
 
-async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=45):
+async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds=MAX_SECONDS):
     packets = report.get('evidence_packets', [])
     evidence = [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]
     keys = {(r.get('url'), r.get('scope_location', r.get('location'))) for r in evidence}

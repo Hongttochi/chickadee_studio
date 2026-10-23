@@ -53,6 +53,12 @@ def recognized_text(result, limit=4000):
             'mean_confidence': round(sum(line['confidence'] for line in accepted)/len(accepted), 4) if accepted else None}
 
 
+def unreadable_message(result):
+    if not result.get('lines'):
+        return '문자 영역을 찾지 못했습니다. 글자가 없거나 인식하지 못한 이미지입니다.'
+    return f"인식한 문구 {len(result['lines'])}개의 신뢰도가 사용 기준 55%에 미달했습니다."
+
+
 class OCRSession:
     def __init__(self):
         self.process = None

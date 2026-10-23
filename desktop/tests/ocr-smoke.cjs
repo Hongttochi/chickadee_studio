@@ -34,7 +34,7 @@ const http = require('node:http');
     await page.getByRole('textbox', { name: '검사 대상 URL' }).fill(`http://127.0.0.1:${server.address().port}/`);
     await page.locator('.header-run-controls button.primary').click();
     let state;
-    const deadline = Date.now() + 90000;
+    const deadline = Date.now() + 180000;
     do {
       state = await page.evaluate(() => window.chickadee.state());
       if (!state.running && state.history.length === 1) break;

@@ -603,6 +603,7 @@ function App() {
   const [capabilities, setCapabilities] = useState(null);
   const [visualPreview, setVisualPreview] = useState(false);
   const [runTarget, setRunTarget] = useState("");
+  const activeRun = useRef(null);
   const [tutorial, setTutorial] = useState(shouldShowTutorial);
   useEffect(() => {
     if (!booted || flow.nodes.some(node => node.dragging)) return;
@@ -806,6 +807,7 @@ function App() {
       )
         setCurrentUrl(event.url);
       if (event.kind === "started") {
+        activeRun.current = event.run_id;
         setRecords([]); setPages([]); setPending([]); setEvents([{ ...event, key: crypto.randomUUID() }]); setPreview(null); setOutcome(null); setLiveScreenshots({});
         setReviewData({ revision: 0, items: {} }); setSelectedIds(new Set()); setSelectedRecord(null);
         setDiscovered(0); setQueue(0); setElapsed(0); setSearch(""); setFilter("all"); setReviewFilter("all");
@@ -840,13 +842,55 @@ function App() {
         setRecords((items) => [...items.filter(item => item.id !== event.candidate.id), event.candidate]);
       if (event.kind === "done") {
         applyOutcome(event);
+        setView(previous => previous === "workflow" ? "results" : previous);
       }
       if (event.kind === "error") {
         setStatus("failed");
+        setActive(null);
         tell(event.message, "error");
       }
     });
   }, [appendEvent, applyOutcome]);
+  // Recover a missed terminal event without mistaking a slow OCR/model load for completion.
+  useEffect(() => {
+    if (!api || !booted || !running) return;
+    let disposed = false,
+      checking = false;
+    const timer = window.setInterval(async () => {
+      if (checking || startRequest.current || !activeRun.current) return;
+      checking = true;
+      try {
+        const state = await api.state();
+        if (disposed || state.running || state.run_id !== activeRun.current)
+          return;
+        const entry = state.history?.find((item) => item.id === state.run_id);
+        if (entry) {
+          const value = await api.history(entry.id);
+          if (!disposed && activeRun.current === state.run_id) {
+            applyOutcome(value);
+            setView((previous) =>
+              previous === "workflow" ? "results" : previous,
+            );
+          }
+        } else if (state.status === "failed") {
+          setStatus("failed");
+          setActive(null);
+          tell(
+            "검사가 종료되었습니다. 진행 기록과 결과 폴더의 failure.log를 확인하세요.",
+            "error",
+          );
+        }
+      } catch (error) {
+        // The transport already surfaces an engine exit; polling never masks it.
+      } finally {
+        checking = false;
+      }
+    }, 3000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [booted, running, applyOutcome]);
   useEffect(() => {
     if (
       !booted ||

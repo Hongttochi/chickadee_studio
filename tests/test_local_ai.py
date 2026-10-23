@@ -15,6 +15,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class LocalAITests(unittest.TestCase):
+    def test_test_site_disclosure_is_not_repeated_as_an_ai_advertisement(self):
+        item=packet();item['text']='본 사이트는 행정안전부 주최 공공 웹사이트 불법광고 탐지 도구 개발 공모전 참가를 위해 제작한 테스트 사이트입니다.'
+        report={'evidence_packets':[item],'ad_candidates':[]}
+        signal={**local_ai.text_analysis(item['text']),'review_priority':'high'}
+        with patch.object(local_ai,'text_analysis',return_value=signal):local_ai.enrich_report(report)
+        self.assertEqual(report['ad_candidates'],[])
+        self.assertIn('text',item['local_ai'])
     def test_candidate_ids_remain_unique_after_summary_dedup_leaves_gaps(self):
         item = packet()
         report = {'evidence_packets': [item], 'ad_candidates': [

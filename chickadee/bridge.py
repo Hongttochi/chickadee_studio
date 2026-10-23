@@ -537,13 +537,13 @@ class DesktopBridge:
     def _run(self, config, folder, demo, workflow):
         site = None
         busy = self.busy
+        events = []
         try:
             folder.mkdir(parents=True, exist_ok=True)
             if demo:
                 from dataclasses import replace
                 site = DemoSite().start()
                 config = replace(config, entry_url=site.url, profile_path=None)
-            events = []
             def observe(event):
                 if event['kind'] == 'exploration':
                     self.live_graph['nodes'][event['node']['id']] = event['node']
@@ -598,7 +598,20 @@ class DesktopBridge:
         except Exception as exc:
             busy.clear()
             self.last_status = 'failed'
-            self.emit({'kind': 'error', 'message': str(exc)})
+            failure = self.emit({'kind': 'error', 'message': str(exc)})
+            # Keep diagnostics even if validation, report writing or engine work failed.
+            # No locals, credentials or image payloads are written to the traceback.
+            import traceback
+            try:
+                folder.mkdir(parents=True, exist_ok=True)
+                atomic_write(folder/'failure.json', json.dumps({'status':'failed',
+                    'error_type':type(exc).__name__, 'message':str(exc),
+                    'timestamp':datetime.now().astimezone().isoformat()},ensure_ascii=False).encode('utf-8'))
+                atomic_write(folder/'failure.log', traceback.format_exc().encode('utf-8'))
+                atomic_write(folder/'events.jsonl', ''.join(json.dumps(e,ensure_ascii=False)+'\n'
+                    for e in [*events, failure]).encode('utf-8'))
+            except OSError:
+                pass  # The original failure remains visible when the disk is unwritable.
         finally:
             if site:
                 site.close()

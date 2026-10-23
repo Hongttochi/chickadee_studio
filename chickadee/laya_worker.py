@@ -23,7 +23,7 @@ def verified_bundle(folder):
     folder = Path(folder).resolve(strict=True)
     if (folder/'manifest.json').stat().st_size > 100_000: raise ValueError('Laya 모델 목록 크기 오류')
     manifest = json.loads((folder/'manifest.json').read_text(encoding='utf8'))
-    if manifest.get('format') != 1 or manifest.get('training') != 'full_encoder' or manifest.get('approved') is not True:
+    if manifest.get('format') not in (1, 2) or manifest.get('training') != 'full_encoder' or manifest.get('approved') is not True:
         raise ValueError('Laya 모델 검증 대기')
     evaluation = manifest['evaluation']
     if evaluation.get('passed') is not True or evaluation.get('threshold') != .5 or evaluation.get('test_used_for_training') is not False:
@@ -33,7 +33,7 @@ def verified_bundle(folder):
         raise ValueError('Laya 보정 온도 오류')
     files = manifest['files']
     if not isinstance(files,list) or not 1 <= len(files) <= 64: raise ValueError('Laya 모델 파일 수 오류')
-    names = set()
+    names, hashes = set(), {}
     for item in files:
         rel=Path(item['path'])
         if rel.is_absolute() or '..' in rel.parts or rel.as_posix() in names: raise ValueError('Laya 모델 경로 오류')
@@ -41,13 +41,16 @@ def verified_bundle(folder):
             raise ValueError('지원하지 않는 Laya 모델 파일')
         path=folder/rel
         if path.is_symlink() or not path.resolve(strict=True).is_relative_to(folder): raise ValueError('Laya 외부 모델 경로 오류')
-        if not path.is_file() or path.stat().st_size != item['bytes'] or digest(path) != item['sha256']:
+        actual_hash = digest(path) if path.is_file() else None
+        if not path.is_file() or path.stat().st_size != item['bytes'] or actual_hash != item['sha256']:
             raise ValueError('Laya 모델 무결성 오류')
         names.add(rel.as_posix())
+        hashes[rel.as_posix()] = actual_hash
     actual = {p.relative_to(folder).as_posix() for p in (folder/'base').rglob('*') if p.is_file()}
-    if not actual or actual - names or 'base/model.safetensors' not in names or 'best.safetensors' not in names:
+    checkpoint = 'base/model.safetensors' if manifest['format'] == 2 else 'best.safetensors'
+    if not actual or actual - names or 'base/model.safetensors' not in names or checkpoint not in names:
         raise ValueError('목록에 없는 Laya 모델 파일')
-    if evaluation['checkpoint_sha256'] != digest(folder/'best.safetensors'): raise ValueError('평가한 체크포인트와 불일치')
+    if evaluation['checkpoint_sha256'] != hashes[checkpoint]: raise ValueError('평가한 체크포인트와 불일치')
     if not isinstance(manifest.get('version'),str) or len(manifest['version']) >= 200: raise ValueError('Laya 버전 오류')
     return folder, manifest
 
@@ -67,7 +70,8 @@ class Reader:
         self.torch = torch
         self.agent = laya.load(str(folder/'base'), device='cpu')
         # Assign the evaluated tensors directly rather than holding a second FP32 copy.
-        self.agent.model.load_state_dict(load_file(str(folder/'best.safetensors')),strict=True,assign=True)
+        if self.manifest['format'] == 1:
+            self.agent.model.load_state_dict(load_file(str(folder/'best.safetensors')),strict=True,assign=True)
         self.agent.model.eval()
 
     def analyze(self, text):

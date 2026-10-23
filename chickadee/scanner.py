@@ -21,9 +21,9 @@ from .authentication import AuthenticationRequired, LoginRedirect, is_login_url,
 from . import __version__
 from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
-from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text
+from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text, unreadable_message
 from .local_ai import enrich_report, visual_analysis, prepare_models
-from .laya_review import enrich_laya
+from .laya_review import enrich_laya, analysis_reserve
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots, SCREENSHOT_MAX_COUNT, SCREENSHOT_MAX_BYTES, OCR_MAX_OBSERVATIONS
@@ -284,6 +284,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     rules = Rules.load(config.rules_path)
     profile = SiteProfile.load(config.profile_path)
     status = "completed"
+    reserved_analysis = analysis_reserve(config.timeout_sec)
     emit({"kind": "status", "message": "브라우저를 준비하고 있습니다."})
     worker = asyncio.create_task(_crawl(config, state, emit, rules, profile, control))
     try:
@@ -292,9 +293,9 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
                 status = "cancelled"
                 worker.cancel()
                 break
-            if time.monotonic() - clock - (control.paused_seconds if control else 0) >= config.timeout_sec:
+            if time.monotonic() - clock - (control.paused_seconds if control else 0) >= config.timeout_sec-reserved_analysis:
                 status = "partial"
-                state.errors.append({"url": config.entry_url, "message": "전체 제한시간에 도달했습니다. 일부 결과입니다."})
+                state.errors.append({"url": config.entry_url, "message": "분석 시간을 확보하기 위해 탐색을 마쳤습니다. 일부 결과입니다." if reserved_analysis else "전체 제한시간에 도달했습니다. 일부 결과입니다."})
                 worker.cancel()
                 break
             await asyncio.wait({worker}, timeout=0.1)
@@ -304,7 +305,7 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
             if status == "completed":
                 raise
         except Exception as exc:
-            status = "failed"
+            status = "partial" if state.pages else "failed"
             state.errors.append({"url": config.entry_url, "message": str(exc)})
     finally:
         if not worker.done():
@@ -1073,7 +1074,7 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
             text = observation['text']
             record['recognition_status'] = 'readable' if text else 'unreadable'
             if not text:
-                message = '이미지에서 신뢰할 수 있는 문구를 읽지 못했습니다. 정상 판정이 아닙니다.'
+                message = unreadable_message(result)
                 record['message'] = message
                 state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + message})
                 emit({'kind': 'warning', 'stage': 'ocr', 'message': message, 'url': page_url})

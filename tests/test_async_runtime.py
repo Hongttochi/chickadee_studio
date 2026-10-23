@@ -23,7 +23,7 @@ class RunnerTests(unittest.TestCase):
         factory.assert_called_once(); runner.close.assert_called_once()
 
     def test_other_errors_and_retry_limit_are_preserved(self):
-        for code, attempts in [(10013, 1), (10014, 3)]:
+        for code, attempts in [(10013, 1), (10014, 5)]:
             runner = Mock(); runner.get_loop.side_effect = self.error(code)
             with patch('chickadee.async_runtime.asyncio.Runner', return_value=runner) as factory, patch('chickadee.async_runtime.time.sleep'):
                 with self.assertRaises(OSError):

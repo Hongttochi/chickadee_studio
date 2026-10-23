@@ -125,6 +125,23 @@ def verify(value, directory):
                 with archive.open(name) as stream:
                     if file_digest(stream, 'sha256').hexdigest() != model['sha256']:
                         raise ValueError('ZIP local AI model SHA256 mismatch: ' + model['path'])
+        if tuple(map(int, value.split('.'))) >= (0, 10, 11):
+            laya = prefix + 'resources/laya-model/'
+            if prefix+'resources/laya/ChickadeeLaya.exe' not in files:
+                raise ValueError('ZIP is missing the standalone Laya CPU runtime')
+            meta = json.loads(archive.read(laya+'manifest.json'))
+            if meta.get('format') != 2 or meta.get('training') != 'full_encoder' or meta.get('approved') is not True:
+                raise ValueError('ZIP Laya model is not approved')
+            from prepare_laya_models import HASHES
+            if meta['evaluation']['checkpoint_sha256'] != HASHES['best.safetensors']:
+                raise ValueError('ZIP Laya checkpoint differs from evaluated model')
+            for model in meta['files']:
+                name = laya+model['path']
+                if name not in files or archive.getinfo(name).file_size != model['bytes']:
+                    raise ValueError('ZIP is missing Laya model file')
+                with archive.open(name) as stream:
+                    if file_digest(stream,'sha256').hexdigest() != model['sha256']:
+                        raise ValueError('ZIP Laya model SHA256 mismatch')
         bad = archive.testzip()
         if bad:
             raise ValueError(f"ZIP CRC check failed: {bad}")

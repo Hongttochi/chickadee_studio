@@ -1,4 +1,4 @@
-param([switch]$SkipInstall, [switch]$SkipEngine, [switch]$RequireSigned)
+param([switch]$SkipInstall, [switch]$SkipEngine, [switch]$SkipLaya, [switch]$RequireSigned)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskVersion = (Get-Content -LiteralPath (Join-Path $taskRoot 'desktop/package.json') -Raw | ConvertFrom-Json).version
@@ -7,6 +7,19 @@ try {
     $taskPython = Join-Path $taskRoot '.venv\Scripts\python.exe'
     if (-not (Test-Path -LiteralPath $taskPython)) { throw 'Install requirements-dev.txt into .venv first.' }
     $env:PLAYWRIGHT_BROWSERS_PATH = '0'
+    if (-not $SkipLaya) {
+        $taskLayaPython = Join-Path $taskRoot 'artifacts/laya-venv/Scripts/python.exe'
+        if (-not (Test-Path -LiteralPath $taskLayaPython)) {
+            & $taskPython -m venv artifacts/laya-venv
+            if ($LASTEXITCODE -ne 0) { throw 'Laya environment creation failed.' }
+            & $taskLayaPython -m pip install -r requirements-laya.txt pyinstaller==6.22.3
+            if ($LASTEXITCODE -ne 0) { throw 'Laya runtime installation failed.' }
+        }
+        & $taskPython scripts/prepare_laya_models.py
+        if ($LASTEXITCODE -ne 0) { throw 'Laya model preparation failed.' }
+        & $taskLayaPython -m PyInstaller --noconfirm --distpath "artifacts/laya-$taskVersion" --workpath "artifacts/laya-build-$taskVersion" scripts/laya.spec
+        if ($LASTEXITCODE -ne 0) { throw 'Laya CPU executable build failed.' }
+    }
     if (-not $SkipEngine) {
         & $taskPython scripts/prepare_ocr_models.py
         if ($LASTEXITCODE -ne 0) { throw 'OCR model preparation failed.' }

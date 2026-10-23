@@ -47,7 +47,8 @@ DIRECT_CTA_RE = re.compile(r"가입(?:하세요|하고)|(?:충전|접속|신청)
 
 
 def is_editorial_context(text):
-    return bool(EDITORIAL_RE.search(text))
+    disclosure = re.search(r'(?:본|이)\s*(?:웹)?사이트는.{0,160}(?:공모전|시연).{0,100}(?:제작|참가).{0,50}테스트\s*사이트', text)
+    return bool(EDITORIAL_RE.search(text) or (disclosure and not DIRECT_CTA_RE.search(text)))
 
 
 @dataclass(frozen=True)
