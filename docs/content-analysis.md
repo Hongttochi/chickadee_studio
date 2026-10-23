@@ -75,7 +75,7 @@ py -3.12 -m venv .venv-laya
 
 등록 후 앱을 다시 실행하면 사용자 설정 폴더의 `laya.json`에서 모델과 실행 환경을 읽습니다. Windows의 기본 위치는 `%APPDATA%/Chickadee/laya.json`입니다. 설정에는 모델 경로와 Python 경로만 저장합니다. API 키와 원문은 포함하지 않습니다.
 
-추론용 묶음은 `manifest.json`, `base/`, `best.safetensors`로 구성됩니다. 파일 크기와 SHA-256, 평가한 가중치의 해시와 보정 온도를 확인하고 경로 이탈이나 목록에 없는 모델 파일을 거부합니다. 가중치는 safetensors 형식입니다. 실행 시 사용 가능한 메모리가 3GB 미만이면 Laya를 건너뛰고 OCR과 RF 결과를 보존합니다.
+추론용 묶음은 `manifest.json`, `base/`, `best.safetensors`로 구성됩니다. 파일 크기와 SHA-256, 평가한 가중치의 해시와 보정 온도를 확인하고 경로 이탈이나 목록에 없는 모델 파일을 거부합니다. 가중치는 safetensors 형식입니다. 실행 시 사용 가능한 메모리가 3GB 미만이면 Laya를 건너뛰고 OCR과 RF 결과를 보존합니다. Laya는 검사에 남은 시간 안에서 최대 45초 동안 실행합니다. 첫 모델 로딩이 느려 제한을 넘기면 해당 상태를 기록하고 기존 결과를 보존합니다. 이 PC의 Windows 실행본 검증에서는 첫 시도가 시간 초과로 끝났고, 재실행에서는 문맥 8개를 모두 처리했습니다.
 
 환경변수로 지정하려면 `CHICKADEE_LAYA_MODEL_DIR`에 모델 폴더를, `CHICKADEE_LAYA_PYTHON`에 Python 실행 파일의 절대 경로를 설정합니다. 별도 설정 파일은 `CHICKADEE_LAYA_CONFIG`로 지정할 수 있습니다. 가중치와 실행 환경을 자동으로 다운로드하지 않으며, API 호출 없이 PC에서 실행합니다.
 
