@@ -249,24 +249,24 @@ The comparison used 440 real training texts and 49 synthetic augmentations. Resu
 
 ![Korean context classification metrics](docs/assets/evaluation/model-comparison.png)
 
-A separate diagnostic set contains 7 advertisements and 5 normal reporting samples from 5 new sources. Baseline RF detected 0/7 advertisements and augmented RF detected 1/7. Six advertisement samples require source context beyond their text. Full fine-tuned Laya detected 4/7 advertisements and preserved 5/5 normal reports, with 9/12 total agreement. Production-worker predictions matched evaluation probabilities within 0.000001 on these 12 samples.
+A separate diagnostic set contains 7 advertisements and 5 normal reporting samples from 5 new sources. Baseline RF detected 0/7 advertisements and augmented RF detected 1/7. Six advertisement samples require source context beyond their text. Full fine-tuned Laya detected 4/7 advertisements and preserved 5/5 normal reports, with 9/12 total agreement. These are promotional-context evaluation results, not current general-advertising or 14-topic classification accuracy.
 
 ### 7.2 OCR recognition
 
-These Latin-script recognition metrics cover 43 text regions from 16 real images. They are not a Korean-language performance benchmark. Reference text was transcribed directly from the images.
+The Korean recognition audit uses 20 fixed text regions from 8 real images and 287 reference characters. References were transcribed from the images and excluded from training. Candidate selection used a separate synthetic validation set.
 
 | Model | Character errors | CER | Deployment |
 | --- | ---: | ---: | --- |
-| Existing OCR | 13 / 1,229 | 1.06% | Existing Korean model retained |
-| Further-trained OCR | 36 / 1,229 | 2.93% | Not promoted |
+| Existing Korean OCR | 30 / 287 | 10.45% | Baseline |
+| Korean adapted OCR | 10 / 287 | 3.48% | Included in the Windows app |
 
 ![OCR character error comparison](docs/assets/evaluation/ocr-comparison.png)
 
-Separate Korean fixtures verify extraction, coordinates and UI rendering; these are functional checks rather than a Korean accuracy benchmark.
+This is a small recognition audit, not overall Korean OCR accuracy or text-detection recall. Full-image fixtures also verify extraction, coordinates and UI rendering. The app includes the adapted recognizer with the official text detector.
 
 ### 7.3 Deployment and verification
 
-The Windows app bundles Korean PaddleOCR, RF and the Korean Laya model with its CPU executable. BERT is retained as an evaluation reference. Groq runs only when configured and requested.
+The Windows app bundles Korean PaddleOCR, RF, photo classification and the Korean Laya model with its CPU executable. Laya processes all collected text in successive batches without a fixed per-scan item cap. Identical text reuses its result. Completed work is preserved on interruption. BERT is retained as an evaluation reference. Groq runs only when configured and requested.
 
 [Windows package verification](https://github.com/orqan137/chickadee_studio/actions/runs/39824971344) covers extraction, launch, Korean OCR, image-free processing, login resumption and key registration. Published-file checksums, included models, ordinary Windows launch, report saving/reopening, review persistence and CSV export were also checked.
 
