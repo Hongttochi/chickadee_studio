@@ -1,5 +1,7 @@
 # 기능 안내
 
+![서비스 전체 시연](assets/demos/overview.webp)
+
 [README](../README.md) | [설치 및 실행](quickstart-windows.md) | [출력 규격](result-format.md)
 
 ## 목차
@@ -95,9 +97,9 @@ PaddleOCR가 이미지에서 읽은 문구와 글자 영역을 표시합니다. 
 
 ### ML 처리 통계
 
-문자 TF-IDF와 RF의 처리 영역 수와 점수 분포를 확인합니다. 기본 배포본은 기존 RF를 사용하며, Laya는 미적용 상태를 표시합니다. 점수는 정확도나 위법 확률이 아닙니다.
+문자 TF-IDF와 RF의 처리 영역 수와 점수 분포를 확인합니다. RF로 문자 문맥을 분류하고, 설치한 한국어 Laya로 문맥을 추가 분석합니다. 점수는 정확도나 위법 확률이 아닙니다.
 
-Laya의 로컬 CPU 검토 경로도 연결되어 있습니다. 독립 평가를 확인한 모델 묶음과 실행 환경이 설치된 경우에만 실행하며, 가중치를 자동 다운로드하거나 외부 API를 호출하지 않습니다. [Laya 설정](content-analysis.md)
+한국어 Laya는 로컬 CPU에서 실행합니다. 실제 앱 검사에서 문맥 8개를 분석했으며, 외부 API 호출은 없었습니다. 모델 팩과 실행 환경은 별도로 설치합니다. [Laya 설정](content-analysis.md)
 
 ![모델 처리 통계](assets/demos/02-statistics.png)
 
@@ -218,33 +220,37 @@ Ctrl K로 화면 이동, 결과 불러오기와 내보내기 명령을 검색합
 
 ## 7. 기능 시연
 
-### GIF 01. 탐색 흐름 확인
+각 영상은 실제 앱에서 해당 기능을 실행한 구간입니다. 한국어 검증 페이지의 OCR 및 Laya 분석과, 별도로 저장한 웹사이트의 Groq 검토 결과를 구분합니다. 재촬영에는 추가 API 호출이 없습니다.
 
-![GIF 01 탐색 그래프 확대 및 이동](assets/demos/exploration.gif)
+### 01. 검사 대상 입력
 
-### GIF 02. 이미지 문자 추출
+![01. 검사 대상 입력](assets/demos/stage-01-target.webp)
 
-![GIF 02 한국어 이미지 OCR](assets/demos/ocr.gif)
+### 02. 게시글 및 댓글 탐색
 
-### GIF 03. 원문 및 촬영 화면 확인
+![02. 게시글 및 댓글 탐색](assets/demos/stage-02-exploration.webp)
 
-![GIF 03 원문 및 촬영 화면](assets/demos/evidence.gif)
+### 03. 문자 위장 및 은닉 탐지
 
-### GIF 04. 처리 통계 및 AI 검토
+![03. 문자 위장 및 은닉 탐지](assets/demos/stage-03-detection.webp)
 
-![GIF 04 처리 통계 및 AI 검토](assets/demos/features.gif)
+### 04. 이미지 문자 추출
 
-### GIF 05. 검토 저장 및 결과 내보내기
+![04. 이미지 문자 추출](assets/demos/stage-04-ocr.webp)
 
-![GIF 05 검토 저장 및 결과 내보내기](assets/demos/review-actions.gif)
+### 05. ML과 Laya 문맥 분석
 
-| 번호 | 녹화 파일 | 내용 |
-| ---: | --- | --- |
-| 1 | [사이트 검사](assets/demos/site-scan.webm) | 100페이지 탐색과 일부 결과 |
-| 2 | [탐색 그래프](assets/demos/graphs-original.webm) | 전체 보기와 60개 확대 구간 |
-| 3 | [한국어 OCR](assets/demos/ocr-original.webm) | 로컬 검증 이미지의 글자 추출과 줄 선택 |
-| 4 | [분석 및 AI 검토](assets/demos/features-details.webm) | 처리 통계, Groq 의견, 보고서와 설정 |
-| 5 | [검토 및 내보내기](assets/demos/actions-original.webm) | 미리보기, 메모, 일괄 선택, CSV와 기록 복원 |
+![05. ML과 Laya 문맥 분석](assets/demos/stage-05-analysis.webp)
+
+### 06. Groq 추가 검토
+
+![06. Groq 추가 검토](assets/demos/stage-06-groq.webp)
+
+### 07. 결과 검토 및 출력
+
+![07. 결과 검토 및 출력](assets/demos/stage-07-report.webp)
+
+[전체 시연 영상](assets/demos/service.webm) | [GIF 원본](assets/demos/overview.gif)
 
 ## 8. 전체 그래프 확대
 

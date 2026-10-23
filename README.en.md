@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="desktop/assets/app-mark.png" width="104" alt="Chickadee with a magnifying glass" />
+<img src="desktop/assets/app-mark.png" width="38" alt="Chickadee with a magnifying glass" />
 
 # Chickadee Studio
 
@@ -17,14 +17,27 @@ An open-source desktop app for detecting text obfuscation, hidden advertising an
 
 </div>
 
-![Chickadee Studio workspace](docs/assets/demos/01-pipeline.png)
+![Website scanning, OCR, local analysis and review](docs/assets/demos/overview.webp)
+
+<p align="center">
+<img src="docs/assets/stack/python.svg" height="22" width="22" alt="Python" title="Python" /> Python &nbsp;
+<img src="docs/assets/stack/electron.svg" height="22" width="22" alt="Electron" title="Electron" /> Electron &nbsp;
+<img src="docs/assets/stack/react.svg" height="22" width="22" alt="React" title="React" /> React &nbsp;
+<img src="docs/assets/stack/paddlepaddle.svg" height="22" width="22" alt="PaddleOCR" title="PaddleOCR" /> PaddleOCR &nbsp;
+<img src="docs/assets/stack/pytorch.svg" height="22" width="22" alt="PyTorch" title="Laya / PyTorch" /> Laya / PyTorch &nbsp;
+<img src="docs/assets/stack/groq.svg" height="22" width="22" alt="Groq 추가 검토" title="Groq" /> Groq
+</p>
+
+| OCR | ML | Laya |
+| --- | --- | --- |
+| Extract Korean text and boxes from images | Classify text context with TF-IDF and RF | Review context with a fully fine-tuned Korean CPU model |
 
 ## Contents
 
 1. [Installation](#1-installation)
 2. [Processing pipeline](#2-processing-pipeline)
 3. [Features](#3-features)
-4. [Demonstrations](#4-demonstrations)
+4. [Service stages](#4-service-stages)
 5. [Output files](#5-output-files)
 6. [Datasets](#6-datasets)
 7. [Training and evaluation](#7-training-and-evaluation)
@@ -42,13 +55,13 @@ An open-source desktop app for detecting text obfuscation, hidden advertising an
 
 The Windows x64 package includes Python, Chromium, Korean OCR and local ML models. No separate Python, Node.js, Docker or GPU installation is needed. The Run scan dropdown → **데모 검사** opens the bundled offline demonstration. The interface and detailed guides are in Korean.
 
-Core scanning, OCR and RF inference run locally without an API key. Groq review is optional and uses a user-provided key.
+Core scanning, OCR, RF and Laya inference run locally without an API key. Laya requires the separately installed [Korean model pack](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1) and CPU runtime. Groq review is optional and uses a user-provided key.
 
 ## 2. Processing pipeline
 
 ![Chickadee Studio architecture overview](docs/assets/architecture.png)
 
-The figure describes the overall design. In the current release, **text bypasses OCR**, Laya weights are not bundled, and results are stored as local files.
+The figure describes the overall design. In the current release, **text bypasses OCR**, Laya runs on CPU with the installed Korean model pack, and results are stored as local files.
 
 | Stage | Processing |
 | --- | --- |
@@ -101,9 +114,9 @@ The local backend also exposes `content.analyze` for direct image/text analysis,
 
 ### 3.4 Local analysis and Laya integration
 
-The bundled RF analyzes source text and OCR text to prioritize review. The statistics view shows processing counts and score distributions. Scores are not accuracy or legal-violation probabilities.
+The bundled RF analyzes source text and OCR text to prioritize review. The statistics view shows processing counts and score distributions. The recorded local scan processed 8 Laya contexts and 1 Korean OCR image without API calls. Scores are not accuracy or legal-violation probabilities.
 
-An optional **local CPU Laya review worker** is already connected to the pipeline. It requires an explicitly installed, independently evaluated model bundle and compatible runtime. It does not download weights or make API calls. The default package shows **미적용** because the fine-tuned checkpoint has not completed independent evaluation. [Local analysis configuration](docs/content-analysis.md)
+An optional **local CPU Laya review worker** is already connected to the pipeline. It requires an explicitly installed, independently evaluated model bundle and compatible runtime. It does not download weights or make API calls. The Korean model pack has completed a separate 12-sample diagnostic evaluation and was run in the desktop pipeline. The app reads the installed local model configuration automatically. [Model pack](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1). [Local analysis configuration](docs/content-analysis.md)
 
 ![ML and OCR processing statistics](docs/assets/demos/02-statistics.png)
 
@@ -137,29 +150,39 @@ Configure execution mode, output location, completion notifications and schedule
 
 [All feature screenshots](docs/features.md)
 
-## 4. Demonstrations
+## 4. Service stages
 
-**GIF 01. Exploration graph**
+Clips show the actual app. Korean OCR and Laya use a local validation page; Groq opinions are reopened from a separate saved website scan. Rerecording made no API calls.
 
-![GIF 01 Exploration graph](docs/assets/demos/exploration.gif)
+### 01. Target URL
 
-**GIF 02. Korean OCR**
+![01. Target URL](docs/assets/demos/stage-01-target.webp)
 
-![GIF 02 Korean OCR](docs/assets/demos/ocr.gif)
+### 02. Posts and comments
 
-**GIF 03. Source text and screenshots**
+![02. Posts and comments](docs/assets/demos/stage-02-exploration.webp)
 
-![GIF 03 Source text and screenshots](docs/assets/demos/evidence.gif)
+### 03. Obfuscation and hidden text
 
-**GIF 04. Statistics and AI review**
+![03. Obfuscation and hidden text](docs/assets/demos/stage-03-detection.webp)
 
-![GIF 04 Statistics and AI review](docs/assets/demos/features.gif)
+### 04. Image text extraction
 
-**GIF 05. Review and export**
+![04. Image text extraction](docs/assets/demos/stage-04-ocr.webp)
 
-![GIF 05 Review and export](docs/assets/demos/review-actions.gif)
+### 05. RF and Laya analysis
 
-[Recordings and full screenshot guide](docs/features.md)
+![05. RF and Laya analysis](docs/assets/demos/stage-05-analysis.webp)
+
+### 06. Groq review
+
+![06. Groq review](docs/assets/demos/stage-06-groq.webp)
+
+### 07. Review and reports
+
+![07. Review and reports](docs/assets/demos/stage-07-report.webp)
+
+[Full recording](docs/assets/demos/service.webm) | [GIF version](docs/assets/demos/overview.gif)
 
 ## 5. Output files
 
@@ -209,13 +232,13 @@ Preserve source URLs, hashes and original label meanings; separate actual advert
 
 The additional smishing collection started with 18,270 rows, removed 4,058 normalized duplicates and quarantined 41 groups for conflicts or unsuitable text. The remaining 14,171 candidates are not treated as 14-topic advertising ground truth. Crops from one document are not counted as independent advertisements.
 
-Raw training data and experimental checkpoints are excluded from the repository. Runtime models and notices ship with the app. Source-specific usage conditions apply.
+Raw training data is stored separately. The app and model-pack releases provide runtime models and notices. Source-specific usage conditions apply.
 
 ## 7. Training and evaluation
 
 ### 7.1 Korean context classification
 
-The comparison used 440 real training texts and 49 synthetic augmentations. Results below describe a **fixed development set of 118 normal/promotional bot comments**, not independent operational performance or 14-topic legal classification.
+The comparison used 440 real training texts and 49 synthetic augmentations. Results below describe a **fixed evaluation set of 118 normal/promotional bot comments**, not independent operational performance or 14-topic legal classification.
 
 | Model | Accuracy | Macro F1 | Promotional recall | Normal-text false-positive rate |
 | --- | ---: | ---: | ---: | ---: |
@@ -224,13 +247,13 @@ The comparison used 440 real training texts and 49 synthetic augmentations. Resu
 | Full BERT fine-tuning | 88.98% | 0.8892 | 81.36% | 3.39% |
 | Full Laya fine-tuning | 95.76% | 0.9576 | 93.22% | 1.69% |
 
-![Korean context classification comparison](docs/assets/evaluation/model-comparison.png)
+![Korean context classification metrics](docs/assets/evaluation/model-comparison.png)
 
-A separate diagnostic set contains 7 advertisements and 5 normal reporting samples from 5 new sources. Baseline RF detected 0/7 advertisements and augmented RF detected 1/7. Six advertisement samples require source context beyond their text. Full fine-tuned Laya has not completed this independent evaluation.
+A separate diagnostic set contains 7 advertisements and 5 normal reporting samples from 5 new sources. Baseline RF detected 0/7 advertisements and augmented RF detected 1/7. Six advertisement samples require source context beyond their text. Full fine-tuned Laya detected 4/7 advertisements and preserved 5/5 normal reports, with 9/12 total agreement. Production-worker predictions matched evaluation probabilities within 0.000001 on these 12 samples.
 
 ### 7.2 OCR recognition
 
-The OCR pilot uses 43 fixed Latin-script regions from 16 real images with one visual transcription reference. It contains no Korean regions.
+These Latin-script recognition metrics cover 43 text regions from 16 real images. They are not a Korean-language performance benchmark. Reference text was transcribed directly from the images.
 
 | Model | Character errors | CER | Deployment |
 | --- | ---: | ---: | --- |
@@ -243,7 +266,7 @@ Separate Korean fixtures verify extraction, coordinates and UI rendering; these 
 
 ### 7.3 Deployment and verification
 
-The app retains the existing Korean PaddleOCR and RF models. Fine-tuned BERT and Laya weights remain experimental. Groq runs only when configured and requested.
+The app uses Korean PaddleOCR, RF and the installed Korean Laya model pack. Laya is available as an installed local CPU model pack. BERT is retained as an evaluation reference. Groq runs only when configured and requested.
 
 [Windows package verification](https://github.com/orqan137/chickadee_studio/actions/runs/39824971344) covers extraction, launch, Korean OCR, image-free processing, login resumption and key registration. Published-file checksums, included models, ordinary Windows launch, report saving/reopening, review persistence and CSV export were also checked.
 

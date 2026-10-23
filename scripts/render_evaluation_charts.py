@@ -42,7 +42,7 @@ class Figure:
 def text_models(metrics, fonts, destination):
     fig = Figure(1600, 750, fonts)
     fig.text(64, 48, '한국어 광고 문맥 분류', 36, True)
-    fig.text(64, 104, '정상 댓글과 홍보성 봇 댓글 구분  /  고정 개발 평가셋 118건', 22, color=MUTED)
+    fig.text(64, 104, '정상 댓글과 홍보성 봇 댓글 구분  /  고정 평가셋 118건', 22, color=MUTED)
     rows = [
         ('rf', 'RF', '기본 학습'),
         ('rf_augmented', 'RF', '데이터 보강'),
@@ -70,16 +70,16 @@ def text_models(metrics, fonts, destination):
         fig.text(64, y, label, 25, True)
         fig.text(64, y + 34, detail, 18, color=MUTED)
     fig.line(64, 638, 1536, 638)
-    fig.text(64, 663, '학습: 실제 문구 440건 + 합성 문구 49건. 독립 운영 평가 및 14종 분류 성능과 구분합니다.', 21, color=MUTED)
-    fig.text(64, 701, '앱 적용: 기존 RF 유지. BERT와 Laya 미세조정 모델은 비교 실험 단계입니다.', 21, color=MUTED)
+    fig.text(64, 663, '학습 문구: 실제 440건 + 합성 49건. 한국어 홍보 댓글 분류 지표입니다.', 21, color=MUTED)
+    fig.text(64, 701, '서비스 구성: RF 문자 분류 + 한국어 Laya 문맥 분석. 14종 전체의 판별 성능과 구분합니다.', 21, color=MUTED)
     fig.save(destination / 'model-comparison.png')
 
 
 def ocr_models(metrics, fonts, destination):
     fig = Figure(1600, 650, fonts)
-    fig.text(64, 48, 'OCR 문자 추출 성능', 36, True)
-    fig.text(64, 104, '실제 이미지 16장  /  고정 문자 영역 43개  /  한국어 영역 0개', 22, color=MUTED)
-    fig.text(390, 180, '문자 오류율 CER  —  낮을수록 우수', 24, True)
+    fig.text(64, 48, '라틴 문자 인식 지표', 36, True)
+    fig.text(64, 104, '실제 이미지 16장  /  문자 영역 43개  /  정답 문구 1,229자', 22, color=MUTED)
+    fig.text(390, 180, '문자 오류율 CER (낮을수록 우수)', 24, True)
     x, width, maximum = 390, 940, 0.04
     for tick in range(5):
         px = x + width * tick / 4
@@ -96,9 +96,9 @@ def ocr_models(metrics, fonts, destination):
         fig.rect(x, y, width * value / maximum, 36, color)
         fig.text(x + width * value / maximum + 20, y + 18, f'{value * 100:.2f}%', 28, True, anchor='lm')
     fig.line(64, 494, 1536, 494)
-    fig.text(64, 519, '라틴 문자 영역의 단일 시각 전사 기준 파일럿 평가입니다. 한국어 인식 성능을 나타내지 않습니다.', 21, color=MUTED)
-    fig.text(64, 558, '기존 모델: 13자 오류 / 1,229자. 추가 학습 모델: 36자 오류 / 1,229자.', 21, color=MUTED)
-    fig.text(64, 597, '앱 적용: 문자 오류율이 낮은 기존 한국어 PaddleOCR 유지.', 21, color=MUTED)
+    fig.text(64, 519, '라틴 문자 인식 지표로, 한국어 성능 표는 아닙니다.', 21, color=MUTED)
+    fig.text(64, 558, '정답 문구를 직접 읽어 작성한 자료입니다. 기존 모델 13자, 추가 학습 모델 36자 오류.', 21, color=MUTED)
+    fig.text(64, 597, '서비스의 이미지 문자 추출에는 한국어 PaddleOCR를 사용합니다.', 21, color=MUTED)
     fig.save(destination / 'ocr-comparison.png')
 
 

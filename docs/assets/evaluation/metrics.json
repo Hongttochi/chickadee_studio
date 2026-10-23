@@ -85,7 +85,7 @@
       "korean_regions": 0
     }
   },
-  "app_model_changed": false,
+  "app_model_changed": true,
   "additional_korean_candidates": {
     "source_rows": 18270,
     "unique_normalized_groups": 14212,
@@ -102,7 +102,7 @@
     "normal_reports": 5,
     "context_required_ads": 6,
     "test_only": true,
-    "full_finetuned_laya_evaluation": "pending; full checkpoint independent inference not completed",
+    "full_finetuned_laya_evaluation": "completed",
     "seal_sha256": "75385b6010f2a85783b837247979d1daef25168d4beed4ee2cc08714c37708c6",
     "models": {
       "rf": {
@@ -132,6 +132,15 @@
         "false_positives": 0,
         "true_negatives": 5,
         "n": 12
+      },
+      "laya_full_augmented": {
+        "true_positives": 4,
+        "false_negatives": 3,
+        "false_positives": 0,
+        "true_negatives": 5,
+        "n": 12,
+        "accuracy": 0.75,
+        "macro_f1": 0.7482517482517483
       }
     },
     "sources": [
@@ -140,6 +149,35 @@
       "https://www.dasi.or.kr/data/bbsData/16019678371.pdf",
       "https://news.tvchosun.com/site/data/html_dir/2025/01/05/2025010590002.html",
       "https://v.daum.net/v/yGZA6JsAjk"
-    ]
-  }
+    ],
+    "checkpoint_sha256": "457f08418e36a4b22fdd392f591023b3537398b5bacb0ff5003976effce433fb"
+  },
+  "deployment": {
+    "rf": "retained",
+    "ocr": "retained",
+    "laya_model_pack": "laya-ko-v1",
+    "device": "cpu",
+    "worker_parity": {
+      "status": "passed",
+      "real_full_checkpoint": true,
+      "samples": 12,
+      "max_probability_difference": 8.323055442904792e-07,
+      "elapsed_seconds": 19.67523309995886,
+      "paid_requests": 0,
+      "source": "production worker"
+    },
+    "desktop_verification": {
+      "ocr_images": 1,
+      "laya_contexts": 8,
+      "delayed_comment_detected": true,
+      "techniques": [
+        "HOMOGLYPH",
+        "JAMO",
+        "OFFSCREEN",
+        "TRANSPARENT"
+      ],
+      "paid_requests": 0
+    }
+  },
+  "model_change_scope": "Korean Laya model pack enabled; existing OCR and RF weights retained"
 }

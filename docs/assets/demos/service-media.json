@@ -1,0 +1,86 @@
+{
+  "source": "service.webm",
+  "fps": 4,
+  "local_verification": {
+    "ocr": {
+      "engine": "PaddleOCR",
+      "images": 1,
+      "unique_images": 1,
+      "enabled": true,
+      "max_images": 50,
+      "runtime_mode": "standard",
+      "completed": 1,
+      "failed": 0,
+      "unreadable": 0,
+      "skipped": 0,
+      "status": "completed"
+    },
+    "laya": {
+      "status": "completed",
+      "analyzed": 8,
+      "unique_selected": 8,
+      "item_limit": 12,
+      "omitted": 0,
+      "paid_requests": 0
+    },
+    "mandatory_techniques": [
+      "HOMOGLYPH",
+      "JAMO",
+      "OFFSCREEN",
+      "TRANSPARENT"
+    ],
+    "delayed_comment_detected": true,
+    "paid_requests": 0
+  },
+  "clips": [
+    {
+      "asset": "stage-01-target.webp",
+      "source_segment": "01-target",
+      "frames": 6,
+      "duration_ms": 250,
+      "loop": 0
+    },
+    {
+      "asset": "stage-02-exploration.webp",
+      "source_segment": "06-graph",
+      "frames": 10,
+      "duration_ms": 250,
+      "loop": 0
+    },
+    {
+      "asset": "stage-03-detection.webp",
+      "source_segment": "03-detection",
+      "frames": 11,
+      "duration_ms": 250,
+      "loop": 0
+    },
+    {
+      "asset": "stage-04-ocr.webp",
+      "source_segment": "04-ocr",
+      "frames": 14,
+      "duration_ms": 250,
+      "loop": 0
+    },
+    {
+      "asset": "stage-05-analysis.webp",
+      "source_segment": "05-analysis",
+      "frames": 11,
+      "duration_ms": 250,
+      "loop": 0
+    },
+    {
+      "asset": "stage-06-groq.webp",
+      "source_segment": "07-groq",
+      "frames": 14,
+      "duration_ms": 250,
+      "loop": 0
+    },
+    {
+      "asset": "stage-07-report.webp",
+      "source_segment": "08-report",
+      "frames": 11,
+      "duration_ms": 250,
+      "loop": 0
+    }
+  ]
+}

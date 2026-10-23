@@ -16,6 +16,9 @@
 | React Flow | 노드·포트·연결 편집 | https://github.com/xyflow/xyflow/blob/main/LICENSE |
 | Lucide | 기능 아이콘 | https://github.com/lucide-icons/lucide/blob/main/LICENSE |
 | Pretendard | 로컬 글꼴, SIL Open Font License | https://github.com/orioncactus/pretendard/blob/main/LICENSE |
+| Simple Icons | 문서의 기술 스택 아이콘, CC0-1.0 | https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md |
+| Laya Multilingual | 한국어 문맥 모델의 기반 모델, Apache-2.0 | https://huggingface.co/convaiinnovations/laya-multilingual |
+| PyTorch / Transformers / safetensors | 선택 설치하는 로컬 Laya 실행 환경 | https://pytorch.org/ / https://github.com/huggingface/transformers / https://github.com/huggingface/safetensors |
 | Unicode confusables | 제한된 닮은꼴 문자 매핑, Unicode License V3 | https://www.unicode.org/reports/tr39/ |
 
 Unicode 데이터는 `chickadee/data/confusables-ascii.json`에 버전·원본 SHA-256·필터와 함께 고정하며, 원문 라이선스는 `chickadee/data/LICENSE-UNICODE.txt`에 보존합니다. 이 폴더도 검사 엔진 패키지에 포함합니다.

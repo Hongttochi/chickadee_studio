@@ -61,9 +61,23 @@ Laya는 원문이 같은 영역을 중복 추론하지 않고, 사이트 검사�
 
 ### 로컬 Laya 연결
 
-전체 미세조정 모델의 독립 평가가 끝나기 전에는 Laya를 활성화하지 않습니다. 추론용 묶음은 `manifest.json`, `base/`(고정한 기본 모델·토크나이저), `best.safetensors`로 구성합니다. 매니페스트의 파일 크기·SHA-256, 전체 인코더 학습 여부, 독립 평가 통과 여부, 평가한 가중치 해시·보정 온도를 확인하고 파일 경로 이탈과 목록에 없는 모델 파일을 거부합니다. 가중치는 safetensors만 사용합니다.
+[한국어 문맥 모델 팩](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1)은 Laya Multilingual 전체 모델을 한국어 자료로 학습한 가중치입니다. 원문만으로 판단 가능한 자료와 출처 문맥이 필요한 자료를 구분해 독립 검증했으며, 실제 앱에서 문맥 8개의 처리를 확인했습니다. 결과와 해시는 [공개 평가 수치](assets/evaluation/metrics.json)에 있습니다.
 
-검증한 묶음을 설치한 환경에서 `CHICKADEE_LAYA_MODEL_DIR`에 해당 폴더를 지정합니다. 별도 로컬 Python 런타임을 사용할 경우 `CHICKADEE_LAYA_PYTHON`에 그 실행 파일의 절대 경로를 지정합니다. 런타임과 가중치를 자동으로 다운로드하거나 설치하지 않습니다. 미설치 시 기존 OCR·ML 검사는 계속되고 Laya는 `미적용`으로 표시됩니다. 현재 기본 앱 모델은 이 설정만으로 교체되지 않습니다.
+모델 팩에서 `laya-config.zip`, `best.safetensors`, `model.safetensors`, `SHA256SUMS.txt`를 내려받습니다. 설정 ZIP을 `laya` 폴더에 압축 해제한 뒤 `best.safetensors`는 그 폴더에, `model.safetensors`는 `base/` 아래에 넣습니다. 전체 모델과 설정에는 약 1.9GB의 공간이 필요하며 실행 환경 설치 공간은 별도입니다.
+
+소스 개발 환경에서 다음과 같이 로컬 CPU 실행 환경을 준비하고 등록합니다.
+
+```powershell
+py -3.12 -m venv .venv-laya
+.\.venv-laya\Scripts\python.exe -m pip install -r requirements-laya.txt
+.\.venv\Scripts\python.exe scripts/activate_laya.py --bundle 'C:\모델\laya' --python .\.venv-laya\Scripts\python.exe
+```
+
+등록 후 앱을 다시 실행하면 사용자 설정 폴더의 `laya.json`에서 모델과 실행 환경을 읽습니다. Windows의 기본 위치는 `%APPDATA%/Chickadee/laya.json`입니다. 설정에는 모델 경로와 Python 경로만 저장합니다. API 키와 원문은 포함하지 않습니다.
+
+추론용 묶음은 `manifest.json`, `base/`, `best.safetensors`로 구성됩니다. 파일 크기와 SHA-256, 평가한 가중치의 해시와 보정 온도를 확인하고 경로 이탈이나 목록에 없는 모델 파일을 거부합니다. 가중치는 safetensors 형식입니다. 실행 시 사용 가능한 메모리가 3GB 미만이면 Laya를 건너뛰고 OCR과 RF 결과를 보존합니다.
+
+환경변수로 지정하려면 `CHICKADEE_LAYA_MODEL_DIR`에 모델 폴더를, `CHICKADEE_LAYA_PYTHON`에 Python 실행 파일의 절대 경로를 설정합니다. 별도 설정 파일은 `CHICKADEE_LAYA_CONFIG`로 지정할 수 있습니다. 가중치와 실행 환경을 자동으로 다운로드하지 않으며, API 호출 없이 PC에서 실행합니다.
 
 기존 사이트 검사와 직접 분석 모두 OCR 신뢰도 0.55 이상인 줄을 사용하며 4,000자에서 잘렸는지 기록합니다. 사이트 검사 근거에는 이미지 SHA-256과 OCR 엔진·모델·신뢰도 정보를 보존합니다.
 

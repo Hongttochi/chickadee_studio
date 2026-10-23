@@ -10,7 +10,10 @@ const { launch } = require("./native-app.cjs");
 
 (async () => {
   const root = path.resolve(__dirname, "../..");
-  const out = path.join(root, "artifacts/service-recording");
+  const out = path.resolve(
+    process.env.CHICKADEE_CAPTURE_DIR ||
+      path.join(root, "artifacts/service-recording"),
+  );
   const data = path.join(out, "profile-" + Date.now());
   await fs.mkdir(data, { recursive: true });
   const modelConfig = process.env.CHICKADEE_LAYA_CONFIG;
@@ -58,8 +61,10 @@ const { launch } = require("./native-app.cjs");
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   try {
     app = await launch({
-      executablePath: require("electron"),
-      args: [path.join(root, "desktop")],
+      executablePath: process.env.CHICKADEE_PACKAGED_EXE || require("electron"),
+      args: process.env.CHICKADEE_PACKAGED_EXE
+        ? []
+        : [path.join(root, "desktop")],
       env: {
         ...process.env,
         CHICKADEE_TEST_DATA: data,
