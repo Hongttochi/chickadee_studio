@@ -1,5 +1,5 @@
 import UpdateSettings from "./UpdateSettings.jsx";
-import { sortDetections, pathTreeRows } from "./result-list.mjs";
+import { sortDetections } from "./result-list.mjs";
 import React, {
   useState,
   useId,
@@ -578,7 +578,6 @@ function App() {
   const [pending, setPending] = useState([]),
     [pageFilter, setPageFilter] = useState("visited");
   const [recordOrder, setRecordOrder] = useState("newest");
-  const [collapsedPaths, setCollapsedPaths] = useState(() => new Set());
   const [search, setSearch] = useState(""),
     [filter, setFilter] = useState("all"),
     [eventFilter, setEventFilter] = useState("all"),
@@ -2196,26 +2195,15 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pathTreeRows(pageFilter === "pending" ? pending : pages, collapsedPaths, pageSearch)
-                      .map((row) => { if (row.kind === "group") return (
-                        <tr className="path-group-row" key={row.key}>
-                          <td colSpan={6}>
-                            <button className="path-group-toggle" style={{paddingLeft: 12 + row.depth * 16}}
-                              aria-label={`${row.label} 경로 ${row.expanded ? "접기" : "펼치기"}`}
-                              aria-expanded={row.expanded}
-                              onClick={() => setCollapsedPaths(previous => {
-                                const next = new Set(previous);
-                                if (next.has(row.key)) next.delete(row.key); else next.add(row.key);
-                                return next;
-                              })}>
-                              <Icon name={row.expanded ? "ChevronDown" : "ChevronRight"} size={14} />
-                              <span>{row.label}</span><small>{row.count}</small>
-                            </button>
-                          </td>
-                        </tr>
-                      ); const page = row.page; return (
+                    {(pageFilter === "pending" ? pending : pages)
+                      .filter((page) =>
+                        page.url
+                          .toLowerCase()
+                          .includes(pageSearch.toLowerCase()),
+                      )
+                      .map((page, index) => (
                         <tr
-                          key={row.key}
+                          key={index}
                           onClick={() =>
                             setSelectedEvent(
                               pageFilter === "pending"
@@ -2231,7 +2219,7 @@ function App() {
                               {page.http_status || "—"}
                             </span>
                           </td>
-                          <td className="path-cell" style={{paddingLeft: 12 + row.depth * 16}}>
+                          <td className="path-cell">
                             <Icon name="CornerDownRight" size={14} />
                             <span title={page.url}>
                               {relativeUrl(page.url)}
@@ -2252,7 +2240,7 @@ function App() {
                               : "—"}
                           </td>
                         </tr>
-                      ); })}
+                      ))}
                   </tbody>
                 </table>
                 {!(pageFilter === "pending" ? pending : pages).length && (
