@@ -1,6 +1,8 @@
 """Offline, self-contained review reports built only from persisted observations."""
 from html import escape
 import re
+from .candidates import CATEGORY_LABELS
+from .detection import LABELS as TECHNIQUE_LABELS
 
 LABELS = {'ad_suspected': '광고 의심', 'benign_context': '정상 문맥', 'uncertain': '추가 확인'}
 STATUS = {'completed': '완료', 'partial': '부분 검토', 'stopped': '중단', 'running': '검토 중',
@@ -31,13 +33,35 @@ def review_report(result, scan, agent):
     local, ocr = scan.get('local_ai') or {}, scan.get('ocr_summary') or {}
     lines += ['', '## 처리 통계', '',
               f"- ML 문자 분석: {local.get('text_analyzed', 0)}개 영역",
+              f"- ML 이미지 분류: {(scan.get('content_visual') or {}).get('analyzed', 0)}장 / 검토 신호 {(scan.get('content_visual') or {}).get('flagged', 0)}건",
               f"- Laya 분석: {(local.get('laya') or {}).get('analyzed', 0)}개 영역 (검증된 결과가 없으면 미적용)",
-              f"- OCR: {ocr.get('completed', 0)}개 처리 / {ocr.get('failed', 0)}개 오류 / {ocr.get('skipped', 0)}개 생략",
+              f"- OCR: 문자 추출 {max(0, ocr.get('completed', 0)-ocr.get('unreadable', 0))}장 / 판독 불가 {ocr.get('unreadable', 0)}장 / 처리 실패 {ocr.get('failed', 0)}장 / 생략 {ocr.get('skipped', 0)}장",
               '- OCR은 이미지가 있을 때만 실행합니다. 문자 인식 오류와 수집 생략은 탐지 실패와 구분합니다.',
-              '', '## 항목별 검토', '']
+              '', '## 로컬 탐지 결과', '']
+    images = []
+    captures = scan.get('screenshots') or {}
+    image_sources = {image['id']: image for image in scan.get('ocr_images', [])}
+    local_rows = [{**item, **scan.get('evidence_details', {}).get(item.get('id'), {})}
+                  for item in result.get('findings', [])] + scan.get('ad_candidates', [])
+    if not local_rows:
+        lines += ['저장된 로컬 탐지 항목이 없습니다. 미확인 이미지와 누락 페이지는 처리 통계를 확인하세요.']
+    included_images = set()
+    for index, item in enumerate(local_rows, 1):
+        label = TECHNIQUE_LABELS.get(item.get('technique'), CATEGORY_LABELS.get(item.get('category'), '검토 항목'))
+        lines += [f"### {index}. {label}", '', f"- 항목 ID: {item.get('id', '')}",
+                  f"- 페이지: {item.get('url', '')}", f"- 위치: {item.get('location', '')}",
+                  '- 검출 사유: ' + ' / '.join(item.get('reasons', [])), '', '원문:', '',
+                  '> ' + str(item.get('evidence_text', item.get('text', '기록 없음')))[:4000].replace('\n', '\n> '), '']
+        image = image_sources.get(item.get('image_id'), {})
+        screenshot = captures.get(item.get('screenshot_id'), {})
+        for data in (image.get('preview_data_url', ''), screenshot.get('data_url', '')):
+            if data not in included_images and len(data) <= 270000 and re.fullmatch(r'data:image/jpeg;base64,[A-Za-z0-9+/=]+', data):
+                included_images.add(data)
+                images.append((len(lines), data))
+                lines += ['저장된 이미지 근거:', '']
+    lines += ['', '## 항목별 AI 검토', '']
     if not assessments:
         lines += ['아직 Groq 검토 결과가 없습니다. 위 검사 통계는 로컬 검사 결과입니다.']
-    images = []
     for index, item in enumerate(assessments, 1):
         ids = item.get('evidence_ids', [])
         source = next((packets[i] for i in ids if i in packets), {})

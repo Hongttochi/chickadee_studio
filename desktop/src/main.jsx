@@ -98,6 +98,7 @@ import {
   branchEnabled,
   restoreWorkflowLayout,
   ocrPresentation,
+  ocrDetectionCount,
 } from "./workflow.mjs";
 import "./style.css";
 import "./theme.css";
@@ -223,6 +224,8 @@ const LABELS = {
   INVESTMENT: "투자 모집 의심",
   COMMERCIAL: "구매·추천 유도",
   AI_CONTEXT: "AI 광고 문맥",
+  ACCOUNT_TRADE: "계좌·통장 거래 의심",
+  DRUGS: "마약 관련 이미지",
 };
 const TYPE_ICONS = {
   GAMBLING: "Dice5",
@@ -323,9 +326,9 @@ function Button({
 function FlowNode({ id, data, selected }) {
   const def = DEFINITIONS[id];
   const positions = { left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom };
-  const status = { active: "실행 중", paused: "일시정지", done: "실행됨", error: id === "ocr" ? "미확인" : "오류", disabled: "사용 안 함", skipped: "생략" }[data.state] || "대기";
-  const statusIcon = { active: "LoaderCircle", paused: "Pause", done: "Check", error: "X", disabled: "Unplug", skipped: "CornerDownRight" }[data.state];
-  const caption = id === "target" ? shortUrl(data.url) : data.state && data.caption ? data.caption : def.subtitle;
+  const status = { active: "실행 중", paused: "일시정지", done: "실행됨", partial: "일부 완료", error: id === "ocr" ? "미확인" : "오류", disabled: "사용 안 함", skipped: "생략" }[data.state] || "대기";
+  const statusIcon = { active: "LoaderCircle", paused: "Pause", done: "Check", partial: "CircleAlert", error: "X", disabled: "Unplug", skipped: "CornerDownRight" }[data.state];
+  const caption = id === "target" ? shortUrl(data.url) : (data.state || id === "ocr") && data.caption ? data.caption : def.subtitle;
   return (
     <div className={`flow-node tone-${def.tone} ${data.state || ""} ${selected ? "selected" : ""}`}>
       <div className="node-tile">
@@ -340,7 +343,7 @@ function FlowNode({ id, data, selected }) {
       </div>
       <strong>{def.title}</strong>
       <p className="node-caption" title={caption}>{caption}</p>
-      {["active", "paused", "error", "disabled", "skipped"].includes(data.state) && <span className="node-state-text">{status}</span>}
+      {["active", "paused", "partial", "error", "disabled", "skipped"].includes(data.state) && <span className="node-state-text">{status}</span>}
     </div>
   );
 }
@@ -555,6 +558,7 @@ function App() {
     [pages, setPages] = useState([]),
     [history, setHistory] = useState([]);
   const [liveScreenshots, setLiveScreenshots] = useState({});
+  const [ocrLive, setOcrLive] = useState({});
   const [preview, setPreview] = useState(null),
     [currentUrl, setCurrentUrl] = useState(""),
     [queue, setQueue] = useState(0),
@@ -808,7 +812,7 @@ function App() {
         setCurrentUrl(event.url);
       if (event.kind === "started") {
         activeRun.current = event.run_id;
-        setRecords([]); setPages([]); setPending([]); setEvents([{ ...event, key: crypto.randomUUID() }]); setPreview(null); setOutcome(null); setLiveScreenshots({});
+        setRecords([]); setPages([]); setPending([]); setEvents([{ ...event, key: crypto.randomUUID() }]); setPreview(null); setOutcome(null); setLiveScreenshots({}); setOcrLive({});
         setReviewData({ revision: 0, items: {} }); setSelectedIds(new Set()); setSelectedRecord(null);
         setDiscovered(0); setQueue(0); setElapsed(0); setSearch(""); setFilter("all"); setReviewFilter("all");
         setRunTarget(event.url);
@@ -824,6 +828,8 @@ function App() {
       if (event.kind === "progress") {
         setQueue(event.queue_remaining);
       }
+      if (event.kind === "image_ocr" && event.image_id)
+        setOcrLive(items => ({ ...items, [event.image_id]: event }));
       if (event.kind === "url_discovered")
         setPending((items) => [...items, event]);
       if (event.kind === "phase" && event.action === "navigate")
@@ -953,8 +959,10 @@ function App() {
           !["techniques", "candidates", "ocr", "dedup"].includes(node.id) ||
           branchEnabled(flow, node.id);
         const layaSkipped = node.id === "laya" && (outcome?.report.local_ai?.laya?.status === "unavailable" || events.findLast(event => event.kind === "phase" && event.stage === "laya")?.action === "skipped");
-        const ocr = node.id === "ocr" ? ocrPresentation(outcome?.report.ocr_summary) : null;
-        const state = !enabled || layaSkipped
+        const layaReason = outcome?.report.local_ai?.laya?.reason || outcome?.report.evidence_packets?.find(packet => packet.local_ai?.laya?.reason === "insufficient_memory")?.local_ai.laya.reason;
+        const ocrDetected = node.id === "ocr" ? ocrDetectionCount(records) : 0;
+        const ocr = node.id === "ocr" ? ocrPresentation(outcome?.report.ocr_summary, ocrDetected) : null;
+        const state = layaSkipped ? "skipped" : !enabled
           ? "disabled"
           : ocr?.state || (active === node.id
             ? status === "failed"
@@ -970,12 +978,12 @@ function App() {
             ? `${pages.length}페이지 방문`
             : node.id === "collector"
               ? `${discovered}개 URL 발견`
-              : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? "PaddleOCR · 이미지 문자 인식" : node.id === "techniques"
+              : node.id === "dedup" ? "동일 문구 · 근거 보존" : node.id === "ocr" ? `${ocrDetected}건 감지 · ${Object.keys(ocrLive).length}장 처리` : node.id === "techniques"
                 ? `${findings.length}건 발견`
                 : node.id === "laya"
-                  ? layaSkipped ? "미적용" : outcome?.report.local_ai?.laya ? `${outcome.report.local_ai.laya.analyzed}개 검토 · ${outcome.report.local_ai.laya.omitted}개 미확인` : "로컬 문맥 검토"
+                  ? layaSkipped ? ({insufficient_memory:"메모리 부족",timeout:"처리 시간 초과",time_budget:"검사 시간 부족",runtime_unavailable:"실행 환경 확인 필요"}[layaReason] || "분석 미완료") : outcome?.report.local_ai?.laya ? `${outcome.report.local_ai.laya.analyzed}개 검토 · ${outcome.report.local_ai.laya.omitted}개 미확인` : "로컬 문맥 검토"
                 : node.id === "candidates"
-                  ? outcome?.report.local_ai ? `${outcome.report.local_ai.text_analyzed}개 문맥 · ${candidates.length}건 광고 의심` : `${candidates.length}건 광고 의심`
+                  ? outcome?.report.local_ai ? `${outcome.report.local_ai.text_analyzed}개 문맥${outcome.report.content_visual?.analyzed ? ` · 사진 ${outcome.report.content_visual.analyzed}장` : ""} · ${candidates.length}건 광고 의심` : `${candidates.length}건 광고 의심`
                   : node.id === "target"
                     ? ""
                     : outcome
@@ -1004,6 +1012,8 @@ function App() {
       discovered,
       findings.length,
       candidates.length,
+      records,
+      ocrLive,
       outcome,
       url,
       running,

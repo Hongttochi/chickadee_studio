@@ -7,7 +7,10 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 import urllib.request
+import hashlib
+import io
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -59,12 +62,40 @@ def unreadable_message(result):
     return f"인식한 문구 {len(result['lines'])}개의 신뢰도가 사용 기준 55%에 미달했습니다."
 
 
+def image_metadata(data):
+    """Retain photo evidence even if text recognition fails or is disabled."""
+    from PIL import Image
+    Image.MAX_IMAGE_PIXELS=8_000_000
+    with Image.open(io.BytesIO(data)) as image:
+        w,h=image.size;kind=image.format
+        if min(w,h)<8 or w*h>8_000_000 or kind not in ('PNG','JPEG','WEBP','GIF'):
+            raise ValueError('지원하지 않는 이미지 형식·해상도')
+    digest=hashlib.sha256(data).hexdigest()
+    extension={'PNG':'png','JPEG':'jpg','WEBP':'webp','GIF':'gif'}[kind]
+    return {'width':w,'height':h,'image_format':kind,'image_sha256':digest,
+            'relative_path':'evidence/images/'+digest+'.'+extension}
+
+
 class OCRSession:
     def __init__(self):
         self.process = None
         self.stderr_task = None
+        self._elapsed = 0.
+        self._since = None
+
+    @property
+    def elapsed_seconds(self):
+        return self._elapsed + (time.monotonic() - self._since if self._since is not None else 0.)
 
     async def recognize(self, data):
+        self._since = time.monotonic()
+        try:
+            return await self._recognize(data)
+        finally:
+            self._elapsed += time.monotonic() - self._since
+            self._since = None
+
+    async def _recognize(self, data):
         first = self.process is None
         if first:
             args = [sys.executable, '--ocr-worker'] if getattr(sys, 'frozen', False) else [sys.executable, '-m', 'chickadee.ocr_worker']
@@ -78,7 +109,7 @@ class OCRSession:
         try:
             self.process.stdin.write((json.dumps({'image': base64.b64encode(data).decode('ascii')}) + '\n').encode())
             await self.process.stdin.drain()
-            line = await asyncio.wait_for(self.process.stdout.readline(), timeout=30 if first else 20)
+            line = await asyncio.wait_for(self.process.stdout.readline(), timeout=60)
             if not line:
                 raise ValueError('PaddleOCR 작업 프로세스가 종료되었습니다.')
             return json.loads(line)

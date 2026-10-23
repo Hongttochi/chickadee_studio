@@ -4,14 +4,31 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
+from types import SimpleNamespace
 
-from chickadee.scanner import ScanConfig, scan
+from chickadee.scanner import ScanConfig, scan, _fetch_route, _State
 from chickadee.bridge import DesktopBridge
 from tests.test_desktop import workflow
 
 
 class FailureTests(unittest.TestCase):
+    def test_transient_read_failure_retries_once_without_following_redirects(self):
+        async def check():
+            response=object();route=SimpleNamespace(fetch=AsyncMock(side_effect=[OSError('connect EFAULT'),response]))
+            state=_State();events=[];config=ScanConfig('http://127.0.0.1/')
+            result=await _fetch_route(route,config,state,events.append,config.entry_url)
+            self.assertIs(result,response)
+            self.assertEqual(route.fetch.await_count,2)
+            self.assertEqual(state.retry_count,1)
+            for call in route.fetch.call_args_list:
+                self.assertEqual(call.kwargs['max_redirects'],0)
+            route.fetch=AsyncMock(side_effect=OSError('permanent failure'))
+            with self.assertRaises(OSError):
+                await _fetch_route(route,config,state,events.append,config.entry_url)
+            self.assertEqual(route.fetch.await_count,1)
+        asyncio.run(check())
+
     def test_exception_after_a_page_preserves_partial_status_and_error(self):
         async def interrupted(config,state,*args):
             state.pages.append(config.entry_url)

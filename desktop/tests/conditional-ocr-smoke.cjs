@@ -51,7 +51,7 @@ const {pathToFileURL}=require('node:url');
   assert.ok(extra.findings.some(r=>r.technique==='ETC'&&r.evidence_text.includes('카지노')&&r.is_violation===false));
   await page.getByRole('button',{name:'검사 구성',exact:true}).click();
   await page.locator('.react-flow__node[data-id="ocr"] .flow-node.done').waitFor();
-  assert.equal(await page.locator('.react-flow__node[data-id="ocr"] .node-caption').innerText(),'문자 추출 1장');
+  assert.match(await page.locator('.react-flow__node[data-id="ocr"] .node-caption').innerText(),/^[1-9]\d*건 감지 · 문자 추출 1장$/);
   await page.screenshot({path:path.join(root,'artifacts/pipeline-image-only.png')});
   console.log(JSON.stringify({status:'passed',packaged,text_bypasses_ocr:true,image_uses_real_ocr:true,extra_result_created:true,skipped_never_completed:true,paidCalls:0}));
  }finally{

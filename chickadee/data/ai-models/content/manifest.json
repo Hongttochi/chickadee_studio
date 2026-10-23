@@ -1,0 +1,285 @@
+{
+  "architecture": "resnet18",
+  "num_outputs": 3,
+  "topics": [
+    "sexual_content",
+    "gambling",
+    "drugs"
+  ],
+  "thresholds": {
+    "sexual_content": 0.5100000000000001,
+    "gambling": 0.4800000000000001,
+    "drugs": 0.7000000000000002
+  },
+  "input_shape": [
+    1,
+    3,
+    224,
+    224
+  ],
+  "preprocessing": "RGB aspect-preserving pad; ImageNet mean/std",
+  "dropout": 0.25,
+  "sha256": "889e016499d6f206c11470fc1e0438561029cfcfdfe2b71db08c49a292e728ce",
+  "approved_for_app": true,
+  "result": {
+    "status": "completed",
+    "one_model": true,
+    "topics": [
+      "sexual_content",
+      "gambling",
+      "drugs"
+    ],
+    "thresholds": {
+      "sexual_content": 0.5100000000000001,
+      "gambling": 0.4800000000000001,
+      "drugs": 0.7000000000000002
+    },
+    "validation": {
+      "sexual_content": {
+        "count": 1796,
+        "threshold": 0.5100000000000001,
+        "accuracy": 0.9632516703786191,
+        "balanced_accuracy": 0.9632494372825864,
+        "precision": 0.9629629629629629,
+        "recall": 0.9629629629629629,
+        "f1": 0.9629629629629629,
+        "false_positive_rate": 0.03646408839779003,
+        "roc_auc": 0.9909059905376664,
+        "average_precision": 0.9897814343718613,
+        "confusion_matrix": [
+          [
+            872,
+            33
+          ],
+          [
+            33,
+            858
+          ]
+        ]
+      },
+      "gambling": {
+        "count": 58,
+        "threshold": 0.4800000000000001,
+        "accuracy": 0.8275862068965517,
+        "balanced_accuracy": 0.8261904761904761,
+        "precision": 0.8125,
+        "recall": 0.8666666666666667,
+        "f1": 0.8387096774193549,
+        "false_positive_rate": 0.2142857142857143,
+        "roc_auc": 0.8964285714285715,
+        "average_precision": 0.9178379388638589,
+        "confusion_matrix": [
+          [
+            22,
+            6
+          ],
+          [
+            4,
+            26
+          ]
+        ]
+      },
+      "drugs": {
+        "count": 91,
+        "threshold": 0.7000000000000002,
+        "accuracy": 0.9230769230769231,
+        "balanced_accuracy": 0.946969696969697,
+        "precision": 1.0,
+        "recall": 0.8939393939393939,
+        "f1": 0.944,
+        "false_positive_rate": 0.0,
+        "roc_auc": 0.9703030303030303,
+        "average_precision": 0.9897904521315606,
+        "confusion_matrix": [
+          [
+            25,
+            0
+          ],
+          [
+            7,
+            59
+          ]
+        ]
+      }
+    },
+    "best_epoch": 3,
+    "completed_epochs": 8,
+    "paid_requests": 0,
+    "app_model_changed": false,
+    "best_checkpoint": {
+      "checkpoint": "checkpoints/epoch-0003-a148f312",
+      "metadata_sha256": "53dbbbe18aad159da3cdc8ee03a1f30c912cb980ad4641c961ecac7c5e5a77dc"
+    },
+    "test": {
+      "sexual_content": {
+        "count": 1796,
+        "threshold": 0.5100000000000001,
+        "accuracy": 0.9626948775055679,
+        "balanced_accuracy": 0.9626795890147639,
+        "precision": 0.963963963963964,
+        "recall": 0.9607182940516273,
+        "f1": 0.9623383923552558,
+        "false_positive_rate": 0.0353591160220994,
+        "roc_auc": 0.9931035338033496,
+        "average_precision": 0.9931492832990956,
+        "confusion_matrix": [
+          [
+            873,
+            32
+          ],
+          [
+            35,
+            856
+          ]
+        ]
+      },
+      "gambling": {
+        "count": 58,
+        "threshold": 0.4800000000000001,
+        "accuracy": 0.8620689655172413,
+        "balanced_accuracy": 0.861904761904762,
+        "precision": 0.8666666666666667,
+        "recall": 0.8666666666666667,
+        "f1": 0.8666666666666667,
+        "false_positive_rate": 0.1428571428571429,
+        "roc_auc": 0.8845238095238095,
+        "average_precision": 0.9022783160634134,
+        "confusion_matrix": [
+          [
+            24,
+            4
+          ],
+          [
+            4,
+            26
+          ]
+        ]
+      },
+      "drugs": {
+        "count": 91,
+        "threshold": 0.7000000000000002,
+        "accuracy": 0.9230769230769231,
+        "balanced_accuracy": 0.9221212121212121,
+        "precision": 0.9682539682539683,
+        "recall": 0.9242424242424242,
+        "f1": 0.9457364341085271,
+        "false_positive_rate": 0.07999999999999996,
+        "roc_auc": 0.9648484848484848,
+        "average_precision": 0.9880703460496958,
+        "confusion_matrix": [
+          [
+            23,
+            2
+          ],
+          [
+            5,
+            61
+          ]
+        ]
+      }
+    }
+  },
+  "validation": {
+    "passed": true,
+    "cpu_images": 173,
+    "cpu_seconds": 12.547000000020489,
+    "cohorts": {
+      "sexual_content/previous": {
+        "count": 24,
+        "correct": 23,
+        "positive": 12,
+        "true_positive": 11
+      },
+      "gambling/previous": {
+        "count": 58,
+        "correct": 50,
+        "positive": 30,
+        "true_positive": 26
+      },
+      "drugs/new_source": {
+        "count": 41,
+        "correct": 39,
+        "positive": 41,
+        "true_positive": 39
+      },
+      "drugs/previous": {
+        "count": 50,
+        "correct": 45,
+        "positive": 25,
+        "true_positive": 22
+      }
+    },
+    "training_test": {
+      "sexual_content": {
+        "count": 1796,
+        "threshold": 0.5100000000000001,
+        "accuracy": 0.9626948775055679,
+        "balanced_accuracy": 0.9626795890147639,
+        "precision": 0.963963963963964,
+        "recall": 0.9607182940516273,
+        "f1": 0.9623383923552558,
+        "false_positive_rate": 0.0353591160220994,
+        "roc_auc": 0.9931035338033496,
+        "average_precision": 0.9931492832990956,
+        "confusion_matrix": [
+          [
+            873,
+            32
+          ],
+          [
+            35,
+            856
+          ]
+        ]
+      },
+      "gambling": {
+        "count": 58,
+        "threshold": 0.4800000000000001,
+        "accuracy": 0.8620689655172413,
+        "balanced_accuracy": 0.861904761904762,
+        "precision": 0.8666666666666667,
+        "recall": 0.8666666666666667,
+        "f1": 0.8666666666666667,
+        "false_positive_rate": 0.1428571428571429,
+        "roc_auc": 0.8845238095238095,
+        "average_precision": 0.9022783160634134,
+        "confusion_matrix": [
+          [
+            24,
+            4
+          ],
+          [
+            4,
+            26
+          ]
+        ]
+      },
+      "drugs": {
+        "count": 91,
+        "threshold": 0.7000000000000002,
+        "accuracy": 0.9230769230769231,
+        "balanced_accuracy": 0.9221212121212121,
+        "precision": 0.9682539682539683,
+        "recall": 0.9242424242424242,
+        "f1": 0.9457364341085271,
+        "false_positive_rate": 0.07999999999999996,
+        "roc_auc": 0.9648484848484848,
+        "average_precision": 0.9880703460496958,
+        "confusion_matrix": [
+          [
+            23,
+            2
+          ],
+          [
+            5,
+            61
+          ]
+        ]
+      }
+    },
+    "scope": "Previous benchmark reused for development; newly collected drug source held out by capture/visual groups before training. Scores are visual signals, not legal determinations.",
+    "paid_requests": 0
+  },
+  "usage": "Research and non-commercial use; see model notice",
+  "training_job": "01a166b3-da2b-7cef-a92c-15eb77ad20db"
+}

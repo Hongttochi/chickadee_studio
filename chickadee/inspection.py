@@ -90,10 +90,11 @@ class InspectionTrace:
             key = 'e_' + fingerprint([identity, content_hash])[:24]
             # Keep capacity for later posts and OCR instead of spending every
             # packet on repeated site navigation encountered at the beginning.
-            priority = bool(element.get('content_scope') or element.get('source_kind') == 'image_ocr')
-            if not priority and key not in self.packets and (
-                    len(self.packets) >= max(1, self.MAX_PACKETS * 4 // 5) or
-                    self.packet_bytes >= self.MAX_PACKET_BYTES * 4 // 5):
+            # Even semantic DOM scopes cannot consume the final OCR reserve.
+            capacity = 1. if element.get('source_kind') == 'image_ocr' else .9 if element.get('content_scope') else .8
+            if key not in self.packets and (
+                    len(self.packets) >= max(1, int(self.MAX_PACKETS * capacity)) or
+                    self.packet_bytes >= self.MAX_PACKET_BYTES * capacity):
                 self.truncated = True
                 continue
             if key not in self.packets and len(self.packets) >= self.MAX_PACKETS:
@@ -197,10 +198,15 @@ def validate_inspection(report):
 
 def validate_local_ai(value):
     if value is None: return
-    if not isinstance(value, dict) or set(value) - {'text', 'visual', 'laya'}: raise ValueError('AI 분석 형식 오류')
-    for signal in value.values():
+    if not isinstance(value, dict) or set(value) - {'text', 'visual', 'laya', 'content_visual'}: raise ValueError('AI 분석 형식 오류')
+    for kind, signal in value.items():
         if not isinstance(signal, dict) or signal.get('status') not in ('completed', 'unavailable'):
             raise ValueError('AI 분석 상태 오류')
+        if kind == 'content_visual':
+            if signal['status']=='completed':
+                from .content_visual import validate_analysis
+                validate_analysis(signal)
+            continue
         score = signal.get('score')
         if score is not None and (type(score) not in (int, float) or not math.isfinite(score) or not 0 <= score <= 1):
             raise ValueError('AI 모델 점수 오류')

@@ -108,13 +108,16 @@ async def requires_login(page, response):
     return False
 
 
-async def active_timeout(awaitable, seconds, login):
-    """Retain page timeouts while excluding only explicit authentication waits."""
+async def active_timeout(awaitable, seconds, login, excluded_seconds=None):
+    """Keep navigation timeouts separate from bounded local OCR and login waits."""
     task = asyncio.create_task(awaitable)
     started, paused = time.monotonic(), login.paused_seconds if login else 0
+    excluded = excluded_seconds() if excluded_seconds else 0
     try:
         while not task.done():
             elapsed = time.monotonic() - started - ((login.paused_seconds - paused) if login else 0)
+            if excluded_seconds:
+                elapsed -= max(0, excluded_seconds() - excluded)
             if elapsed >= seconds: raise asyncio.TimeoutError()
             await asyncio.wait({task}, timeout=.05)
         return await task

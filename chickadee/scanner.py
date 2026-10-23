@@ -21,8 +21,9 @@ from .authentication import AuthenticationRequired, LoginRedirect, is_login_url,
 from . import __version__
 from .detection import Rules, analyze, classify_elements
 from .candidates import classify_candidates, CATEGORY_LABELS
-from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text, unreadable_message
+from .image_ocr import OCRSession, fetch_image, inline_image, recognized_text, unreadable_message, image_metadata
 from .local_ai import enrich_report, visual_analysis, prepare_models
+from .content_visual import enrich_content_images, model_contract as photo_model_contract
 from .laya_review import enrich_laya, analysis_reserve
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
@@ -261,14 +262,18 @@ class _State:
     image_bytes: int = 0
     ocr_images: list = field(default_factory=list)
     ocr_seen: set = field(default_factory=set)
+    ocr_references: dict = field(default_factory=dict)
+    ocr_reused: int = 0
     ocr_cache: dict = field(default_factory=dict)
     image_assets: dict = field(default_factory=dict)
     ocr_previews_bytes: int = 0
     ocr_disabled: bool = False
+    photo_enabled: bool = False
     ocr_enabled: bool = True
     ocr_max_images: int = 50
     ocr_skipped: int = 0
     ocr_limit_reported: bool = False
+    image_limit_reported: bool = False
     merged_observations: int = 0
 
     image_origins: set = field(default_factory=set)
@@ -350,6 +355,9 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
                                  "ocr_techniques": config.ocr_techniques, "ocr_candidates": config.ocr_candidates, "live_preview": config.capture_previews}}
     emit({'kind': 'phase', 'stage': 'candidates', 'action': 'local_ai', 'message': 'ML로 본문과 OCR 문자 문맥을 분석합니다.'})
     await asyncio.to_thread(enrich_report, report, candidates=config.detect_candidates)
+    emit({'kind':'phase','stage':'candidates','action':'photo_model','message':'이미지 내용을 ML로 분류합니다.'})
+    await enrich_content_images(report, state.image_assets, candidates=config.detect_candidates,
+        timeout_seconds=min(45,max(0,config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0)))),stop=stop)
     await enrich_laya(report, stop=stop, emit=emit,
         timeout_seconds=max(0, config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0))))
     emit({'kind': 'phase', 'stage': 'dedup', 'action': 'merge',
@@ -400,8 +408,8 @@ def _ocr_summary(state, config):
     failed = sum(i['status'] == 'failed' for i in state.ocr_images)
     return {'engine': 'PaddleOCR', 'images': len(state.ocr_images), 'unique_images': len(state.ocr_cache),
             'enabled': config.ocr_enabled, 'max_images': config.ocr_max_images, 'runtime_mode': config.runtime_mode,
-            'completed': sum(i['status'] == 'completed' for i in state.ocr_images),
-            'failed': failed, 'unreadable': unreadable, 'skipped': state.ocr_skipped,
+            'completed': sum(i['status'] == 'completed' and i.get('recognition_status')!='skipped' for i in state.ocr_images),
+            'failed': failed, 'unreadable': unreadable, 'skipped': state.ocr_skipped, 'reused': state.ocr_reused,
             'status': 'disabled' if not config.ocr_enabled else 'partial' if failed or unreadable or state.ocr_skipped
                       else 'completed' if state.ocr_images else 'no_images'}
 
@@ -424,6 +432,8 @@ def _final_candidates(state):
 
 async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile: SiteProfile, control=None):
     from playwright.async_api import async_playwright
+    try: state.photo_enabled=bool(await asyncio.to_thread(photo_model_contract))
+    except Exception: state.photo_enabled=False
 
     emit({'kind': 'phase', 'stage': 'collector', 'action': 'model_load', 'message': '로컬 AI 모델을 준비합니다.'})
     try:
@@ -503,7 +513,18 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                     # Inspect each redirect response before Chromium can follow it.
                     # route.continue_ alone may follow an HTTP redirect without a
                     # second routing callback, bypassing an origin-only guard.
-                    response = await route.fetch(max_redirects=0, timeout=int(config.page_timeout_sec * 1000))
+                    try:
+                        response = await _fetch_route(route, config, state, emit, request.url)
+                    except Exception as error:
+                        message = str(error).split('\n', 1)[0][:300] or type(error).__name__
+                        emit({'kind': 'request_failed', 'url': request.url, 'message': message})
+                        if essential:
+                            state.errors.append({'url': request.url, 'message': message})
+                        try:
+                            await route.abort()
+                        except Exception:
+                            pass  # The page may already have closed after cancellation.
+                        return
                     destination = response.headers.get('location')
                     if response.status in (301, 302, 303, 307, 308) and destination:
                         target = urljoin(request.url, destination)
@@ -669,7 +690,8 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                                 await context.add_cookies(decision['cookies'])
                                 state.image_cache.clear()
                                 visited.discard(visit_key(page.url))
-                    links = await active_timeout(inspect(), config.page_timeout_sec, control.login if control else None)
+                    links = await active_timeout(inspect(), config.page_timeout_sec, control.login if control else None,
+                                                 excluded_seconds=lambda: state.ocr.elapsed_seconds)
                     diagnostic["links_discovered"] = len(links)
                     diagnostic["status"] = "scanned"
                     if page.url not in state.pages:
@@ -717,6 +739,19 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
             await browser.close()
     finally:
         await pw.stop()
+
+
+async def _fetch_route(route, config, state, emit, url):
+    for attempt in range(min(1, config.retries) + 1):
+        try:
+            return await route.fetch(max_redirects=0, timeout=int(config.page_timeout_sec * 1000))
+        except Exception as error:
+            if attempt or not config.retries or not any(token in str(error) for token in
+                    ('EFAULT', 'ENOBUFS', 'ECONNRESET', 'ERR_CONNECTION_RESET')):
+                raise
+            state.retry_count += 1
+            emit({'kind': 'status', 'url': url, 'message': '일시 연결 오류 · 같은 읽기 요청을 한 번 재시도합니다.'})
+            await asyncio.sleep(.25)
 
 
 async def _navigate(page, url, config, state, emit):
@@ -862,7 +897,7 @@ async def _inspect_frame(frame, prefix, inherited, page_url, script, state, emit
     data = await frame.evaluate(script, {"contentSelector": content_selector})
     state.trace.capture(data['elements'], page_url, prefix, emit, inherited)
     ocr_elements = []
-    if ocr_enabled and ((detect_techniques and ocr_techniques) or (detect_candidates and ocr_candidates)):
+    if (ocr_enabled and ((detect_techniques and ocr_techniques) or (detect_candidates and ocr_candidates))) or (state.photo_enabled and detect_candidates):
         ocr_elements = await _inspect_images(frame, data.get('images', []), prefix, page_url, state, emit, rules)
         state.trace.capture(ocr_elements, page_url, prefix, emit, inherited)
         if data.get('images_truncated'):
@@ -973,6 +1008,10 @@ async def _screen_region(frame, selector):
         return None
 
 
+class ImageBudgetExceeded(ValueError):
+    pass
+
+
 async def _fetch_image_bounded(url, state):
     url = normalize_url(url)
     if origin(url) not in state.image_origins or not state.image_allow_network and not is_loopback(url):
@@ -982,8 +1021,8 @@ async def _fetch_image_bounded(url, state):
             raise ValueError('HTTP 429 수신으로 이미지 요청 중단')
         if url in state.image_cache:
             return state.image_cache[url]
-        if state.image_requests >= 50 or state.image_bytes >= 20_000_000:
-            raise ValueError('이미지 수집 한도 도달')
+        if state.image_requests >= min(200, max(50, state.ocr_max_images * 4)) or state.image_bytes >= 20_000_000:
+            raise ImageBudgetExceeded('이미지 수집 한도 도달')
         state.image_requests += 1
         try:
             cookies = await state.image_context.cookies([url]) if state.image_context else []
@@ -1011,11 +1050,11 @@ def _record_skipped_images(images, prefix, page_url, state):
 
 async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
     elements = []
-    if not state.ocr_enabled:
+    if not state.ocr_enabled and not state.photo_enabled:
         _record_skipped_images(images, prefix, page_url, state)
         return elements
     for index, image in enumerate(images):
-        if len(state.ocr_images) >= OCR_MAX_OBSERVATIONS or state.ocr_disabled:
+        if len(state.ocr_images) >= OCR_MAX_OBSERVATIONS or (state.ocr_disabled and not state.photo_enabled):
             state.ocr_skipped += len(images) - index
 
             if not state.ocr_disabled:
@@ -1026,7 +1065,7 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         source_key = page_url, location, hashlib.sha256(source.encode()).hexdigest()
         if source_key in state.ocr_seen:
             # Reuse recognized text on later DOM observations as well.
-            previous = next((item for item in state.ocr_images if item.get('_source_key') == source_key), None)
+            previous = state.ocr_references.get(source_key) or next((item for item in state.ocr_images if item.get('_source_key') == source_key), None)
             if previous and previous.get('text'):
                 elements.append(_ocr_element(image, previous))
             continue
@@ -1038,7 +1077,18 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
             digest = hashlib.sha256(data).hexdigest()
-            if digest in state.ocr_cache and not recognized_text(state.ocr_cache[digest]).get('text'):
+            previous = next((item for item in state.ocr_images[:-1] if item.get('image_sha256') == digest and
+                item.get('source_url') == record['source_url'] and item.get('location') == location and
+                item.get('source_type') == record['source_type'] and item.get('url') != page_url and item.get('text')), None) if not prefix else None
+            if previous:
+                # Repeated site branding shares immutable image evidence. Each
+                # page still gets its own DOM/CSS observation and classifications.
+                state.ocr_images.pop()
+                state.ocr_references[source_key] = previous
+                state.ocr_reused += 1
+                elements.append(_ocr_element(image, previous))
+                continue
+            if digest in state.ocr_cache and not recognized_text(state.ocr_cache[digest]).get('text') and not state.photo_enabled:
                 # Repeated unreadable logos must not crowd later content images
                 # out of the bounded evidence list. The first observation remains.
                 state.ocr_images.pop()
@@ -1050,6 +1100,16 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
                 if not state.ocr_limit_reported:
                     state.errors.append({'url': page_url, 'message': f'OCR 서로 다른 이미지 {state.ocr_max_images}개 처리 한도 도달'})
                     state.ocr_limit_reported = True
+                continue
+            # Image bytes belong to the photo model as well. OCR success must
+            # never be the condition for retaining the image for classification.
+            metadata=image_metadata(data)
+            record.update(metadata)
+            state.image_assets[metadata['relative_path']]=data
+            if not state.ocr_enabled or state.ocr_disabled:
+                record.update(status='completed',recognition_status='skipped',message='문자 인식 생략 · 이미지 분류 대상')
+                state.ocr_cache.setdefault(digest,{'status':'completed','lines':[]})
+                state.ocr_skipped+=1
                 continue
             emit({'kind': 'phase', 'stage': 'ocr', 'action': 'image_ocr', 'url': page_url,
                   'message': 'PaddleOCR로 이미지 속 글자를 읽습니다.', 'location': location})
@@ -1081,7 +1141,15 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
             else:
                 elements.append(_ocr_element(image, record))
             emit({'kind': 'image_ocr', 'image_id': record['id'], 'status': 'completed',
-                  'line_count': len(record['lines']), 'url': page_url})
+                  'line_count': len(record['lines']), 'accepted_lines': observation['accepted_lines'],
+                  'recognition_status': record['recognition_status'], 'url': page_url})
+        except ImageBudgetExceeded as error:
+            state.ocr_images.pop()
+            state.ocr_skipped += 1
+            if not state.image_limit_reported:
+                state.image_limit_reported = True
+                state.errors.append({'url': page_url, 'message': str(error)})
+                emit({'kind': 'warning', 'stage': 'ocr', 'url': page_url, 'message': str(error) + ': 나머지 이미지는 생략으로 기록합니다.'})
         except Exception as error:
             record.update(status='failed', message=str(error)[:300])
             state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + str(error)[:160]})

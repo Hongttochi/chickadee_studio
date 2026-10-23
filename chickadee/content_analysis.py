@@ -9,6 +9,7 @@ from .detection import analyze
 from .image_ocr import OCRSession, inline_image, recognized_text, unreadable_message
 from .local_ai import prepare_models, text_analysis, visual_analysis
 from .laya_review import review_sources
+from .content_visual import analyze_photo, image_candidates
 
 
 def inputs(params):
@@ -52,6 +53,10 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
             except Exception:
                 image['local_ai'] = {'visual': {'status': 'unavailable', 'message': '지원하지 않거나 손상된 이미지입니다.'}}
                 errors.append('이미지 특징 분석 실패')
+            image['local_ai']['content_visual'] = await analyze_photo(pixels)
+            if image['local_ai']['content_visual']['status']=='completed':
+                image['ad_candidates']=image_candidates({'id':'provided_image','url':'http://provided.invalid/',
+                    'location':'provided_image','text':''},image['local_ai']['content_visual'])
             if not runtime['features']['ocr_enabled']:
                 image['ocr'] = {'status': 'skipped', 'reason': 'economy' if runtime['effective_mode'] == 'economy' else 'unavailable'}
             else:
@@ -81,7 +86,7 @@ async def analyze_content(text, pixels, runtime, stop, progress=lambda _: None):
         return {'status': 'partial' if errors or image and image['ocr']['status'] != 'completed' else 'completed',
                 'sources': sources, 'image': image, 'errors': errors, 'runtime_environment': runtime,
                 'finished_at': datetime.now().astimezone().isoformat(), 'paid_requests': 0,
-                'candidate_count': sum(len(source['ad_candidates']) for source in sources)}
+                'candidate_count': sum(len(source['ad_candidates']) for source in sources)+len((image or {}).get('ad_candidates',[]))}
     task = asyncio.create_task(work())
     try:
         async with asyncio.timeout(150):

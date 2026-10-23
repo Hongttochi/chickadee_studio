@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_ITEMS = 12
@@ -78,7 +79,9 @@ class LayaSession:
             return [unavailable() for _ in texts]
         from .runtime import memory_info, GIB
         available = memory_info()['available_bytes']
-        if available is not None and available < 3 * GIB:
+        # Measured bundled CPU peak: 2.78 GiB working set, about 2.04 GiB
+        # additional available memory. Keep a reserve and monitor it while loading.
+        if available is not None and available < 2.75 * GIB:
             return [unavailable('insufficient_memory') for _ in texts]
         bundled_worker = os.environ.get('CHICKADEE_LAYA_WORKER')
         if bundled_worker:
@@ -95,6 +98,7 @@ class LayaSession:
         env = {**os.environ, 'PYTHONIOENCODING': 'utf-8', 'HF_HUB_OFFLINE': '1',
                'TRANSFORMERS_OFFLINE': '1', 'TOKENIZERS_PARALLELISM': 'false', 'USE_TF': '0',
                'CHICKADEE_LAYA_MODEL_DIR': folder}
+        reply = None
         try:
             self.process = await asyncio.create_subprocess_exec(*args, stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, limit=100_000,
@@ -105,7 +109,16 @@ class LayaSession:
             self.stderr_task = asyncio.create_task(drain())
             self.process.stdin.write((json.dumps({'texts': texts}, ensure_ascii=True)+'\n').encode())
             await self.process.stdin.drain()
-            line = await asyncio.wait_for(self.process.stdout.readline(), self.timeout_seconds)
+            reply = asyncio.create_task(self.process.stdout.readline())
+            deadline = time.monotonic() + self.timeout_seconds
+            while not reply.done():
+                free = memory_info()['available_bytes']
+                if free is not None and free < .5 * GIB:
+                    return [unavailable('insufficient_memory') for _ in texts]
+                if time.monotonic() >= deadline:
+                    raise asyncio.TimeoutError()
+                await asyncio.wait({reply}, timeout=.25)
+            line = await reply
             results = json.loads(line)['results']
             from .inspection import validate_local_ai
             if len(results) != len(texts): raise ValueError('Laya 결과 개수 오류')
@@ -116,6 +129,9 @@ class LayaSession:
         except (OSError, ValueError, KeyError, TypeError):
             return [unavailable('inference_failed') for _ in texts]
         finally:
+            if reply is not None and not reply.done():
+                reply.cancel()
+                await asyncio.gather(reply, return_exceptions=True)
             await self.close()
 
     async def close(self):
@@ -164,6 +180,8 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
     summary = {'status': 'completed' if completed and not omitted else 'partial' if completed else 'unavailable',
                'analyzed': completed, 'unique_selected': len(selected), 'item_limit': MAX_ITEMS,
                'omitted': omitted, 'paid_requests': 0}
+    if not completed and results:
+        summary['reason'] = results[0].get('reason', 'inference_failed')
     emit({'kind': 'phase', 'stage': 'laya', 'action': 'complete' if completed else 'skipped',
           'message': f'Laya {completed}개 문맥 검토' if completed else 'Laya 미적용 · 기존 탐지 결과 유지'})
     return summary
@@ -184,7 +202,9 @@ async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds
     # Preserve original evidence order; use existing ML only for routing uncertain fragments.
     def priority(packet):
         score = packet.get('local_ai', {}).get('text', {}).get('score')
-        return packet.get('scope_quality') == 'overlapping', abs((.5 if score is None else score)-.5)
+        return ((packet.get('url'), packet.get('location')) not in keys,
+                packet.get('source_kind') != 'image_ocr',
+                packet.get('scope_quality') == 'overlapping', abs((.5 if score is None else score)-.5))
     selected = sorted([p for p in packets if relevant(p)], key=priority)
     summary = await review_sources(selected, stop=stop, emit=emit, timeout_seconds=timeout_seconds)
     for packet in packets:
@@ -193,10 +213,10 @@ async def enrich_laya(report, *, stop=None, emit=lambda _: None, timeout_seconds
     if summary['status'] == 'completed' and summary['omitted']: summary['status'] = 'partial'
     images = {i['id']: i for i in report.get('ocr_images', [])}
     for packet in packets:
-        if packet.get('image_id') in images: images[packet['image_id']]['local_ai'] = packet['local_ai']
+        if packet.get('image_id') in images: images[packet['image_id']].setdefault('local_ai', {}).update(packet['local_ai'])
     for row in [*report.get('ad_candidates', []), *report.get('evidence_details', {}).values()]:
         match = next((p for p in reversed(packets) if p['url'] == row.get('url') and
                       p['location'] == row.get('scope_location', row.get('location'))), None)
-        if match: row['local_ai'] = match['local_ai']
+        if match: row.setdefault('local_ai', {}).update(match['local_ai'])
     report.setdefault('local_ai', {})['laya'] = summary
     return summary

@@ -3,6 +3,17 @@ from chickadee.reporting import review_report
 
 
 class ReportTests(unittest.TestCase):
+    def test_ocr_candidate_and_original_are_exported_without_groq(self):
+        row={'id':'c_1','category':'ACCOUNT_TRADE','url':'https://example.invalid/post',
+             'location':'img.ad','evidence_text':'계좌 임대 등록비 <script>test</script>',
+             'reasons':['계좌 거래와 대가 지급 문맥'],'image_id':'im_1'}
+        output=review_report({'meta':{},'findings':[]},{'ad_candidates':[row],
+            'ocr_images':[{'id':'im_1','preview_data_url':'data:image/jpeg;base64,/9j/'}]}, {})
+        self.assertIn('계좌·통장 거래 의심',output['html'])
+        self.assertIn('계좌 임대 등록비',output['html'])
+        self.assertIn('저장된 이미지 근거',output['html'])
+        self.assertNotIn('<script>',output['html'])
+
     def test_partial_report_has_traceability_counts_and_inert_content(self):
         result = {'meta': {'entry_url': 'https://example.invalid/'}, 'findings': [{}]}
         scan = {'status': 'completed', 'pages_scanned': ['/'], 'candidate_count': 2,

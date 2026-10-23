@@ -76,6 +76,12 @@ test("OCR is an image-only branch and no image never becomes completed", async (
   assert.equal(ocrPresentation({enabled:false,status:'disabled'}).state,'disabled');
   assert.equal(ocrPresentation({enabled:true,status:'partial',completed:0,failed:1}).state,'error');
   assert.equal(ocrPresentation({enabled:true,status:'partial',skipped:1}).state,'skipped');
-  assert.equal(ocrPresentation({enabled:true,status:'partial',completed:35,unreadable:1}).caption,'문자 추출 34장 · 미확인 1장');
+  assert.equal(ocrPresentation({enabled:true,status:'partial',completed:35,unreadable:1}).caption,'0건 감지 · 문자 추출 34장 · 미확인 1장');
   assert.equal(ocrPresentation(undefined),null,'Legacy reports do not invent observations');
+});
+test("OCR detections count findings rather than readable logos or duplicate evidence", async () => {
+  const {ocrDetectionCount,ocrPresentation}=await import('../src/workflow.mjs');
+  assert.equal(ocrDetectionCount([{id:'text',source_kind:'dom_text'}, {id:'image',image_id:'im_1'},
+    {id:'merged',evidence_sources:[{source_kind:'dom_text'},{source_kind:'image_ocr',image_id:'im_2'},{image_id:'im_3'}]}]),2);
+  assert.equal(ocrPresentation({enabled:true,status:'completed',completed:5},2).caption,'2건 감지 · 문자 추출 5장');
 });

@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PaddleTextReader:
+    DETECT_LIMIT = 960
+    DETECT_MAX_SCALE = 1.5
+    DETECT_UNCLIP_RATIO = 2.0
     def __init__(self):
         import cv2
         import numpy as np
@@ -62,7 +65,7 @@ class PaddleTextReader:
             canvas.alpha_composite(rgba)
             image = np.asarray(canvas.convert('RGB'))[:, :, ::-1].copy()
         # Small banners need enlarged glyphs; keep both scale and detector size bounded.
-        ratio = min(3., 1280 / max(w, h))
+        ratio = min(self.DETECT_MAX_SCALE, self.DETECT_LIMIT / max(w, h))
         dw, dh = max(32, round(w * ratio / 32) * 32), max(32, round(h * ratio / 32) * 32)
         resized = cv.resize(image, (dw, dh)).astype('float32') / 255.
         tensor = ((resized - np.array([.485, .456, .406], dtype='float32')) /
@@ -79,7 +82,7 @@ class PaddleTextReader:
             cv.fillPoly(mask, [poly.astype('int32')], 1)
             if cv.mean(scores, mask)[0] < .6:
                 continue
-            distance = cv.contourArea(poly) * 1.5 / max(cv.arcLength(poly, True), 1)
+            distance = cv.contourArea(poly) * self.DETECT_UNCLIP_RATIO / max(cv.arcLength(poly, True), 1)
             offset = pyclipper.PyclipperOffset()
             offset.AddPath(poly.astype('int32').tolist(), pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
             grown = offset.Execute(distance)

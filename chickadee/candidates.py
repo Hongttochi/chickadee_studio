@@ -6,7 +6,7 @@ from .detection import DEFAULT_RULES, analyze, skeleton, is_editorial_context, t
 
 CATEGORY_LABELS = {"GAMBLING": "도박 홍보 의심", "ADULT": "성인 콘텐츠 홍보 의심",
                    "LOAN": "대출 모집 의심", "INVESTMENT": "투자 모집 의심", "COMMERCIAL": "구매·추천 유도",
-                   "AI_CONTEXT": "AI 광고 문맥"}
+                   "AI_CONTEXT": "AI 광고 문맥", "ACCOUNT_TRADE": "계좌·통장 거래 의심", "DRUGS": "마약 관련 이미지"}
 
 
 @lru_cache(maxsize=512)
@@ -42,6 +42,13 @@ def analyze_candidate(text, rules=DEFAULT_RULES, breaks=()):
     linked = bool(re.search(r"https?://[^\s<>]+", text, re.I))
     def contains(term):
         return skeleton(term) in compact
+    prevention = bool(re.search(r'예방|피해.{0,12}(?:주의|신고|방지)|하지\s*마|금지|처벌|신고하세요|빌려주면', text))
+    account = [term for term in ('계좌', '통장') if contains(term)]
+    rental = [term for term in ('임대', '대여', '매입', '삽니다', '빌리고') if contains(term)]
+    recruiting = bool(re.search(r'등록해|등록비|접수시|모집|드립니다|드리며|수익|\d+\s*만\s*원', text))
+    if account and rental and recruiting and not prevention:
+        result.append({'category': 'ACCOUNT_TRADE', 'matched_keywords': account + rental,
+                       'reasons': ['계좌·통장 거래와 대가 지급·모집 문맥이 함께 나타납니다.']})
     for category, topics, signals in (
         ("LOAN", ("대출", "대부"), ("상담 신청", "즉시 입금", "신용 확인 없이", "당일 대출")),
         ("INVESTMENT", ("투자",), ("수익 보장", "원금 보장", "고수익", "투자 모집")),
@@ -49,9 +56,9 @@ def analyze_candidate(text, rules=DEFAULT_RULES, breaks=()):
     ):
         hits = [t for t in topics if contains(t)]
         selling = [t for t in signals if contains(t)]
-        if linked and hits and selling:
+        if hits and selling and not prevention:
             result.append({"category": category, "matched_keywords": hits,
-                           "reasons": ["외부 주소가 포함된 모집·구매 권유", *selling]})
+                           "reasons": ["모집·구매 권유 문맥" + (" · 외부 주소 포함" if linked else ""), *selling]})
     return result
 
 
