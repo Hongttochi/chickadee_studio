@@ -1,3 +1,3 @@
 """Public website advertisement inspection demo."""
 
-__version__ = "0.10.15"
+__version__ = "0.10.16"

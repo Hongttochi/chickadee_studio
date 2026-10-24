@@ -247,7 +247,7 @@ const { launch } = require("./native-app.cjs");
     await segment("05-analysis", async () => {
       await nav("검사 분석");
       await p.getByRole("tab", { name: "AI 검토", exact: true }).click();
-      await p.getByText("분석 결과", { exact: true }).click();
+      await p.locator(".local-ai-results > summary").click();
       await wait(800);
       await p.locator(".model-statistics").scrollIntoViewIfNeeded();
       await p.screenshot({ path: path.join(out, "02-statistics.png") });

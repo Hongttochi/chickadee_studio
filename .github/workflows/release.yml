@@ -128,6 +128,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/inspection-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/local-ai-results-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/ocr-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ../.venv/Scripts/python.exe ../scripts/test_laya_all_items.py --app $env:CHICKADEE_PACKAGED_EXE

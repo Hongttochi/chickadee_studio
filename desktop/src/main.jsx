@@ -120,6 +120,7 @@ import duplicateRemoveImage from "../assets/duplicate_remove.png";
 import paddleOCRImage from "../assets/paddle_ocr.png";
 import searchImage from "../assets/search.png";
 import hierarchyImage from "../assets/hierarchy.png";
+import layaImage from "../assets/laya.png";
 import csvImage from "../assets/csv.png";
 import diceImage from "../assets/dice.png";
 import profitsImage from "../assets/profits.png";
@@ -148,6 +149,7 @@ const nodeImages = {
   dedup: duplicateRemoveImage,
   techniques: searchImage,
   candidates: hierarchyImage,
+  laya: layaImage,
   report: csvImage,
 };
 
@@ -631,6 +633,7 @@ function App() {
   const [pageSearch, setPageSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [generalSettingsSaving, setGeneralSettingsSaving] = useState(false);
   const [palette, setPalette] = useState(false);
   const [capabilities, setCapabilities] = useState(null);
   const [visualPreview, setVisualPreview] = useState(false);
@@ -1650,6 +1653,17 @@ function App() {
               </div>
             </label>
             <p className="settings-folder-hint">각 검사는 별도 폴더에 저장됩니다.</p>
+            <div className="general-settings-save">
+              <p>변경 사항은 자동 저장됩니다.</p>
+              <Button icon="Save" disabled={running || generalSettingsSaving || !Number.isInteger(Number(maxPages)) || Number(maxPages) < 1 || Number(maxPages) > 10000 || !Number.isFinite(Number(timeout)) || Number(timeout) <= 0 || Number(timeout) > 1800}
+                aria-label="일반 설정 저장" onClick={() => action(async () => {
+                  setGeneralSettingsSaving(true);
+                  try {
+                    await api.preferences({url, maxPages:Number(maxPages), timeout:Number(timeout), profile, livePreview, scanInterval});
+                    tell("일반 설정을 저장했습니다.", "success");
+                  } finally { setGeneralSettingsSaving(false); }
+                })}>{generalSettingsSaving ? "저장 중…" : "설정 저장"}</Button>
+            </div>
             </>}
             {settingsTab === "ai" && <>
             <GrokSettings config={agentConfig} onConfigured={setAgentConfig} />
@@ -2162,12 +2176,12 @@ function App() {
                     />
                   )}
                 </div>
-                <div className="table-footer">
+                {(filteredRecords.length > 0 || running) && <div className="table-footer">
                   {filteredRecords.length}개 페이지 · 같은 페이지의 제목·본문·댓글·이미지 근거를 묶어 표시합니다.{" "}
                   {running && <span>{active === "laya"
                     ? "· 문맥 분석 중이며 광고 후보가 추가될 수 있습니다."
                     : "· 검사 진행 중의 임시 목록입니다. 최종 문맥 분석 후 광고 후보가 추가될 수 있습니다."}</span>}
-                </div>
+                </div>}
               </section>
               <div className="record-drawer" aria-hidden={!selectedRecord} inert={!selectedRecord}>
               {detailRecord && <RecordDetail
@@ -2861,26 +2875,7 @@ function RecordDetail({
     <aside className="record-panel">
       <div className="panel-heading">
         <strong>탐지 근거</strong>
-        <span>
-          <span className="mono">{record.id}</span>
-          <button aria-label="탐지 근거 닫기" onClick={onClose}><Icon name="X" size={16} /></button>
-        </span>
-      </div>
-      <div className="record-body">
-        <div className="record-overview">
-        <span className={`type-badge ${record.technique ? "purple" : "amber"}`} data-type={record.technique || record.category}>
-          <TypeBadgeContent type={record.technique || record.category} />
-        </span>
-        {additionalTypes.length > 0 && <details className="record-additional-types" ref={additionalTypesRef}>
-          <summary className="record-type-more" aria-label={`추가 유형 ${additionalTypes.length}개 보기`}>
-            외 {additionalTypes.length}개 <Icon name="ChevronDown" size={12} aria-hidden="true" />
-          </summary>
-          <div className="record-additional-types-panel" aria-label="추가 탐지 유형">
-            {additionalTypes.map(type => <span key={type} className={`type-badge ${record.techniques?.includes(type) ? "purple" : "amber"}`} data-type={type}><TypeBadgeContent type={type} /></span>)}
-          </div>
-        </details>}
-        {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}
-
+        <span className="record-header-actions">
         <div className="review-control">
           <span
             className={`review-label review-${review?.status || "unreviewed"}`}
@@ -2911,6 +2906,25 @@ function RecordDetail({
             ]}
           />
         </div>
+          <button aria-label="탐지 근거 닫기" onClick={onClose}><Icon name="X" size={16} /></button>
+        </span>
+      </div>
+      <div className="record-body">
+        <div className="record-overview">
+        <span className={`type-badge ${record.technique ? "purple" : "amber"}`} data-type={record.technique || record.category}>
+          <TypeBadgeContent type={record.technique || record.category} />
+        </span>
+        {additionalTypes.length > 0 && <details className="record-additional-types" ref={additionalTypesRef}>
+          <summary className="record-type-more" aria-label={`추가 유형 ${additionalTypes.length}개 보기`}>
+            외 {additionalTypes.length}개 <Icon name="ChevronDown" size={12} aria-hidden="true" />
+          </summary>
+          <div className="record-additional-types-panel" aria-label="추가 탐지 유형">
+            {additionalTypes.map(type => <span key={type} className={`type-badge ${record.techniques?.includes(type) ? "purple" : "amber"}`} data-type={type}><TypeBadgeContent type={type} /></span>)}
+          </div>
+        </details>}
+        {hasOCREvidence(record) && <span className="ocr-source-badge" title="이미지에서 읽은 문구 포함">OCR</span>}
+
+
         </div>
         <label>{record.page_group ? "페이지 탐지 요약" : "발견한 문구"}</label>
         {record.page_group ? <>
@@ -3016,6 +3030,8 @@ function RecordDetail({
         )}
         <details className="record-technical">
         <summary>페이지 · 기술 정보</summary>
+        <label>항목 ID</label>
+        <pre>{record.id}</pre>
         <label>
           페이지 URL{" "}
           <button onClick={() => onCopy(record.url)} title="URL 복사">

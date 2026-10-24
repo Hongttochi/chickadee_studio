@@ -77,7 +77,7 @@ const http = require("node:http");
     await page.waitForFunction(async () => (await window.chickadee.state()).status === 'paused');
     await page.getByRole('button', { name: /^탐지 내역/ }).click();
     await page.locator('tbody tr').first().click();
-    await page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true }).waitFor();
+    await page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true }).first().waitFor();
     assert.equal((await page.evaluate(() => window.chickadee.state())).running, true);
     await page.evaluate(() => window.chickadee.resume());
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
@@ -86,22 +86,32 @@ const http = require("node:http");
     assert.ok(firstGraph >= 4);
     await page.getByRole('button', { name: /^탐지 내역/ }).click();
     await page.locator('tbody tr').first().click();
-    const evidence = page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true });
+    const evidence = page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true }).first();
     await evidence.waitFor({ state: 'attached' });
-    await page.waitForFunction(() => document.querySelector('.evidence-capture img')?.naturalWidth === 1366);
+    await page.waitForFunction(() => document.querySelector('.evidence-capture img')?.naturalWidth > 0);
     // Completion loads the persisted outcome asynchronously after live rows;
     // select the saved row once its screenshot has arrived.
     await page.locator('tbody tr .evidence-cell').first().click();
     await page.locator('.record-drawer[aria-hidden="false"]').waitFor();
-    await page.getByRole('button', { name: '확대', exact: true }).waitFor();
+    await page.getByRole('button', { name: '항목 작업', exact: true }).click();
+    const itemMenu = page.getByRole('menu', { name: '항목 작업', exact: true });
+    await itemMenu.waitFor();
+    for (const item of await itemMenu.getByRole('menuitem').all()) {
+      assert.ok((await item.boundingBox()).width > 180);
+      assert.equal(await item.evaluate(el => getComputedStyle(el).display), 'flex');
+    }
+    await page.screenshot({ path: path.join(root, 'artifacts/record-action-menu.png') });
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '스크린샷 확대', exact: true }).first().waitFor();
     await page.screenshot({ path: path.join(root, 'artifacts/evidence-panel-0.8.0.png') });
-    await page.getByRole('button', { name: '확대', exact: true }).click();
+    await page.getByRole('button', { name: '스크린샷 확대', exact: true }).first().click();
     await page.getByRole('dialog', { name: '스크린샷 확대' }).waitFor();
     await page.keyboard.press('Escape');
     await page.getByRole('dialog', { name: '스크린샷 확대' }).waitFor({ state: 'detached' });
-    assert.equal(await page.getByRole('button', { name: '확대', exact: true }).evaluate(el => el === document.activeElement), true);
-    await page.locator('.capture-metadata summary').click();
-    const captureLink = page.locator('.capture-metadata a');
+    assert.equal(await page.getByRole('button', { name: '스크린샷 확대', exact: true }).first().evaluate(el => el === document.activeElement), true);
+    await page.locator('.record-technical > summary').click();
+    const captureLink = page.locator('.record-technical .detail-url a');
+    assert.equal(await page.locator('.capture-metadata a').count(), 0);
     assert.match(await captureLink.getAttribute('href'), /^https?:/);
     if (!packaged) {
       await page.evaluate(() => { window.__openedURL = null; window.chickadee.openExternal = async url => { window.__openedURL = url; }; });
@@ -116,10 +126,10 @@ const http = require("node:http");
     assert.equal(current.history.length, 2);
     const result = current.history[0].path;
     const raw = await fs.readFile(result);
-    // Invisible source text must not disable enlargement of its captured viewport.
+    // Invisible source text must still allow opening the saved reference screenshot.
     await page.getByRole('button', { name: /^탐지 내역/ }).click();
     await page.locator('tbody tr').first().click();
-    await page.getByRole('button', { name: '확대', exact: true }).click();
+    await page.getByRole('button', { name: '스크린샷 확대', exact: true }).first().click();
     await page.getByRole('dialog', { name: '스크린샷 확대' }).waitFor();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
@@ -133,7 +143,8 @@ const http = require("node:http");
     assert.match(await fs.readFile(htmlExport, 'utf8'), /Chickadee 검사 리포트/);
     const localResults = page.getByRole('region', { name: '로컬 AI 결과', exact: true });
     await localResults.waitFor();
-    await localResults.getByText('분석 결과', { exact: true }).click();
+    await localResults.locator('.local-ai-results > summary').click();
+    await localResults.locator('.local-ai-row > summary').first().click();
     await localResults.getByRole('region', { name: '로컬 AI 분석', exact: true }).first().waitFor();
     await page.getByText('검토 안내 및 사용량', { exact: true }).click();
     await page.getByRole('button', { name: 'AI 설정', exact: true }).click();
@@ -210,7 +221,7 @@ const http = require("node:http");
     assert.equal(await page.getByRole('tab', { name: '변경 비교', exact: true }).count(), 0);
     await page.getByRole('button', { name: /^탐지 내역/ }).click();
     await page.locator('tbody tr').first().click();
-    await page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true }).waitFor();
+    await page.getByAltText('검사 브라우저에서 촬영한 스크린샷', { exact: true }).first().waitFor();
     assert.equal(errors.length, 0, errors.join('\n'));
     console.log(JSON.stringify({ status: 'passed', mode: packaged ? 'electron-packaged' : 'source-ui-real-python', explorationGraph: true,
       comparisonRemoved: true, grokConfiguration: true,

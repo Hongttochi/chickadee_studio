@@ -109,19 +109,20 @@ async function waitForHistory(page, count) {
       ),
     );
     await page.getByRole("button", { name: "미리보기 닫기" }).click();
-    assert.equal(
-      await page
-        .locator(".summary-numbers")
-        .innerText()
-        .then((text) => text.includes("14")),
-      true,
-    );
+    const firstResult = JSON.parse(await fs.readFile(firstResultPath, "utf8"));
+    assert.equal(firstResult.findings.length, 14);
+    assert.equal(new Set(firstResult.findings.map(row => row.url)).size, 2);
+    assert.equal(await page.locator(".summary-numbers button").filter({ hasText: "필수 탐지" }).locator("b").innerText(), "2");
     await page.screenshot({
       path: path.join(artifacts, "electron-workflow.png"),
     });
     await page.getByRole("button", { name: /^탐지 내역/ }).click();
-    assert.equal(await page.locator("tbody tr").count(), 14);
+    assert.equal(await page.locator("tbody tr").count(), 2);
     const firstNewest = await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label');
+    const firstFinding = firstResult.findings.find(row => row.id === firstNewest.replace(/ 선택$/, ""));
+    assert.ok(firstFinding);
+    const confirmedEvidenceCount = firstResult.findings.filter(row => row.url === firstFinding.url).length;
+    const dismissedEvidenceCount = firstResult.findings.length - confirmedEvidenceCount;
     await page.getByRole('button', {name:'정렬 방식',exact:true}).click();
     await page.getByRole('menuitemradio',{name:'오래된순',exact:true}).click();
     assert.notEqual(await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label'),firstNewest);
@@ -141,7 +142,7 @@ async function waitForHistory(page, count) {
     await page.getByRole("dialog", { name: "검토 저장 완료" }).getByRole("button", { name: "확인", exact: true }).click();
     await page.getByRole("button", { name: "검토 상태 필터:", exact: false }).click();
     await page.getByRole("menuitemradio", { name: "미검토", exact: true }).click();
-    assert.equal(await page.locator("tbody tr").count(), 13);
+    assert.equal(await page.locator("tbody tr").count(), 1);
     await page.getByRole("checkbox", { name: "표시 항목 전체 선택" }).check();
     await page
       .locator(".bulk-toolbar")
@@ -149,17 +150,23 @@ async function waitForHistory(page, count) {
       .click();
     await page
       .getByRole("dialog", { name: "검토 저장 완료" })
-      .filter({ hasText: "13건의 검토 내용을 저장했습니다." })
+      .filter({ hasText: "1건의 검토 내용을 저장했습니다." })
       .waitFor();
     await page.getByRole("dialog", { name: "검토 저장 완료" }).getByRole("button", { name: "확인", exact: true }).click();
     assert.equal(await page.locator("tbody tr").count(), 0);
+    const savedReview = JSON.parse(await fs.readFile(path.join(path.dirname(firstResultPath), "review.json"), "utf8"));
+    assert.equal(Object.values(savedReview.items).filter(item => item.status === "confirmed").length, confirmedEvidenceCount);
+    assert.equal(Object.values(savedReview.items).filter(item => item.status === "dismissed").length, dismissedEvidenceCount);
+    for (const finding of firstResult.findings) {
+      assert.equal(savedReview.items[finding.id].status, finding.url === firstFinding.url ? "confirmed" : "dismissed");
+    }
     await page.getByRole("button", { name: "검토 상태 필터:", exact: false }).click();
     await page.getByRole("menuitemradio", { name: "검토 전체", exact: true }).click();
     await page.getByRole("button", { name: "검사 기록", exact: true }).click();
     await page.locator("tbody tr").first().click();
     await page.locator("tbody tr .review-confirmed").first().waitFor();
     assert.equal(await page.locator("tbody tr .review-confirmed").count(), 1);
-    assert.equal(await page.locator("tbody tr .review-dismissed").count(), 13);
+    assert.equal(await page.locator("tbody tr .review-dismissed").count(), 1);
     await page.locator("tbody tr").first().click();
     assert.equal(
       await page.getByRole("textbox", { name: "검토 메모" }).inputValue(),
@@ -278,7 +285,7 @@ async function waitForHistory(page, count) {
       await page.getByRole("textbox", { name: "결과 검색" }).inputValue(),
       "",
     );
-    assert.equal(await page.locator("tbody tr").count(), 14);
+    assert.equal(await page.locator("tbody tr").count(), 2);
     await page.getByRole("button", { name: "검사 구성", exact: true }).click();
     await page.locator(".preview-image img").waitFor();
     assert.equal(await page.locator(".node-config").count(), 0);

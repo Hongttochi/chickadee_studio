@@ -9,7 +9,7 @@ export default function LocalAIAnalysis({ analysis }) {
       const item = analysis[kind];
       if (!item) return null;
       return <React.Fragment key={kind}><dt>{title}</dt><dd>
-        <strong>{item.status === "completed" ? labels[item.label] || "분석 완료" : kind === "laya" ? "미적용" : "분석 미완료"}</strong>
+        <strong data-label={item.status === "completed" ? item.label : "unavailable"}>{item.status === "completed" ? labels[item.label] || "분석 완료" : kind === "laya" ? "미적용" : "분석 미완료"}</strong>
         {Number.isFinite(item.score) && <span title={item.score_kind === "calibrated_promotion_score" ? "별도 검증 자료로 보정한 광고 문맥 점수입니다. 위법·안전 확률이 아닙니다." : "보정되지 않은 학습 모델의 분류 점수입니다. 확률이나 안전 점수가 아닙니다."}>모델 점수 {item.score.toFixed(3)}</span>}
         {kind === "content_visual" && item.status === "completed" && <span>{[["sexual_content", "성인물"], ["gambling", "도박"], ["drugs", "마약"]].filter(([topic]) => Number.isFinite(item.scores?.[topic])).map(([topic, name]) => `${name} ${item.scores[topic].toFixed(3)}`).join(" · ")}</span>}
       </dd></React.Fragment>;

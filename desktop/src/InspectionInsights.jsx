@@ -6,8 +6,9 @@ import "./inspection.css";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
 import ImageOCR from "./ImageOCR.jsx";
 import LocalAIAnalysis from "./LocalAIAnalysis.jsx";
+import LocalAIResults from "./LocalAIResults.jsx";
 import ModelStatistics from "./ModelStatistics.jsx";
-import { RefreshCw, GitBranch, Sparkles, FileText, Download, Info, X } from "lucide-react";
+import { RefreshCw, GitBranch, Sparkles, FileText, Download, Info, X, Cpu, SlidersHorizontal } from "lucide-react";
 
 import pageIcon from "../assets/browser.png";
 import collectIcon from "../assets/collection.png";
@@ -72,7 +73,7 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
   const [data, setData] = useState(EMPTY), [run, setRun] = useState(null);
   const [selected, setSelected] = useState(null), [packetId, setPacketId] = useState("");
   const [message, setMessage] = useState(""), [working, setWorking] = useState(false);
-  const [localOpen, setLocalOpen] = useState(false), [localVisible, setLocalVisible] = useState(50);
+  const [localOpen, setLocalOpen] = useState(false);
   const tokenLimit = agentConfig?.token_limit || 24000, callLimit = agentConfig?.call_limit || 6;
   async function refresh() {
     const state = await api.state();
@@ -162,22 +163,29 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
     </>}
     {tab === "agent" && <>
       <div className="review-workspace">
-        {data.local_ai && <section className="local-ai-overview" aria-label="로컬 AI 결과">
-          <div><strong>로컬 AI</strong><span>문자 {data.local_ai.text_analyzed}개 / 화면 {data.local_ai.visual_analyzed}개 / API 0회{data.ocr_summary?.enabled === false ? " / 이미지 OCR 끔" : ""}{data.local_ai.status !== "completed" ? " / 일부 분석 미완료" : ""}</span></div>
-          <details onToggle={event => setLocalOpen(event.currentTarget.open)}><summary>분석 결과</summary>{localOpen && data.packets.filter(p => !p.supplemental).slice(0, localVisible).map(p => <article key={p.id}>
-            <p>{p.text.slice(0, 180)}</p><LocalAIAnalysis analysis={p.local_ai} />
-          </article>)}{localOpen && total > localVisible && <button onClick={() => setLocalVisible(count => count + 50)}>분석 결과 더보기</button>}</details>
-        </section>}
+        {data.local_ai && <>
+        <header className="review-heading"><div><h2><Cpu size={20} aria-hidden="true" />로컬 AI 분석</h2><p>문자와 화면의 분석 결과 및 처리 현황을 확인합니다.</p></div></header>
+        <section className="local-ai-overview" aria-label="로컬 AI 결과">
+          <div className="local-ai-overview-header">
+            <strong className="local-ai-status-title">분석 현황</strong>
+            <div className="local-ai-metrics"><span>문자 <b>{data.local_ai.text_analyzed ?? 0}</b></span><span>화면 <b>{data.local_ai.visual_analyzed ?? 0}</b></span><span>API <b>0회</b></span>
+              {data.ocr_summary?.enabled === false && <span>이미지 OCR 끔</span>}{data.local_ai.status !== "completed" && <span className="local-ai-partial">일부 분석 미완료</span>}
+            </div>
+          </div>
+          <details className="local-ai-results" onToggle={event => setLocalOpen(event.currentTarget.open)}><summary>분석 결과 <span>{total}개 영역</span></summary>
+            {localOpen && <LocalAIResults key={run} packets={data.packets} />}
+          </details>
+        </section></>}
         {data.local_ai && <ModelStatistics data={data} />}
         <header className="review-heading"><div><h2><FileText size={20} />검사 결과 리포트</h2><p>수집한 전체 영역을 검토하고 확인이 필요한 내용을 정리합니다.</p></div>{data.agent?.running ? <button className="review-stop" onClick={() => action(() => api.stopAgent())}>검토 중단</button> : <button className="review-primary" disabled={!total || busy || ["running", "paused"].includes(runStatus)} onClick={() => action(() => api.runAgent({ run_id: run, scope: "all" }))}>전체 검토 시작</button>}</header>
         <section className="review-overview" aria-label="검토 범위">
           <div><span>검토 범위</span><strong>전체 수집 영역</strong></div>
-          <div><span>수집 영역</span><strong>{total.toLocaleString()}<small>개</small></strong></div>
-          <div><span>검토 완료</span><strong>{completed.toLocaleString()}<small>개</small></strong></div>
-          <div><span>미검토</span><strong>{(total - completed).toLocaleString()}<small>개</small></strong></div>
+          <div data-metric="collected"><span>수집 영역</span><strong>{total.toLocaleString()}<small>개</small></strong></div>
+          <div data-metric="completed" data-empty={completed === 0}><span>검토 완료</span><strong>{completed.toLocaleString()}<small>개</small></strong></div>
+          <div data-metric="pending" data-empty={total - completed === 0}><span>미검토</span><strong>{(total - completed).toLocaleString()}<small>개</small></strong></div>
         </section>
         {report && <div className="review-progress" role="status"><progress max={Math.max(total, 1)} value={completed} /><span>{({running: "검토 중", completed: "전체 검토 완료", stopped: "검토 중단", partial: "일부 검토 완료"})[report.status]} / {completed}/{total}{report.status !== "completed" && !data.agent?.running ? ` / 미검토 ${total - completed}개` : ""}</span></div>}
-        <details className="review-notice"><summary>검토 안내 및 사용량</summary><div className="review-usage">{[["요청 횟수", ledger.calls || 0, ledger.call_limit || callLimit, "회"], ["토큰 사용량", ledger.charged_tokens || 0, ledger.token_limit || tokenLimit, "토큰"]].map(([label, used, limit, unit]) => <div className="review-meter" key={label}><div><span>{label}</span><strong>{used.toLocaleString()}<small> / {limit.toLocaleString()}{unit}</small></strong></div><progress aria-label={label} value={Math.min(used, limit)} max={limit} /><small>{Math.max(0, limit - used).toLocaleString()}{unit} 남음</small></div>)}</div><div className="review-usage-footer"><span className="review-usage-caption">현재 검사 기준 / 토큰은 사용 한도에서 차감된 양입니다.<ReviewHelp /></span><button className="review-text-action" onClick={onOpenSettings}>AI 설정</button></div></details>
+        <details className="review-notice"><summary>검토 안내 및 사용량</summary><div className="review-usage">{[["요청 횟수", ledger.calls || 0, ledger.call_limit || callLimit, "회"], ["토큰 사용량", ledger.charged_tokens || 0, ledger.token_limit || tokenLimit, "토큰"]].map(([label, used, limit, unit]) => <div className="review-meter" key={label}><div><span>{label}</span><strong>{used.toLocaleString()}<small> / {limit.toLocaleString()}{unit}</small></strong></div><progress aria-label={label} value={Math.min(used, limit)} max={limit} /><small>{Math.max(0, limit - used).toLocaleString()}{unit} 남음</small></div>)}</div><div className="review-usage-footer"><span className="review-usage-caption"><span>현재 검사 기준 · 토큰은 사용 한도에서 차감된 양입니다.</span><ReviewHelp /></span><button className="review-text-action" onClick={onOpenSettings}><SlidersHorizontal size={14} aria-hidden="true" />AI 설정</button></div></details>
         {!assessments.length && !data.agent?.running && <div className="review-empty"><FileText size={30} /><strong>전체 검토를 시작하면 리포트가 표시됩니다.</strong><span>영역별 검토 의견과 확인이 필요한 근거를 모아 볼 수 있습니다.</span></div>}
       {data.agent?.events?.length > 0 && <details open={Boolean(data.agent.running)}><summary>조사 과정</summary><ol>
         {data.agent.events.slice(-20).map((event, index) => <li key={index}>{({model_request: "Groq 요청", tool_result: "근거 조회", site_explore: "같은 사이트 추가 탐색", browser_phase: "브라우저 확인", browser_request_blocked: "요청 차단", browser_warning: "수집 알림", exploration_incomplete: "추가 확인 미완료"})[event.action] || event.kind}{event.tool && ` / ${event.tool}`}{event.url && ` / ${event.url}`}{event.message && ` / ${event.message}`}{event.reason && ` / ${event.reason}`}</li>)}
