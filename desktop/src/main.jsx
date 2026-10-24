@@ -1953,27 +1953,7 @@ function App() {
           {view === "results" && (
             <div className={`results-layout ${selectedRecord ? "detail-open" : "detail-closed"}`}>
               <section className="table-section">
-                <div className="list-toolbar">
-                  <AnimatedTabs value={filter}>
-                    {[
-                      ["all", "전체", "ListFilter"],
-                      ["required", "필수 탐지", "ScanSearch"],
-                      ["general_ads", "일반 광고", "ShoppingCart"],
-                      ["illegal_suspected", "불법 의심", "ShieldAlert"],
-                      ["image_review", "이미지 검토", "ScanSearch"],
-                    ].map(([id, label, icon]) => (
-                      <button
-                        className={filter === id ? "active" : ""}
-                        aria-pressed={filter === id}
-                        title={id === "general_ads" ? "일반 광고와 유형 미확인 광고 후보입니다. 합법 여부를 확정하지 않습니다." : id === "illegal_suspected" ? "위험 주제·거래 문맥의 검토 후보입니다. 위법 여부는 원문을 확인해야 합니다." : undefined}
-                        key={id}
-                        onClick={() => setFilter(id)}
-                      >
-                        <Icon name={icon} size={15} aria-hidden="true" />
-                        {label}
-                      </button>
-                    ))}
-                  </AnimatedTabs>
+                <div className="list-toolbar results-filters-toolbar">
                   <div className="search">
                     <Icon name="Search" size={15} />
                     <input
@@ -1983,6 +1963,12 @@ function App() {
                       onChange={(event) => setSearch(event.target.value)}
                     />
                   </div>
+                  <ActionMenu
+                    className="result-category-menu"
+                    label={`탐지 분류 필터: ${{all:"전체", required:"필수 탐지", general_ads:"일반 광고", illegal_suspected:"불법 의심", image_review:"이미지 검토"}[filter] || "전체"}`}
+                    triggerText={`분류: ${{all:"전체", required:"필수 탐지", general_ads:"일반 광고", illegal_suspected:"불법 의심", image_review:"이미지 검토"}[filter] || "전체"}`}
+                    items={[["all", "전체"], ["required", "필수 탐지"], ["general_ads", "일반 광고"], ["illegal_suspected", "불법 의심"], ["image_review", "이미지 검토"]].map(([id, label]) => ({label, selected:filter === id, action:() => setFilter(id)}))}
+                  />
                   <ActionMenu
                     className="review-filter-menu"
                     label={`검토 상태 필터: ${reviewFilter === "all" ? "검토 전체" : REVIEW_LABELS[reviewFilter]}`}

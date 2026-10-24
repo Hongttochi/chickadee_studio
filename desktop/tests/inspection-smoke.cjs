@@ -93,6 +93,11 @@ const http = require("node:http");
     // select the saved row once its screenshot has arrived.
     await page.locator('tbody tr .evidence-cell').first().click();
     await page.locator('.record-drawer[aria-hidden="false"]').waitFor();
+    const badgeOffset = await page.locator('.record-header-actions .review-label').evaluate(el => {
+      const badge = el.getBoundingClientRect(), header = el.closest('.panel-heading').getBoundingClientRect();
+      return Math.abs((badge.top + badge.bottom - header.top - header.bottom) / 2);
+    });
+    assert.ok(badgeOffset <= 1, `Review badge is off center by ${badgeOffset}px`);
     await page.getByRole('button', { name: '항목 작업', exact: true }).click();
     const itemMenu = page.getByRole('menu', { name: '항목 작업', exact: true });
     await itemMenu.waitFor();

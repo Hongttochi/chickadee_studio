@@ -1744,11 +1744,25 @@
 .record-panel .record-body { padding: 16px; }
 .record-overview { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .record-header-actions, .record-header-actions .review-control { display:inline-flex; align-items:center; gap:6px; flex-shrink:0; }
+.record-header-actions .review-control { margin:0; }
 .record-header-actions .review-label { min-height:24px; line-height:18px; }
 .record-header-actions .menu-trigger { width:26px; height:28px; min-height:28px; padding:0; border:0; background:transparent; color:#687583; }
 .ocr-source-badge { display: inline-flex; align-items: center; margin-left: 6px; padding: 1px 5px; border: 1px solid #d5ddec; border-radius: 2px; color: #4d6080; background: #f1f4f9; font-size: 10px; font-weight: 600; line-height: 16px; vertical-align: middle; }
 .record-overview .ocr-source-badge { margin-left: 0; }
 .results-layout .list-toolbar > .action-menu { flex: 0 0 auto; }
+.results-layout > .table-section { container-type:inline-size; container-name:results-list; }
+.results-layout .results-filters-toolbar { display:grid; grid-template-columns:minmax(160px,1fr) auto auto auto auto; gap:8px; }
+.results-layout .results-filters-toolbar .search { width:100%; min-width:0; }
+.results-layout .results-filters-toolbar .menu-trigger { display:inline-flex; align-items:center; justify-content:space-between; gap:8px; height:32px; min-height:32px; padding:0 10px; border:1px solid #d4d9df; border-radius:3px; background:#fff; color:#505b67; font-size:12px; }
+.results-layout .results-filters-toolbar .result-category-menu .menu-trigger { min-width:164px; }
+.results-layout .results-filters-toolbar .menu-trigger > svg { flex-shrink:0; }
+.results-filters-toolbar .result-category-menu .action-menu-panel { left:0; right:auto; transform-origin:top left; }
+.results-layout .results-filters-toolbar > .button { margin-left:0; white-space:nowrap; }
+@container results-list (max-width:700px) {
+  .results-layout .results-filters-toolbar { grid-template-columns:minmax(164px,1.3fr) minmax(112px,1fr) minmax(100px,1fr) auto; }
+  .results-filters-toolbar > .search { grid-column:1 / -1; }
+  .results-layout .results-filters-toolbar .menu-trigger { width:100%; min-width:0; }
+}
 .results-layout .list-toolbar .menu-trigger { white-space: nowrap; flex: 0 0 auto; min-width: 80px; }
 .evidence-cell .ocr-source-badge { margin: 0 6px 0 0; }
 .record-overview .menu-trigger { width: 26px; height: 28px; min-height: 28px; border: 0; background: transparent; color: #687583; padding: 0; }
