@@ -478,11 +478,12 @@ function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = 
               }}
             >
               {typeof item.selected === "boolean"
-                ? <span className="menu-selection-mark" aria-hidden="true">{item.selected && <Icon name="Check" size={16} />}</span>
+                ? item.icon ? <Icon name={item.icon} size={16} aria-hidden="true" /> : <span className="menu-selection-mark" aria-hidden="true">{item.selected && <Icon name="Check" size={16} />}</span>
                 : item.image
                 ? <img className={`menu-item-image ${item.imageClassName || ""}`} src={item.image} alt="" width={20} height={20} draggable={false} />
                 : <Icon name={item.icon} size={16} />}
               <span>{item.label}</span>
+              {typeof item.selected === "boolean" && item.icon && <span className="menu-selection-mark" aria-hidden="true">{item.selected && <Icon name="Check" size={16} />}</span>}
               {item.shortcut && <kbd>{item.shortcut}</kbd>}
             </button>
           ))}
@@ -1967,7 +1968,7 @@ function App() {
                     className="result-category-menu"
                     label={`탐지 분류 필터: ${{all:"전체", required:"필수 탐지", general_ads:"일반 광고", illegal_suspected:"불법 의심", image_review:"이미지 검토"}[filter] || "전체"}`}
                     triggerText={`분류: ${{all:"전체", required:"필수 탐지", general_ads:"일반 광고", illegal_suspected:"불법 의심", image_review:"이미지 검토"}[filter] || "전체"}`}
-                    items={[["all", "전체"], ["required", "필수 탐지"], ["general_ads", "일반 광고"], ["illegal_suspected", "불법 의심"], ["image_review", "이미지 검토"]].map(([id, label]) => ({label, selected:filter === id, action:() => setFilter(id)}))}
+                    items={[["all", "전체", "ListFilter"], ["required", "필수 탐지", "Fingerprint"], ["general_ads", "일반 광고", "ShoppingCart"], ["illegal_suspected", "불법 의심", "ShieldAlert"], ["image_review", "이미지 검토", "ScanSearch"]].map(([id, label, icon]) => ({label, icon, selected:filter === id, action:() => setFilter(id)}))}
                   />
                   <ActionMenu
                     className="review-filter-menu"
