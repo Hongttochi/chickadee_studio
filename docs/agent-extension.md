@@ -1,5 +1,7 @@
 # 에이전트 확장 규격 v1
 
+[한국어](agent-extension.md) | [English](agent-extension.en.md)
+
 로컬 확장을 위한 JSONL 도구 계약입니다. Groq 근거 조사의 호출·사용량 한도는 [검사 분석·AI 검토](inspection-agent.md)를 참고하세요.
 
 화면과 검사 프로그램은 아래 도구로 통신합니다. Groq 근거 조사 어댑터는 등록된 읽기 도구만 사용합니다. 별도 HTTP 수신 포트는 열지 않습니다.

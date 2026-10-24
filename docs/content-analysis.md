@@ -1,5 +1,7 @@
 # 이미지·텍스트 직접 분석
 
+[한국어](content-analysis.md) | [English](content-analysis.en.md)
+
 `content.analyze`는 사이트 검사 없이 텍스트와 이미지를 직접 분석하는 로컬 백엔드 도구입니다. PaddleOCR, 문자 탐지 규칙, 광고 문맥 분류 모델, 이미지 특징 분류 모델을 사용하며 Groq 요청은 발생하지 않습니다.
 
 ## 호출

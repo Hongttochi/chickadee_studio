@@ -31,7 +31,7 @@
     let path = parts.join(' > ');
     if (!frame) selectorCache.set(el, path);
     if (frame && el.hasAttribute('src')) {
-      // Absolute src is required by the contest; nth-of-type disambiguates
+      // Absolute src keeps frame locations consistent; nth-of-type disambiguates
       // duplicate frames. Resolve relative attributes before replaying this.
       path += `[src=${JSON.stringify(el.src)}]`;
     }

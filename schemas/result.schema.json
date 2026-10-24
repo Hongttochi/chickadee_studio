@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Chickadee Bot result.json - development validation schema",
-  "description": "2026년 9월 모집요강을 바탕으로 작성한 자체 개발용 스키마입니다. 공식 배포 파일이 아닙니다. ID 고유성, 검출 중복, 선택자 정확성, 인코딩은 별도 검증이 필요합니다. docs/requirements.md 참고.",
+  "description": "Chickadee Studio의 문자 위장·은닉 4종 탐지 결과 스키마입니다. ID 고유성, 검출 중복, 선택자 정확성, 인코딩은 별도 검증이 필요합니다. docs/requirements.md 참고.",
   "type": "object",
   "additionalProperties": false,
   "required": ["meta", "findings"],

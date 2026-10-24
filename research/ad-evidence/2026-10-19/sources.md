@@ -1,5 +1,7 @@
 # 사례 출처
 
+[한국어](sources.md) | [English](sources.en.md)
+
 | ID | 원본 공개 페이지 | 관측 구분 | 상태 |
 | --- | --- | --- | --- |
 | A001 | [출처](<https://mse.hanyang.ac.kr/park/?go=%EB%B0%94%EC%B9%B4%EB%9D%BC-%EC%8B%9C%EC%8A%A4%ED%85%9C-%EB%B0%B0%ED%8C%85>) | observed | dom_verified |

@@ -1,5 +1,7 @@
 # 구현 구조
 
+[한국어](architecture.md) | [English](architecture.en.md)
+
 Chickadee Studio는 Electron 화면과 Python 검사 엔진으로 구성됩니다. Chromium으로 수집한 DOM·CSS·이미지를 분석하고, 원문과 근거를 JSON·CSV 및 검사 기록에 저장합니다.
 
 ![Chickadee Studio 전체 설계](assets/architecture.png)

@@ -1,5 +1,7 @@
 # Contributing to Chickadee Studio
 
+[한국어](CONTRIBUTING.md) | [English](CONTRIBUTING.en.md)
+
 버그 수정, 탐지 규칙, UI, 문서와 번역 개선을 환영합니다. 개발 환경 설치는 [README](README.md#8-개발-환경)를 참고하세요.
 
 ## 이슈와 PR
@@ -38,7 +40,7 @@ node desktop/tests/capture-docs.cjs
 - 이미지는 실제 화면 그대로 사용합니다. 검토 결과나 탐지 건수를 편집해 만들지 마세요.
 - 이미지 교체 후 다시 빌드하면 앱 내부 가이드에도 반영됩니다.
 
-한국어 README를 수정할 때는 [영문 README](README.en.md)도 맞춰 주세요. 다운로드 링크는 `/releases/latest`를 사용해 오래된 버전으로 고정되지 않도록 합니다.
+한국어 문서를 수정할 때는 해당 `.en.md` 문서의 내용·링크·명령·이미지도 맞춰 주세요. 새 안내 문서에는 영어 버전과 언어 전환 링크를 함께 추가합니다. 다운로드 링크는 `/releases/latest`를 사용해 오래된 버전으로 고정되지 않도록 합니다.
 
 ## 코드와 배포
 

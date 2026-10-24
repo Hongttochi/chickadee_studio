@@ -2,8 +2,7 @@
 
 # <img src="desktop/assets/app-mark.png" width="38" alt="박새 치카디" /> Chickadee Studio
 
-**이미지는 이미지대로, 글은 글대로.**<br />
-**숨어 있는 광고를 찾아주는 당신의 박새, 치카디.**
+**웹사이트의 광고 문맥과 문자 위장·은닉을 분석하는 오픈소스 데스크톱 도구**
 
 [**Windows 다운로드**](https://github.com/orqan137/chickadee_studio/releases/latest) | [사용설명서](docs/quickstart-windows.md) | [English](README.en.md)
 
@@ -230,17 +229,17 @@ OCR은 이미지에서 문자를 읽는 단계입니다. 처리 이미지 수와
 
 이 방식은 키의 **암호화 저장이 아닌 미저장 방식**입니다. 외부 `.env` 파일을 선택해서 사용할 수도 있습니다. `.env` 자체는 평문 파일이며 앱이 암호화하지 않습니다.
 
-외부 설정 파일은 아래 형식으로 작성합니다. 실제 키가 들어간 `.env`는 공개 저장소와 소스코드 ZIP에 포함하지 않습니다. 심사용 키는 비공개 제출 자료로 별도 전달합니다.
+외부 설정 파일은 아래 형식으로 작성합니다. 실제 키가 들어간 `.env`는 공개 저장소와 소스코드 ZIP에 포함하지 않습니다.
 
 ```dotenv
 GROQ_API_KEY=YOUR_GROQ_API_KEY
 ```
 
 ```powershell
-.\ChickadeeRuntime.exe --groq-env-file 'C:\심사설정\.env'
+.\ChickadeeRuntime.exe --groq-env-file 'C:\Chickadee\.env'
 ```
 
-심사용 비공개 자료에는 `.env`를 별도 첨부합니다. `.env`를 메모장으로 열고 `GROQ_API_KEY=` 뒤의 값만 복사한 뒤 **앱 대시보드의 설정 → AI 연결 → API 키 등록**에 직접 입력합니다. **파일을 실행본 옆에 두기만 해서는 자동 적용되지 않습니다.** 위 명령은 심사 시 외부 파일의 키를 교체하는 실행 방법입니다. 키를 등록하는 것만으로 API 요청이 발생하지 않습니다.
+외부 파일 대신 직접 등록하려면 `.env`를 메모장으로 열고 `GROQ_API_KEY=` 뒤의 값만 복사한 뒤 **앱 대시보드의 설정 → AI 연결 → API 키 등록**에 직접 입력합니다. **파일을 실행본 옆에 두기만 해서는 자동 적용되지 않습니다.** 위 명령으로 사용할 외부 키 파일을 명시적으로 선택할 수 있습니다. 키를 등록하는 것만으로 API 요청이 발생하지 않습니다.
 
 ![Groq 키 설정](docs/assets/demos/14-settings-groq.png)
 
@@ -554,6 +553,8 @@ Electron과 Python 가상환경의 CPU 아키텍처를 맞춰 사용합니다.
 화면과 앱 셸은 `desktop/`, 검사 엔진은 `chickadee/`, 출력 규격은 `schemas/`에 있습니다. 평가 도표는 `scripts/render_evaluation_charts.py`로 공개 수치에서 다시 생성할 수 있습니다.
 
 ## 9. 문서 및 기여
+
+[전체 문서 목록](docs/README.md) · [English documentation](docs/README.en.md)
 
 | 문서 | 내용 |
 | --- | --- |

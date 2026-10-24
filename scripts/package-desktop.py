@@ -54,10 +54,12 @@ def main():
     count = frontend_licenses()
     shutil.copytree(DESKTOP / 'licenses', APP / 'licenses', dirs_exist_ok=True)
     for name in ['quickstart-windows.md', 'desktop.md', 'result-format.md', 'third-party-notices.md', 'validation.md', 'manual.md', 'agent-extension.md', 'inspection-agent.md', 'content-analysis.md', 'windows-signing.md']:
-        target = APP / 'docs' / name
-        target.parent.mkdir(exist_ok=True)
-        shutil.copy2(ROOT / 'docs' / name, target)
-    shutil.copy2(ROOT / 'DESIGN.md', APP / 'DESIGN.md')
+        for localized_name in (name, name.replace('.md', '.en.md')):
+            target = APP / 'docs' / localized_name
+            target.parent.mkdir(exist_ok=True)
+            shutil.copy2(ROOT / 'docs' / localized_name, target)
+    for name in ('DESIGN.md', 'DESIGN.en.md'):
+        shutil.copy2(ROOT / name, APP / name)
     for name in ('LICENSE', 'NOTICE'):
         shutil.copy2(ROOT / name, APP / name)
     shutil.copy2(ROOT / '.env.example', APP / '.env.example')
@@ -70,7 +72,7 @@ def main():
         'URL 입력 → 검사 실행. 로컬 예제는 실행 옆 화살표 메뉴 → 데모 검사.\n'
         '일시정지·재개, 검토 상태·메모·일괄 처리, Ctrl K 빠른 명령을 지원합니다.\n'
         '기본 저장: 문서/Chickadee/results/실행별 폴더\n'
-        '심사용 result.json 및 추가 관측 result_extra.json은 위 실행별 폴더에 생성합니다.\n'
+        '탐지 결과 result.json 및 추가 관측 result_extra.json은 위 실행별 폴더에 생성합니다.\n'
         '검사 구성은 고정 순서로 실행하며 이미지 OCR 사용 여부는 노드 설정에서 선택합니다.\n'
         '사용 안내: docs/quickstart-windows.md, docs/desktop.md\n'
         '이미지 속 한국어 문구도 자동 검사합니다. OCR 모델은 동봉되어 별도 설치가 필요하지 않습니다.\n'
@@ -80,8 +82,29 @@ def main():
         'OCR 기능 확인 버튼은 인터넷 접속 없이 동봉된 한국어 모델을 시험합니다. GPU는 필수가 아닙니다.\n'
         'Groq 추가 검토는 AI 설정에서 키를 등록한 뒤 실행합니다. 기본 누적 한도: 검사당 6회 / 24,000토큰.\n'
         'API 키는 현재 앱 세션에서만 사용하며, 환경 변수나 다른 프로젝트의 키를 자동 사용하지 않습니다.\n'
-        '심사용 외부 키 파일: Chickadee.exe --groq-env-file "설정파일의 전체 경로". docs/quickstart-windows.md 참고.\n'
+        '선택한 외부 키 파일: Chickadee.exe --groq-env-file "설정파일의 전체 경로". docs/quickstart-windows.md 참고.\n'
         '서명 서비스 가입 없이 제공되는 미서명 패키지입니다.\n'
+        'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
+    (APP / 'README_FIRST.en.txt').write_text(
+        f'Chickadee Studio {VERSION} / Windows x64\n\n'
+        'Extract the entire ZIP into a new folder and run Chickadee.exe.\n'
+        'If Windows app control blocks it, run ChickadeeRuntime.exe in the same folder.\n'
+        'This official unmodified Electron runtime runs the same app and models without changing security settings.\n'
+        'Keep resources and all accompanying folders. No separate Python, Node.js or Docker installation is needed.\n'
+        'Enter a URL and choose Run scan (검사 실행); the adjacent menu offers a local Demo scan (데모 검사).\n'
+        'Pause/resume, review states, notes, bulk review and Ctrl K quick commands are supported.\n'
+        'Default storage: Documents/Chickadee/results/<run folder>/.\n'
+        'result.json and additional observations in result_extra.json are saved in that run folder.\n'
+        'The workflow order is fixed; enable image OCR in its node settings.\n'
+        'Guides: docs/quickstart-windows.en.md and docs/desktop.en.md. The app interface is in Korean.\n'
+        'Korean OCR, the trained Laya model and its CPU runtime are bundled for local OCR -> ML -> Laya analysis.\n'
+        'Text and visual AI run locally without paid requests. Review evidence and Inspection analysis -> AI review.\n'
+        'Settings -> General -> Runtime offers Auto, Standard and Economy; Economy skips image OCR.\n'
+        'The OCR check tests bundled models offline. No GPU is required.\n'
+        'Optional Groq review requires a user-provided key. Default per-scan budget: 6 calls / 24,000 tokens.\n'
+        'Keys stay in the current app session; keys from other projects or arbitrary environment variables are not used automatically.\n'
+        'Explicit external key file: Chickadee.exe --groq-env-file "absolute path to settings file". See the quick start guide.\n'
+        'This package is unsigned.\n'
         'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
     output = ROOT / 'artifacts' / f'Chickadee-Studio-{VERSION}-win-x64.zip'
     temporary = output.with_suffix('.zip.tmp')

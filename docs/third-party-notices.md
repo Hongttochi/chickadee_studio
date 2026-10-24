@@ -1,5 +1,7 @@
 # 사용 구성요소와 배포 참고
 
+[한국어](third-party-notices.md) | [English](third-party-notices.en.md)
+
 프로젝트는 [Apache-2.0](../LICENSE)을 사용합니다. 외부 구성요소와 모델에는 각 프로젝트의 라이선스가 적용됩니다.
 
 | 구성요소 | 용도 | 공식 출처 |
@@ -25,7 +27,7 @@ Unicode 데이터는 `chickadee/data/confusables-ascii.json`에 버전·원본 S
 
 PaddleOCR 공식 모델은 [PP-OCRv5 모바일 탐지](https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det)와 [한국어 인식](https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec)을 사용합니다. Apache-2.0 모델의 revision·파일별 SHA-256은 `chickadee/data/ocr-models.json`에 고정합니다. DB 탐지·CTC 인식 전후처리를 연결한 자체 어댑터에서 PaddlePaddle CPU 추론을 수행하며 PaddleX 파이프라인의 자동 다운로드를 사용하지 않습니다. 원문 라이선스와 패키지 고지는 `desktop/licenses/OCR-Third-Party.txt`에 보관합니다.
 
-Playwright가 동봉하는 Node.js·브라우저 및 의존성의 라이선스·고지 파일도 배포본 내부에 유지해야 합니다. Electron 배포본의 `resources`, Chromium 라이선스 파일과 검사 프로그램의 `_internal`을 유지합니다. Pretendard 라이선스는 `desktop/licenses/Pretendard-OFL.txt`에 보관합니다. 이 목록은 최종 제출 시 필요한 전체 의존성·라이선스 검토를 대신하지 않습니다.
+Playwright가 동봉하는 Node.js·브라우저 및 의존성의 라이선스·고지 파일도 배포본 내부에 유지해야 합니다. Electron 배포본의 `resources`, Chromium 라이선스 파일과 검사 프로그램의 `_internal`을 유지합니다. Pretendard 라이선스는 `desktop/licenses/Pretendard-OFL.txt`에 보관합니다. 이 목록은 배포 시 필요한 전체 의존성·라이선스 검토를 대신하지 않습니다.
 
 로고 원본은 `desktop/assets/logo-original.png`, 앱 아이콘은 새와 돋보기를 모티프로 한 `desktop/assets/app-mark.png`입니다. ICO는 앱 아이콘의 Windows 형식 변환본입니다.
 

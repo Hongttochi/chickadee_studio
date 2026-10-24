@@ -1,5 +1,7 @@
 # 기능 안내
 
+[한국어](features.md) | [English](features.en.md)
+
 ![서비스 전체 시연](assets/demos/overview.webp)
 
 [README](../README.md) | [설치 및 실행](quickstart-windows.md) | [출력 규격](result-format.md)

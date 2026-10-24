@@ -4,8 +4,7 @@
 
 # Chickadee Studio
 
-**Images as images. Text as text.**<br />
-**Your chickadee for finding hidden advertising.**
+**An open-source desktop tool for analyzing advertising context, text obfuscation and hidden content on websites.**
 
 An open-source desktop app for detecting text obfuscation, hidden advertising and promotional text inside images on public-sector websites.
 
@@ -13,7 +12,7 @@ An open-source desktop app for detecting text obfuscation, hidden advertising an
 [![Build](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_studio/release.yml?branch=main&label=build&style=flat)](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-303438?style=flat)](LICENSE)
 
-[**Windows download**](https://github.com/orqan137/chickadee_studio/releases/latest) | [User guide](docs/quickstart-windows.md) | [Feature guide](docs/features.md) | [한국어](README.md)
+[**Windows download**](https://github.com/orqan137/chickadee_studio/releases/latest) | [User guide](docs/quickstart-windows.en.md) | [Feature guide](docs/features.en.md) | [한국어](README.md)
 
 </div>
 
@@ -53,7 +52,7 @@ An open-source desktop app for detecting text obfuscation, hidden advertising an
 4. Inspect source text, locations and screenshots in **탐지 내역**, then save review states and notes.
 5. Open **결과 폴더** for JSON, CSV and reports.
 
-The Windows x64 package includes Python, Chromium, Korean OCR, RF, the fine-tuned Laya weights and a standalone CPU runtime. No separate Python, Node.js, Docker or GPU installation is needed. The Run scan dropdown → **데모 검사** opens the bundled offline demonstration. The interface and detailed guides are in Korean.
+The Windows x64 package includes Python, Chromium, Korean OCR, RF, the fine-tuned Laya weights and a standalone CPU runtime. No separate Python, Node.js, Docker or GPU installation is needed. The Run scan dropdown → **데모 검사** opens the bundled offline demonstration. The interface is in Korean; English guides retain Korean control labels where needed to help you find them in the app.
 
 Core scanning, OCR, RF and Laya inference run locally without an API key. Laya is bundled and requires no separate model or Python installation in the Windows release. Groq review is optional and uses a user-provided key.
 
@@ -75,7 +74,7 @@ The figure describes the overall design. In the current release, **text bypasses
 
 Without images, the OCR node displays **이미지 없음**. OCR extracts text; rules and ML analyze advertising context. OCR output alone does not establish which Unicode characters appeared in the original image.
 
-[Architecture](docs/architecture.md) | [Exploration and AI settings](docs/inspection-agent.md)
+[Architecture](docs/architecture.en.md) | [Exploration and AI settings](docs/inspection-agent.en.md)
 
 ## 3. Features
 
@@ -110,13 +109,13 @@ PaddleOCR extracts Korean text and links each line to its original image, boundi
 
 This is a functional validation image, not a population-level accuracy measurement.
 
-The local backend also exposes `content.analyze` for direct image/text analysis, preserving the distinction between supplied text and OCR output. [Request and response format](docs/content-analysis.md)
+The local backend also exposes `content.analyze` for direct image/text analysis, preserving the distinction between supplied text and OCR output. [Request and response format](docs/content-analysis.en.md)
 
 ### 3.4 Local analysis and Laya integration
 
 The bundled RF analyzes source text and OCR text to prioritize review. The statistics view shows processing counts and score distributions. The recorded local scan processed 8 Laya contexts and 1 Korean OCR image without API calls. Scores are not accuracy or legal-violation probabilities.
 
-The **local CPU Laya review worker** and evaluated Korean weights are bundled in the Windows release. They run offline without downloads or API calls. The checkpoint was independently evaluated and verified against the standalone executable. Source developers can still register an external model configuration. [Local analysis configuration](docs/content-analysis.md)
+The **local CPU Laya review worker** and evaluated Korean weights are bundled in the Windows release. They run offline without downloads or API calls. The checkpoint was independently evaluated and verified against the standalone executable. Source developers can still register an external model configuration. [Local analysis configuration](docs/content-analysis.en.md)
 
 ![ML and OCR processing statistics](docs/assets/demos/02-statistics.png)
 
@@ -148,7 +147,7 @@ Inspect source text, URLs, CSS selectors and screenshots; search, filter, add no
 
 Configure execution mode, output location, completion notifications and scheduled scans. Scheduling requires the app to remain open; external notification channels require user configuration. Shortcuts, Ctrl K commands and release updates are available in settings.
 
-[All feature screenshots](docs/features.md)
+[All feature screenshots](docs/features.en.md)
 
 ## 4. Service stages
 
@@ -205,7 +204,7 @@ JSON uses UTF-8 without BOM. `result.json` combines every page in one `findings`
 
 HTML reports work offline and can be printed to PDF. Partial or interrupted runs retain their status and unreviewed counts.
 
-[JSON and CSV specification](docs/result-format.md) | [JSON Schema](schemas/result.schema.json) | [HTML example](docs/assets/demos/sample-report.html) | [CSV example](docs/assets/demos/sample-results.csv)
+[JSON and CSV specification](docs/result-format.en.md) | [JSON Schema](schemas/result.schema.json) | [HTML example](docs/assets/demos/sample-report.html) | [CSV example](docs/assets/demos/sample-results.csv)
 
 ## 6. Datasets
 
@@ -270,7 +269,7 @@ The Windows app bundles Korean PaddleOCR, RF, photo classification and the Korea
 
 [Windows package verification](https://github.com/orqan137/chickadee_studio/actions/runs/39824971344) covers extraction, launch, Korean OCR, image-free processing, login resumption and key registration. Published-file checksums, included models, ordinary Windows launch, report saving/reopening, review persistence and CSV export were also checked.
 
-[Metrics and split hashes](docs/assets/evaluation/metrics.json) | [Test guide](docs/validation.md)
+[Metrics and split hashes](docs/assets/evaluation/metrics.json) | [Test guide](docs/validation.en.md)
 
 ## 8. Development
 
@@ -322,10 +321,12 @@ The app shell is in `desktop/`, the engine in `chickadee/`, and output schemas i
 
 ## 9. Documentation and contributions
 
-[User guide](docs/quickstart-windows.md) | [Feature screenshots](docs/features.md) | [Desktop guide](docs/desktop.md) | [Architecture](docs/architecture.md) | [Output format](docs/result-format.md) | [AI configuration](docs/inspection-agent.md) | [Tests](docs/validation.md) | [Contributing](CONTRIBUTING.md)
+[All documentation](docs/README.en.md) · [한국어 문서](docs/README.md)
+
+[User guide](docs/quickstart-windows.en.md) | [Feature screenshots](docs/features.en.md) | [Desktop guide](docs/desktop.en.md) | [Architecture](docs/architecture.en.md) | [Output format](docs/result-format.en.md) | [AI configuration](docs/inspection-agent.en.md) | [Tests](docs/validation.en.md) | [Contributing](CONTRIBUTING.en.md)
 
 Report reproducible bugs and propose features through [GitHub Issues](https://github.com/orqan137/chickadee_studio/issues). Do not post API keys or login credentials.
 
 ## 10. License
 
-[Apache License 2.0](LICENSE). Third-party libraries, fonts and models retain their respective licenses; see [third-party notices](docs/third-party-notices.md).
+[Apache License 2.0](LICENSE). Third-party libraries, fonts and models retain their respective licenses; see [third-party notices](docs/third-party-notices.en.md).

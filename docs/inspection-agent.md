@@ -1,5 +1,7 @@
 # 탐색 그래프, Groq 근거 조사
 
+[한국어](inspection-agent.md) | [English](inspection-agent.en.md)
+
 실제 방문 경로와 수집 근거를 확인하고, Groq로 광고 문맥을 추가 검토합니다.
 
 ## 화면

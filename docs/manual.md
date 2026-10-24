@@ -1,5 +1,7 @@
 # 실행·빌드 및 사용설명서
 
+[한국어](manual.md) | [English](manual.en.md)
+
 > 이 문서는 Python CLI·Tkinter 호환판 기준입니다. 현재 Windows Electron 앱은 [빠른 실행](quickstart-windows.md)과 [데스크톱 앱 안내](desktop.md)를 참고하세요.
 
 **결과 저장 위치:** 실행 파일 옆 `results` 폴더에 `result.json`, `result_extra.json`, `scan-report.json`, `result.csv`를 저장합니다. 소스 실행은 저장소의 `results`가 기본값입니다. 화면의 **저장 폴더 설정** 또는 `--output-dir`로 바꿀 수 있습니다. 파일은 실행 종료 시 교체됩니다. 일반 광고 문맥 검토 관측값은 `result_extra.json`, 보고서 `ad_candidates`, CSV에 담으며 불법 확정으로 바꾸지 않습니다. 현재 Electron 앱은 기본적으로 `문서/Chickadee/results/<실행별 폴더>`에 저장합니다. [고정 17개 칼럼](result-format.md)과 [빠른 실행](quickstart-windows.md)을 참고하세요.
@@ -74,13 +76,13 @@ OCR은 CPU에서 실행하며 모델은 Windows 배포본에 포함됩니다. �
 
 `scan-report.json`의 `ocr_images`에 원문·좌표·신뢰도·원본 해시가, `ocr_summary`에 처리 건수가 저장됩니다. 원본은 `evidence/images/`에 저장합니다. 이미지 광고는 `ad_candidates`에 `source_kind=image_ocr`, `image_id`와 함께 기록하며 CSV의 기존 칼럼을 사용합니다.
 
-- `result.json`: 모집요강의 필수 4종 결과만 담습니다. UTF-8(BOM 없음), 최상위 `meta`, `findings` 구조입니다. 0건도 빈 배열을 저장합니다.
+- `result.json`: 문자 위장·은닉 4종 결과만 담습니다. UTF-8(BOM 없음), 최상위 `meta`, `findings` 구조입니다. 0건도 빈 배열을 저장합니다.
 - `scan-report.json`: `completed`, `partial`, `cancelled`, `failed` 상태, 점검한 페이지, 남은 페이지 수, 누락·오류, 실행 제한과 출력 경로를 담습니다.
 - `evidence_details`: 항목별 일치 키워드·원문 위치, CSS 값·판정 이유, 프레임 상속 상태와 읽기 동작 기록입니다. `rules_version`, `profile`, `retry_count`, `blocked_requests`도 보고서에 기록합니다.
 - `contextual_homoglyphs`: 키워드 자체의 변형과 구분한 문맥 내 닮은꼴 COM의 원문·span입니다. CSS 근거에는 viewport·문서 좌표·스크롤 위치와 은닉에 기여한 조상 스타일을 기록합니다. 작은 상자와 글자 크기를 구분하고 opacity:0.003 같은 실측 값은 그대로 유지합니다.
 - 보고서의 `result_sha256`이 `result.json` 바이트의 SHA-256과 일치하면 같은 실행의 파일 쌍입니다. 쓰기 도중 장애가 나면 파일 쌍이 맞지 않을 수 있습니다.
 - `is_violation: true`는 규칙에 걸린 의심 항목을 뜻합니다. 법적 판단을 대신하지 않습니다.
-- iframe 선택자의 `src`는 모집요강에 따라 절대주소입니다. 상대주소 iframe을 재조회할 때는 실제 `src` 속성도 절대주소로 해석하여 비교해야 합니다.
+- iframe 선택자의 `src`는 절대주소로 기록합니다. 상대주소 iframe을 재조회할 때는 실제 `src` 속성도 절대주소로 해석하여 비교해야 합니다.
 
 폴더 쓰기 권한이 없거나 디스크가 가득 차면 화면에 저장 실패를 표시합니다. 이전 파일을 이번 실행 결과로 사용하지 마세요. 새 실행 전 파일은 자동 삭제하지 않으며 정상 또는 일부 결과를 저장할 때 교체합니다.
 
