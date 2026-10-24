@@ -1,6 +1,8 @@
 <div align="center">
 
-# <img src="desktop/assets/app-mark.png" width="38" alt="박새 치카디" /> Chickadee Studio
+<img src="desktop/assets/app-mark.png" width="80" alt="Chickadee with a magnifying glass" />
+
+# Chickadee Studio
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white" alt="Python" />
