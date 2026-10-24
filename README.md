@@ -2,6 +2,16 @@
 
 # <img src="desktop/assets/app-mark.png" width="38" alt="박새 치카디" /> Chickadee Studio
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white" alt="Electron" />
+  <img src="https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/PaddleOCR-0062CC?style=flat&logo=paddlepaddle&logoColor=white" alt="PaddleOCR" />
+  <img src="https://img.shields.io/badge/Laya-8A2BE2?style=flat&logo=artstation&logoColor=white" alt="Laya" />
+  <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white" alt="PyTorch" />
+  <img src="https://img.shields.io/badge/Groq-F55036?style=flat&logo=groq&logoColor=white" alt="Groq" />
+</p>
+
 **웹사이트의 광고 문맥과 문자 위장·은닉을 분석하는 오픈소스 데스크톱 도구**
 
 [**Windows 다운로드**](https://github.com/orqan137/chickadee_studio/releases/latest) | [사용설명서](docs/quickstart-windows.md) | [English](README.en.md)
@@ -9,15 +19,6 @@
 </div>
 
 ![이미지 문자 추출과 ML 및 Laya 문맥 분석 시연](docs/assets/demos/overview.webp)
-
-<p align="center">
-<img src="docs/assets/stack/python.svg" height="22" width="22" alt="Python" title="Python" /> Python &nbsp;
-<img src="docs/assets/stack/electron.svg" height="22" width="22" alt="Electron" title="Electron" /> Electron &nbsp;
-<img src="docs/assets/stack/react.svg" height="22" width="22" alt="React" title="React" /> React &nbsp;
-<img src="docs/assets/stack/paddlepaddle.svg" height="22" width="22" alt="PaddleOCR" title="PaddleOCR" /> PaddleOCR &nbsp;
-<img src="docs/assets/stack/pytorch.svg" height="22" width="22" alt="PyTorch" title="Laya / PyTorch" /> Laya / PyTorch &nbsp;
-<img src="docs/assets/stack/groq.svg" height="22" width="22" alt="Groq 추가 검토" title="Groq" /> Groq
-</p>
 
 공공 웹사이트의 **게시글, 댓글, 이미지**에서 광고를 찾는 오픈소스 데스크톱 앱입니다. 문자 위장과 화면 은닉을 확인하고, OCR로 읽은 문구를 ML과 Laya로 분석해 원문과 화면을 함께 제공합니다.
 
