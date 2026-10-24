@@ -515,6 +515,7 @@ else {
       return initialize();
     })
     .catch((error) => {
+      console.error("Chickadee startup failed:", error);
       dialog.showErrorBox("Chickadee", error.message);
       app.quit();
     });

@@ -54,9 +54,17 @@ async function launch({executablePath = require('electron'), args = [], env = pr
         while(Date.now()<deadline){
           const page=browser.contexts().flatMap(c=>c.pages())[0];
           if(page)return page;
+          if(child.exitCode !== null || child.signalCode !== null) throw new Error('Native app exited before opening a window: '+output);
           await new Promise(resolve=>setTimeout(resolve,100));
         }
-        throw new Error('Native window did not appear: '+output);
+        let mainState, targets;
+        if (socket) mainState = await evaluate(({app, BrowserWindow}) => ({ready:app.isReady(), windows:BrowserWindow.getAllWindows().map(window => ({id:window.id, visible:window.isVisible(), url:window.webContents.getURL()}))})).catch(error => ({error:error.message}));
+        try {
+          const diagnostics = await browser.newBrowserCDPSession();
+          targets = await diagnostics.send('Target.getTargets');
+          await diagnostics.detach();
+        } catch(error) { targets = {error:error.message}; }
+        throw new Error('Native window did not appear: '+JSON.stringify({mainState, targets})+'\n'+output);
       },
       waitForEvent: () => context.waitForEvent('page', {timeout}),
       evaluate,

@@ -1,0 +1,67 @@
+name: Windows artifact check
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Release run containing windows-build-candidate
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: '0'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Record candidate source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN: ${{ inputs.run_id }}
+        run: |
+          if ($env:CANDIDATE_RUN -notmatch '^\d+$') { throw 'Invalid run ID' }
+          gh run view $env:CANDIDATE_RUN --json headSha,url,workflowName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install test dependencies
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-build-candidate
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run_id }}
+          path: candidate
+      - name: Extract verified candidate
+        run: |
+          $taskZip = @(Get-ChildItem candidate -Filter '*.zip')
+          if ($taskZip.Count -ne 1) { throw 'Expected one candidate ZIP' }
+          $taskExpected = (Get-Content ($taskZip[0].FullName + '.sha256') -Raw).Trim().Split(' ')[0]
+          if ((Get-FileHash $taskZip[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $taskExpected) { throw 'Candidate SHA256 mismatch' }
+          $taskDestination = Join-Path $env:RUNNER_TEMP 'candidate-app'
+          Expand-Archive -LiteralPath $taskZip[0].FullName -DestinationPath $taskDestination
+          $taskExe = @(Get-ChildItem $taskDestination -Recurse -Filter 'Chickadee.exe')
+          if ($taskExe.Count -ne 1) { throw 'Expected one app executable' }
+          "CHICKADEE_PACKAGED_EXE=$($taskExe[0].FullName)" >> $env:GITHUB_ENV
+      - name: Check packaged app startup and workflow
+        working-directory: desktop
+        run: npm run smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: startup-diagnostics
+          path: artifacts/*.png
+          if-no-files-found: ignore
