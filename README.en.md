@@ -1,8 +1,18 @@
 <div align="center">
 
-<img src="desktop/assets/app-mark.png" width="38" alt="Chickadee with a magnifying glass" />
+<img src="desktop/assets/app-mark.png" width="80" alt="Chickadee with a magnifying glass" />
 
 # Chickadee Studio
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white" alt="Electron" />
+  <img src="https://img.shields.io/badge/React-61DAFB?style=flat&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/PaddleOCR-0062CC?style=flat&logo=paddlepaddle&logoColor=white" alt="PaddleOCR" />
+  <img src="https://img.shields.io/badge/Laya-8A2BE2?style=flat&logo=artstation&logoColor=white" alt="Laya" />
+  <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat&logo=pytorch&logoColor=white" alt="PyTorch" />
+  <img src="https://img.shields.io/badge/Groq-F55036?style=flat&logo=groq&logoColor=white" alt="Groq" />
+</p>
 
 **An open-source desktop tool for analyzing advertising context, text obfuscation and hidden content on websites.**
 
@@ -17,15 +27,6 @@ An open-source desktop app for detecting text obfuscation, hidden advertising an
 </div>
 
 ![Website scanning, OCR, local analysis and review](docs/assets/demos/overview.webp)
-
-<p align="center">
-<img src="docs/assets/stack/python.svg" height="22" width="22" alt="Python" title="Python" /> Python &nbsp;
-<img src="docs/assets/stack/electron.svg" height="22" width="22" alt="Electron" title="Electron" /> Electron &nbsp;
-<img src="docs/assets/stack/react.svg" height="22" width="22" alt="React" title="React" /> React &nbsp;
-<img src="docs/assets/stack/paddlepaddle.svg" height="22" width="22" alt="PaddleOCR" title="PaddleOCR" /> PaddleOCR &nbsp;
-<img src="docs/assets/stack/pytorch.svg" height="22" width="22" alt="PyTorch" title="Laya / PyTorch" /> Laya / PyTorch &nbsp;
-<img src="docs/assets/stack/groq.svg" height="22" width="22" alt="Groq 추가 검토" title="Groq" /> Groq
-</p>
 
 | OCR | ML | Laya |
 | --- | --- | --- |
