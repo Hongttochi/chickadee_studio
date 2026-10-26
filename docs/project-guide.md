@@ -21,11 +21,11 @@
 
 1. Download `Chickadee-Studio-<version>-win-x64.zip` from the [latest release](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest).
 2. Extract the **entire ZIP** into a new folder and run `Chickadee.exe`. Keep the bundled `resources` folder together with the app.
-3. Enter a starting URL and select **검사 실행**.
+3. Enter a starting URL and select **Run scan**.
 4. Inspect source text, locations and screenshots in **탐지 내역**, then save review states and notes.
 5. Open **결과 폴더** for JSON, CSV and reports.
 
-The Windows x64 package includes Python, Chromium, Korean OCR, RF, the fine-tuned Laya weights and a standalone CPU runtime. No separate Python, Node.js, Docker or GPU installation is needed. The Run scan dropdown → **데모 검사** opens the bundled offline demonstration. The interface is in Korean; English guides retain Korean control labels where needed to help you find them in the app.
+The Windows x64 package includes Python, Chromium, Korean OCR, RF, the fine-tuned Laya weights and a standalone CPU runtime. No separate Python, Node.js, Docker or GPU installation is needed. The Run scan dropdown → **Demo scan** opens the bundled offline demonstration. The interface is in Korean; English guides retain Korean control labels where needed to help you find them in the app.
 
 Core scanning, OCR, RF and Laya inference run locally without an API key. Laya is bundled and requires no separate model or Python installation in the Windows release. Groq review is optional and uses a user-provided key.
 

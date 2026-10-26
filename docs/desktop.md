@@ -25,9 +25,9 @@ The workflow describes what will run; inspection analysis shows evidence collect
 
 ![Target node and URL panel](../desktop/assets/guide/start.png)
 
-Select **검사 대상** (Scan target) in the workflow and enter an `http://` or `https://` URL in the panel on the right, such as `https://example.go.kr`. Open the lower-left gear → Settings → General to check maximum pages, total time and navigation settings. **앱으로 돌아가기** returns to the previous screen.
+Select **Scan target** in the workflow and enter an `http://` or `https://` URL in the panel on the right, such as `https://example.go.kr`. Open the lower-left gear → Settings → General to check maximum pages, total time and navigation settings. **Back to app** returns to the previous screen.
 
-Choose **검사 실행** (Run scan). Its adjacent menu offers **이 페이지만 검사** (Scan only this page) and **데모 검사** (Demo scan). The guide also offers **데모로 연습하기** (Practice with demo). If scanning cannot start, check the URL and engine readiness. Some settings cannot change during a run.
+Choose **Run scan**. Its adjacent menu offers **Scan only this page** and **Demo scan**. The guide also offers **Practice with demo**. If scanning cannot start, check the URL and engine readiness. Some settings cannot change during a run.
 
 <a id="guide-2"></a>
 

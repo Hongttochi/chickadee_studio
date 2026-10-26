@@ -4,7 +4,7 @@
 
 1. Download the Windows x64 ZIP from the [latest release](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest) and extract the entire archive.
 2. Run `Chickadee.exe`. If Windows app control blocks it, use `ChickadeeRuntime.exe` in the same folder. This official unmodified runtime runs the same app and models without changing security settings. Keep `resources` and all accompanying files. Close any previous instance first.
-3. Enter a URL and choose **검사 실행** (Run scan). The adjacent menu offers **데모 검사** (Demo scan) for a local example.
+3. Enter a URL and choose **Run scan**. The adjacent menu offers **Demo scan** for a local example.
 4. Results are saved under `Documents/Chickadee/results`, in a separate folder per run. Open **결과 폴더** (Results folder) to see the actual location.
 
 **Site login:** When prompted, sign in in the separate login window, then choose **검사 재개** (Resume scan) in the app.
@@ -33,7 +33,7 @@ Keys entered in settings are masked and kept only in session memory. They are no
 
 ## First use
 
-The first-run guide covers starting scans, OCR, speed, review, AI, history, scheduling, notifications and updates. **데모로 연습하기** (Practice with demo) starts the bundled example. Close it with **닫기** or Esc and reopen it through **설정 → 사용 가이드** (Settings → User guide). Once dismissed, it does not automatically reopen. Viewing the guide does not start a scan.
+The first-run guide covers starting scans, OCR, speed, review, AI, history, scheduling, notifications and updates. **Practice with demo** starts the bundled example. Close it with **닫기** or Esc and reopen it through **설정 → 사용 가이드** (Settings → User guide). Once dismissed, it does not automatically reopen. Viewing the guide does not start a scan.
 
 The workflow follows a fixed order; enable image OCR in its node settings. Inspect page captures, navigation paths, HTTP responses and evidence in the app. Use **일시정지**, **검사 재개** and **검사 중단** to pause, resume and stop. Review findings individually or in bulk and save notes. `Ctrl K` opens quick commands. Scan settings and the output directory persist.
 

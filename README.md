@@ -39,10 +39,10 @@ The download bundles the Python scan engine, Chromium, OCR/RF/Laya models and CP
 
 1. Download the Windows ZIP from the latest release and **extract the entire archive**.
 2. Keep the `resources` folder in place and run **Chickadee.exe**.
-3. Enter a URL in **검사 대상** and select **검사 실행** to start scanning.
+3. Enter a URL in **Scan target** and select **Run scan** to start scanning.
 4. Review the source text and screenshots, then save your review results.
 
-If application control blocks the executable, use `ChickadeeRuntime.exe` in the same folder. It runs the same app through the original Electron executable. To explore without internet access, select **데모 검사** from the menu beside the scan button. The app interface is in Korean.
+If application control blocks the executable, use `ChickadeeRuntime.exe` in the same folder. It runs the same app through the original Electron executable. To explore without internet access, select **Demo scan** from the menu beside the scan button. The app interface is in Korean.
 
 [Installation and launch guide](docs/quickstart-windows.md) · [Desktop user guide](docs/desktop.md)
 
