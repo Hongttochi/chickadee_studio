@@ -36,7 +36,8 @@ def frontend_licenses():
     return len(visited)
 
 
-def main():
+def main(app_directory=None):
+    APP = Path(app_directory).resolve() if app_directory else ROOT / 'artifacts' / f'electron-{VERSION}' / 'win-unpacked'
     required = [APP / 'Chickadee.exe', APP / 'resources/engine/ChickadeeEngine.exe',
                 APP / 'resources/laya/ChickadeeLaya.exe', APP / 'resources/laya-model/manifest.json']
     if not all(p.is_file() for p in required):
@@ -128,4 +129,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--app-directory', type=Path)
+    main(parser.parse_args().app_directory)

@@ -30,6 +30,8 @@ let preferences = {};
 let preferenceWrites = Promise.resolve();
 app.setName("Chickadee");
 app.setAppUserModelId("org.chickadee.inspector");
+// A branded development executable is still launched through Electron default_app.
+const isPackaged = app.isPackaged && !process.defaultApp;
 const root = path.resolve(__dirname, "../..");
 const smoke = process.env.CHICKADEE_TEST_DATA;
 if (smoke) app.setPath("userData", smoke);
@@ -170,14 +172,20 @@ async function initialize() {
     outputRoot = preferences.outputRoot;
   if (smoke) outputRoot = path.join(smoke, "results");
   const area = screen.getPrimaryDisplay().workAreaSize;
+  // Windows Shell cannot read icons inside app.asar. Keep a real ICO available
+  // for taskbar pinning, including the unmodified compatibility runtime.
+  const appIcon = isPackaged
+    ? path.join(process.resourcesPath, "chickadee.ico")
+    : path.join(__dirname, "../assets/app.ico");
   window = new BrowserWindow({
+    show: false,
     width: Math.min(1530, area.width - 24),
     height: Math.min(990, area.height - 24),
     minWidth: Math.min(1120, area.width - 24),
     minHeight: Math.min(700, area.height - 24),
     backgroundColor: "#f2f4f6",
     title: "Chickadee",
-    icon: path.join(__dirname, "../assets/app.ico"),
+    icon: path.join(__dirname, "../assets/app-mark.png"),
     titleBarStyle: "hidden",
     titleBarOverlay: { color: "#242426", symbolColor: "#c9c9cf", height: 40 },
     webPreferences: {
@@ -189,13 +197,24 @@ async function initialize() {
       backgroundThrottling: false,
     },
   });
+  if (process.platform === "win32") {
+    window.setAppDetails({
+      appId: "org.chickadee.inspector",
+      appIconPath: appIcon,
+      appIconIndex: 0,
+      relaunchCommand: isPackaged
+        ? `"${process.execPath}"`
+        : `"${process.execPath}" "${app.getAppPath()}"`,
+      relaunchDisplayName: "Chickadee",
+    });
+  }
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.session.setPermissionRequestHandler(
     (_contents, _permission, callback) => callback(false),
   );
   window.webContents.session.setPermissionCheckHandler(() => false);
-  let executable = app.isPackaged
+  let executable = isPackaged
     ? path.join(
         process.resourcesPath,
         "engine",
@@ -206,10 +225,10 @@ async function initialize() {
     : process.platform === "win32"
       ? path.join(root, ".venv", "Scripts", "python.exe")
       : path.join(root, ".venv", "bin", "python");
-  let args = app.isPackaged
+  let args = isPackaged
     ? ["--data-dir", app.getPath("userData")]
     : ["-m", "chickadee.bridge", "--data-dir", app.getPath("userData")];
-  if (!app.isPackaged && process.platform === "darwin") {
+  if (!isPackaged && process.platform === "darwin") {
     args = [
       process.arch === "arm64" ? "-arm64" : "-x86_64",
       executable,
@@ -222,14 +241,14 @@ async function initialize() {
     executable,
     args,
     {
-      cwd: app.isPackaged ? process.resourcesPath : root,
+      cwd: isPackaged ? process.resourcesPath : root,
       env: {
         ...process.env,
         PYTHONIOENCODING: "utf-8",
         CHICKADEE_LAYA_CONFIG:
           process.env.CHICKADEE_LAYA_CONFIG ||
           path.join(app.getPath("userData"), "laya.json"),
-        ...(app.isPackaged
+        ...(isPackaged
           ? {
               CHICKADEE_LAYA_MODEL_DIR:
                 process.env.CHICKADEE_LAYA_MODEL_DIR ||
@@ -474,12 +493,13 @@ async function initialize() {
     return JSON.parse(await fs.readFile(selected.filePaths[0], "utf8"));
   });
   window.webContents.on("before-input-event", (event, input) => {
-    if (input.key === "F12" && !app.isPackaged) {
+    if (input.key === "F12" && !isPackaged) {
       window.webContents.toggleDevTools();
       event.preventDefault();
     }
   });
   await window.loadFile(page);
+  window.show();
   try {
     const { startupGroqConfig } = require("./groq-env.cjs");
     const config = await startupGroqConfig(process.argv);

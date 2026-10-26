@@ -10,7 +10,7 @@ exports.launch = async ({ env }) => {
   const root = path.resolve(__dirname, "../..");
   const data = env.CHICKADEE_TEST_DATA;
   const { Notifications } = require('../electron/notifications.cjs');
-  const notifications = new Notifications({ directory: data, safeStorage: { isEncryptionAvailable: () => false }, supported: () => false });
+  const notifications = new Notifications({ directory: data, safeStorage: { isAsyncEncryptionAvailable: async () => false }, supported: () => false });
   await notifications.load();
   const dist = path.join(root, "desktop/dist");
   await fs.mkdir(data, { recursive: true });

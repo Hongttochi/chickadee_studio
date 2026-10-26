@@ -41,6 +41,8 @@ export default function Tutorial({ onClose, onDemo, onInspect, canDemo }) {
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
     content.current?.scrollTo({ top: 0 });
+    const active = tabs.current?.querySelector('[aria-current="step"]');
+    active?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [step]);
   useLayoutEffect(() => {
     const list = tabs.current;
@@ -67,8 +69,8 @@ export default function Tutorial({ onClose, onDemo, onInspect, canDemo }) {
       onKeyDown={(event) => event.stopPropagation()}
     >
       <header className="tutorial-header">
-        <h2 id="tutorial-label">사용 가이드</h2>
-        <button type="button" className="tutorial-close" aria-label="사용 가이드 닫기" onClick={onClose}>닫기 <X size={18} aria-hidden="true" /></button>
+        <div className="tutorial-heading"><h2 id="tutorial-label">사용 가이드</h2><span className="tutorial-progress" aria-hidden="true">{step + 1} / {steps.length}</span></div>
+        <button type="button" className="tutorial-close" aria-label="사용 가이드 닫기" onClick={onClose}><X size={18} aria-hidden="true" /></button>
       </header>
       <nav className="tutorial-steps" aria-label="안내 순서">
         <ol ref={tabs}>
@@ -90,6 +92,7 @@ export default function Tutorial({ onClose, onDemo, onInspect, canDemo }) {
         <span id="tutorial-step-count" className="tutorial-sr-only">{steps.length}단계 중 {step + 1}단계</span>
         <p id="tutorial-description">{current.description}</p>
         <div className="tutorial-walkthrough">
+        <div className="tutorial-visual">
         <figure className="tutorial-screen">
           <button className="tutorial-screen-button" type="button" aria-label="화면 크게 보기" title="화면 크게 보기" onClick={() => setZoomed(true)}>
             <img src={current.image} alt={current.caption} />
@@ -97,18 +100,19 @@ export default function Tutorial({ onClose, onDemo, onInspect, canDemo }) {
           </button>
           <figcaption>{current.caption}</figcaption>
         </figure>
+        {current.example && <p className="tutorial-address">주소 예시 <code>{current.example}</code></p>}
+        <p className="tutorial-hint"><span>참고</span>{current.note}</p>
+        </div>
         <dl className="tutorial-instructions">
           {current.instructions.map(([label, description], index) => (
             <div key={label}><dt><span className="tutorial-number" aria-hidden="true">{index + 1}</span>{label}</dt><dd>{description}</dd></div>
           ))}
         </dl>
         </div>
-        {current.example && <p className="tutorial-address">주소 예시 <code>{current.example}</code></p>}
-        <p className="tutorial-hint">{current.note}</p>
         {last && !canDemo && <p id="tutorial-demo-unavailable" className="tutorial-unavailable" role="status">지금은 데모를 시작할 수 없습니다. 검사 엔진이 준비되고 진행 중인 검사가 끝난 뒤 다시 시도하세요.</p>}
       </div>
       <footer className="tutorial-footer">
-          <button type="button" className="button button-secondary" disabled={step === 0} onClick={() => setStep(step - 1)}><ArrowLeft size={18} aria-hidden="true" /> 이전</button>
+          {step > 0 && <button type="button" className="button button-secondary" onClick={() => setStep(step - 1)}><ArrowLeft size={18} aria-hidden="true" /> 이전</button>}
           <div>
           {last ? (
             <>
@@ -120,7 +124,6 @@ export default function Tutorial({ onClose, onDemo, onInspect, canDemo }) {
           )}
         </div>
       </footer>
-      <p className="tutorial-reopen">닫아도 <strong>설정 → 사용 가이드</strong>에서 다시 볼 수 있습니다.</p>
       {zoomed && <ScreenPreview image={current.image} caption={current.caption} onClose={() => setZoomed(false)} />}
     </dialog>
   );

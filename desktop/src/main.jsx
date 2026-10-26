@@ -12,6 +12,7 @@ import React, {
   useCallback,
 } from "react";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
 import ImageOCR from "./ImageOCR.jsx";
 import LocalAIAnalysis from "./LocalAIAnalysis.jsx";
@@ -575,10 +576,33 @@ function CommandPalette({ commands, onClose }) {
   );
 }
 
+let pageTransition;
+let pageTransitionRequest = 0;
+function transitionPage(update) {
+  const request = ++pageTransitionRequest;
+  pageTransition?.skipTransition();
+  if (!document.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    update();
+    return;
+  }
+  const transition = document.startViewTransition(() => {
+    // A rapid second navigation must win over a pending snapshot callback.
+    if (request === pageTransitionRequest) flushSync(update);
+  });
+  pageTransition = transition;
+  transition.ready.catch(() => {});
+  transition.finished.catch(() => {}).finally(() => {
+    if (pageTransition === transition) pageTransition = undefined;
+  });
+}
+
 function App() {
   const [flow, setFlow] = useState(defaultWorkflow),
     [url, setUrl] = useState("http://113.198.66.73:18244/"),
-    [view, setView] = useState("workflow");
+    [view, setCurrentView] = useState("workflow");
+  const setView = useCallback(next => {
+    if (next !== view || pageTransition) transitionPage(() => setCurrentView(next));
+  }, [view]);
   const [status, setStatus] = useState("idle"),
     [active, setActive] = useState(null),
     [visited, setVisited] = useState(new Set());
@@ -1187,14 +1211,6 @@ function App() {
       setSelectedRecord(null);
     }
   };
-  const loadFlow = () =>
-    action(async () => {
-      const value = await api.loadWorkflow();
-      if (value) {
-        setFlow(normalizeWorkflow(value));
-        tell("구성 불러오기 완료", "success");
-      }
-    });
   const pause = () =>
     action(async () => {
       const resuming = status === "paused" || status === "pausing";
@@ -1361,7 +1377,7 @@ function App() {
       <div className="window-titlebar" aria-hidden="true" />
       <aside className={`sidebar ${view === "settings" ? "settings-sidebar" : ""}`}>
         {view === "settings" ? <>
-          <SettingsNav selected={settingsTab} onSelect={setSettingsTab} onBack={() => setView(settingsReturnView.current)} onGuide={() => setTutorial(true)} />
+          <SettingsNav selected={settingsTab} onSelect={tab => { if (tab !== settingsTab) transitionPage(() => setSettingsTab(tab)); }} onBack={() => setView(settingsReturnView.current)} onGuide={() => setTutorial(true)} />
         </> : <>
 
           <div className="brand sidebar-brand">
@@ -1698,34 +1714,29 @@ function App() {
                     <span>이미지 <Icon name="ChevronRight" size={12} /> OCR <Icon name="ChevronRight" size={12} /> ML</span>
                   </small></span>
                   <div className="canvas-flow-actions">
-                    <button className="canvas-arrange" title="노드 정렬" aria-label="노드 정렬" onClick={() => {
-                      const positions = defaultWorkflow().nodes;
-                      setFlow(value => ({ ...value, nodes: value.nodes.map(node => ({ ...node, position: positions.find(item => item.id === node.id).position })) }));
-                      requestAnimationFrame(() => requestAnimationFrame(() => canvasApi?.fitView({ padding: 0.2, maxZoom: 0.75, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200 })));
-                    }}><Icon name="Workflow" size={15} /><span>자동 정렬</span></button>
-                    <button
-                      title="기본 구성"
+                    <SidebarTool
+                      label="자동 정렬"
+                      icon="Workflow"
+                      onClick={() => {
+                        const positions = defaultWorkflow().nodes;
+                        setFlow(value => ({ ...value, nodes: value.nodes.map(node => ({ ...node, position: positions.find(item => item.id === node.id).position })) }));
+                        requestAnimationFrame(() => requestAnimationFrame(() => canvasApi?.fitView({ padding: 0.2, maxZoom: 0.75, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200 })));
+                      }}
+                    />
+                    <SidebarTool
+                      label="기본 구성으로 되돌리기"
+                      icon="RotateCcw"
                       disabled={running}
                       onClick={() => {
                         setFlow(defaultWorkflow());
                         setSelectedNode(null);
                       }}
-                    >
-                      <Icon name="RotateCcw" size={15} />
-                    </button>
-                    <button
-                      title="구성 불러오기"
-                      disabled={running}
-                      onClick={loadFlow}
-                    >
-                      <Icon name="Upload" size={15} />
-                    </button>
-                    <button
-                      title="구성 내보내기"
+                    />
+                    <SidebarTool
+                      label="구성 내보내기"
+                      icon="Download"
                       onClick={() => action(() => api.exportWorkflow(flow))}
-                    >
-                      <Icon name="Download" size={15} />
-                    </button>
+                    />
                   </div>
                 </div>
                 <div className="flow-area">
@@ -2936,8 +2947,12 @@ function RecordDetail({
           const screenshot = outcome?.report.screenshots?.[source.screenshot_id] || liveScreenshots[source.screenshot_id];
           const role = evidenceRole(source);
           return <section className="page-evidence-item" key={index}>
-            <strong>{index + 1}. {role}{source.source_kind === "image_ocr" && role !== "이미지" ? " 이미지" : ""}</strong>
-            <blockquote>{source.text}</blockquote>
+            <header className="evidence-item-heading">
+              <span className="evidence-item-number">{index + 1}.</span>
+              <div><strong>{role}{source.source_kind === "image_ocr" && role !== "이미지" ? " 이미지" : ""}</strong></div>
+              {(source.transparent || source.offscreen) && <span className="evidence-visibility" title={source.offscreen ? "화면 밖에서 발견한 요소" : "투명하게 표시된 요소"}><Icon name="EyeOff" size={14} /><span>{source.offscreen ? "화면 밖" : "투명 요소"}</span></span>}
+            </header>
+            <div className="evidence-original"><blockquote>{source.text}</blockquote></div>
             {source.image_id && <ImageOCR image={outcome?.report.ocr_images?.find(image => image.id === source.image_id)} />}
             <EvidenceScreenshot screenshot={screenshot} hidden={source.transparent || source.offscreen} showPageURL={false}
               caption={screenshot?.capture === "target_element" ? "해당 위치 캡처" : "페이지 참고 화면"} />
@@ -2990,15 +3005,12 @@ function RecordDetail({
                 {
                   label: "메모 저장",
                   icon: "Save",
-                  image: saveImage,
-                  imageClassName: "menu-image-save",
                   disabled: reviewDisabled,
                   action: () => onReview(review?.status || "unreviewed", note),
                 },
                 {
                   label: "미검토로 변경",
                   icon: "RotateCcw",
-                  image: refreshImage,
                   disabled: reviewDisabled,
                   action: () => onReview("unreviewed", note),
                 },

@@ -20,12 +20,12 @@ class Notifications {
     this.file = path.join(directory, 'notifications.json'); this.crypto = safeStorage; this.notify = notify; this.focused = focused; this.fetcher = fetcher; this.supported = supported;
     this.settings = { ...DEFAULTS }; this.secrets = {}; this.lastDelivery = []; this.writes = Promise.resolve(); this.seen = new Set();
   }
-  secure() { return this.crypto.isEncryptionAvailable() && this.crypto.getSelectedStorageBackend?.() !== 'basic_text'; }
+  async secure() { return await this.crypto.isAsyncEncryptionAvailable() && this.crypto.getSelectedStorageBackend?.() !== 'basic_text'; }
   async load() {
     try { const value = JSON.parse(await fs.readFile(this.file, 'utf8')); for (const key of Object.keys(DEFAULTS)) if (typeof value.settings?.[key] === 'boolean') this.settings[key] = value.settings[key]; this.secrets = value.secrets || {}; } catch { /* New or unreadable local settings. */ }
     return this.state();
   }
-  state() { return { ...this.settings, slackConfigured: Boolean(this.secrets.slack), discordConfigured: Boolean(this.secrets.discord), secureStorage: this.secure(), desktopSupported: this.supported(), lastDelivery: this.lastDelivery }; }
+  async state() { return { ...this.settings, slackConfigured: Boolean(this.secrets.slack), discordConfigured: Boolean(this.secrets.discord), secureStorage: await this.secure(), desktopSupported: this.supported(), lastDelivery: this.lastDelivery }; }
   save(value) { const job = this.writes.then(() => this.write(value)); this.writes = job.catch(() => {}); return job; }
   async write(value) {
     if (!value || typeof value !== 'object') throw new Error('알림 설정 형식 오류');
@@ -35,8 +35,8 @@ class Notifications {
       if (value[`${provider}Remove`]) { delete secrets[provider]; settings[provider] = false; }
       if (value[`${provider}Url`]) {
         const url = validateWebhook(provider, value[`${provider}Url`].trim());
-        if (!this.secure()) throw new Error('운영체제 보안 저장소를 사용할 수 없어 웹훅을 저장하지 못했습니다.');
-        secrets[provider] = this.crypto.encryptString(url).toString('base64');
+        if (!await this.secure()) throw new Error('운영체제 보안 저장소를 사용할 수 없어 웹훅을 저장하지 못했습니다.');
+        secrets[provider] = (await this.crypto.encryptStringAsync(url)).toString('base64');
       }
       if (settings[provider] && !secrets[provider]) throw new Error(`${provider === 'slack' ? 'Slack' : 'Discord'} 웹훅을 먼저 등록하세요.`);
     }
@@ -56,8 +56,9 @@ class Notifications {
     }
     this.lastDelivery = await Promise.all(['slack', 'discord'].filter((provider) => settings[provider]).map(async (provider) => {
       try {
-        if (!this.secure()) throw new Error();
-        const url = validateWebhook(provider, this.crypto.decryptString(Buffer.from(secrets[provider], 'base64')));
+        if (!await this.secure()) throw new Error();
+        const { result } = await this.crypto.decryptStringAsync(Buffer.from(secrets[provider], 'base64'));
+        const url = validateWebhook(provider, result);
         const payload = provider === 'slack' ? { text, mrkdwn: false, unfurl_links: false, unfurl_media: false } : { content: text, allowed_mentions: { parse: [] } };
         const response = await this.fetcher(url, { method: 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(8000) });
         await response.body?.cancel();

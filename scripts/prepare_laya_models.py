@@ -16,7 +16,8 @@ from chickadee.laya_worker import verified_bundle, digest
 RELEASE = 'https://github.com/orqan137/chickadee_studio/releases/download/laya-ko-v1/'
 HASHES = {
     'best.safetensors': '457f08418e36a4b22fdd392f591023b3537398b5bacb0ff5003976effce433fb',
-    'laya-config.zip': 'aed47ede044185b2d7b2925fc7b4d35ecd4c38c8933cf2dd774c32a2bb5f5cd9',
+    # Official laya-ko-v1 asset 677023566, republished 2026-10-26.
+    'laya-config.zip': '5a02efa9a2eeb59acdbbff2f9bb408f55b3c362f11a4700bd1218e843dac2a60',
 }
 
 

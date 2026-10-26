@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CircleAlert, ExternalLink, X } from "lucide-react";
+import { ChevronDown, CircleAlert, ExternalLink, ZoomIn, X } from "lucide-react";
 
 function ScreenshotModal({ screenshot, onClose }) {
   const ref = useRef(null);
@@ -30,7 +30,7 @@ export default function EvidenceScreenshot({ screenshot, hidden = false, caption
   const [error, setError] = useState("");
   useEffect(() => { setExpanded(false); setError(""); }, [screenshot?.data_url, hidden]);
   if (!screenshot || !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(screenshot.data_url || "") || screenshot.data_url.length > 270000) {
-    return <figure className="evidence-capture"><figcaption>{caption}</figcaption><p className="evidence-capture-note">저장된 스크린샷이 없습니다. 원문·CSS 근거를 확인하세요.</p></figure>;
+    return <figure className="evidence-capture"><figcaption>{caption}</figcaption><p className="evidence-capture-note capture-guidance"><span>저장된 스크린샷이 없습니다. 원문·CSS 근거를 확인하세요.</span></p></figure>;
   }
   let url = null;
   try {
@@ -45,12 +45,12 @@ export default function EvidenceScreenshot({ screenshot, hidden = false, caption
     catch { setError("앱을 재실행한 뒤 다시 시도해 주세요."); }
   };
   return <figure className="evidence-capture">
-    <figcaption>{caption}</figcaption>
+    <figcaption><span>{caption}</span><button type="button" className="capture-enlarge" onClick={() => setExpanded(true)} aria-label="참고 화면 크게 보기"><ZoomIn size={13} aria-hidden="true" />확대</button></figcaption>
     <button className="evidence-capture-frame" type="button" aria-label="스크린샷 확대" aria-haspopup="dialog" onClick={() => setExpanded(true)}>
       <span className="evidence-capture-image"><img src={screenshot.data_url} alt="검사 브라우저에서 촬영한 스크린샷" /></span>
     </button>
-    <p className="evidence-capture-note">{hidden ? "투명하거나 화면 밖에 있는 요소는 촬영 화면에 보이지 않을 수 있습니다. 원문과 CSS 근거를 함께 확인하세요." : screenshot.capture === "target_element" ? "탐지된 요소를 직접 촬영한 화면" : "페이지 수집 당시의 참고 화면입니다. 탐지 문구가 있는 위치를 촬영한 화면은 아닙니다."}</p>
-    <details className="capture-metadata"><summary>촬영 정보</summary>
+    <p className="evidence-capture-note capture-guidance">{hidden ? "투명하거나 화면 밖의 요소는 보이지 않을 수 있습니다. 원문·CSS 근거를 함께 확인하세요." : screenshot.capture === "target_element" ? "탐지된 요소를 직접 촬영한 화면입니다." : "페이지 수집 당시의 참고 화면입니다. 탐지 문구의 정확한 위치를 촬영한 화면은 아닙니다."}</p>
+    <details className="capture-metadata"><summary><span>촬영 정보</span><ChevronDown className="capture-metadata-chevron" size={14} aria-hidden="true" /></summary>
       <dl>{showPageURL && <div><dt>페이지</dt><dd>{url ? <a href={url} onClick={openURL} title="기본 브라우저에서 열기">{screenshot.url}<ExternalLink size={13} aria-hidden="true" /></a> : "주소 없음"}</dd></div>}
         <div><dt>촬영 시각</dt><dd><time dateTime={screenshot.observed_at}>{capturedAt}</time></dd></div>
         <div><dt>SHA-256</dt><dd className="capture-hash">{screenshot.sha256 || "기록 없음"}</dd></div></dl>

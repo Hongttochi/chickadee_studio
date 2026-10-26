@@ -1,6 +1,6 @@
 {
   "name": "chickadee-desktop",
-  "version": "0.10.16",
+  "version": "0.10.18",
   "description": "Chickadee visual website inspection workspace",
   "author": "Chickadee contributors",
   "license": "Apache-2.0",
@@ -16,10 +16,10 @@
   },
   "devDependencies": {
     "@xyflow/react": "12.12.0",
-    "electron": "44.9.1",
+    "electron": "46.0.0-alpha.1",
     "electron-builder": "26.15.3",
     "lucide-react": "1.60.0",
-    "playwright": "1.64.0",
+    "playwright": "1.64.1",
     "pretendard": "1.3.9",
     "prettier": "3.9.10",
     "react": "19.3.1",
@@ -30,7 +30,7 @@
     "appId": "org.chickadee.inspector",
     "productName": "Chickadee",
     "directories": {
-      "output": "../artifacts/electron-0.10.16"
+      "output": "../artifacts/electron-0.10.18"
     },
     "files": [
       "dist/**/*",
@@ -43,11 +43,15 @@
     ],
     "extraResources": [
       {
-        "from": "../artifacts/engine-0.10.16/ChickadeeEngine",
+        "from": "assets/app.ico",
+        "to": "chickadee.ico"
+      },
+      {
+        "from": "../artifacts/engine-0.10.18/ChickadeeEngine",
         "to": "engine"
       },
       {
-        "from": "../artifacts/laya-0.10.16/ChickadeeLaya",
+        "from": "../artifacts/laya-0.10.18/ChickadeeLaya",
         "to": "laya"
       },
       {
