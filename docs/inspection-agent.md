@@ -1,8 +1,8 @@
-# Exploration graph and Groq evidence review
+# Exploration graph and AI evidence review
 
 [한국어](inspection-agent.ko.md) | [English](inspection-agent.md)
 
-Inspect observed navigation and collected evidence, then optionally use Groq to review advertising context.
+Inspect observed navigation and collected evidence, then optionally use the selected AI provider to review advertising context.
 
 ## Interface
 
@@ -24,9 +24,17 @@ The app pins Unicode confusables **18.0.0 with 1,351 restricted mappings** local
 
 Version, source SHA-256 and filtering are in `chickadee/data/confusables-ascii.json`; the license is `chickadee/data/LICENSE-UNICODE.txt`. No Unicode server is contacted at runtime.
 
-## Groq execution and costs
+## AI execution and costs
 
-The only provider is Groq, at `https://api.groq.com/openai/v1/chat/completions`, with default model `openai/gpt-oss-20b`. No other providers, paid search, built-in search or code tools are invoked. See [Groq API](https://console.groq.com/docs/api-reference) and [model documentation](https://console.groq.com/docs/model/openai/gpt-oss-20b).
+Choose **Groq, OpenAI (GPT), or Anthropic (Claude)** under Settings → AI connection and enter that provider’s API key. Switching provider requires a new key; model/limit changes for the same provider can reuse the current session key. Keys are not saved to disk and are forgotten on exit. ChatGPT/Claude subscriptions do not include API billing.
+
+| Provider | Default model | Endpoint |
+| --- | --- | --- |
+| Groq | `openai/gpt-oss-20b` | `https://api.groq.com/openai/v1/chat/completions` |
+| OpenAI | `gpt-4.1-mini` | `https://api.openai.com/v1/chat/completions` |
+| Anthropic | `claude-haiku-4-5-20251001` | `https://api.anthropic.com/v1/messages` |
+
+Model IDs are editable. Requests go only to the selected provider’s fixed official endpoint; built-in search and code execution are not used.
 
 1. The model selects reads from `evidence_read`, `style_read`, `text_analyze` and `local_ai_read`.
 2. The app validates evidence IDs/arguments and reads collected evidence only. Arbitrary URLs, files, commands, other-run evidence and changes to findings/human review are disallowed.
@@ -77,7 +85,7 @@ The existing stdio bridge adds these commands without an HTTP port:
 
 Windows supports `Chickadee.exe --groq-env-file 'C:\Chickadee\.env'`, reading only `GROQ_API_KEY` from that explicitly selected file without executing it or expanding other variables. Loading a key makes no request and retains limits. See [Quick start](quickstart-windows.md).
 
-`inspection.read` and `agent.status` are also local tools. Paid commands and authentication configuration are not exposed to the review model. `agent_connected` indicates session configuration; `agent_available=true` and `providers=["groq"]` indicate implementation availability.
+`inspection.read` and `agent.status` are also local tools. Paid commands and authentication configuration are not exposed to the review model. `agent_connected` indicates session configuration; `agent_available=true` and `providers=["groq", "openai", "anthropic"]` indicate implementation availability.
 
 ## Validation and reruns
 

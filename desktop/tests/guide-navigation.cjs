@@ -1,4 +1,6 @@
 // Current guide navigation and layout against the real renderer; no scans or API calls.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { launch } = require('./source-ui-harness.cjs');

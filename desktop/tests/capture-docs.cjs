@@ -1,5 +1,7 @@
 // Refresh documentation from the actual desktop app and its bundled demo.
 // Uses isolated test data; does not call external AI or notification services.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const {launch} = require(process.argv.includes('--source') ? './source-ui-harness.cjs' : './native-app.cjs');
 const path = require('node:path');
 const fs = require('node:fs/promises');

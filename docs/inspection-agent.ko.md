@@ -1,8 +1,8 @@
-# 탐색 그래프, Groq 근거 조사
+# 탐색 그래프, AI 근거 조사
 
 [한국어](inspection-agent.ko.md) | [English](inspection-agent.md)
 
-실제 방문 경로와 수집 근거를 확인하고, Groq로 광고 문맥을 추가 검토합니다.
+실제 방문 경로와 수집 근거를 확인하고, 선택한 AI 제공자로 광고 문맥을 추가 검토합니다.
 
 ## 화면
 
@@ -25,7 +25,15 @@ Unicode 공식 confusables 데이터의 **18.0.0, 1,351개 제한 매핑**을 �
 
 ## Groq 실행과 비용
 
-제공자는 **Groq 하나**이고 요청 주소는 `https://api.groq.com/openai/v1/chat/completions`로 고정한다. 다른 제공자, 유료 검색 API, Groq 내장 검색, 코드 실행 도구는 호출하지 않는다. 기본 모델은 Groq에서 제공하는 `openai/gpt-oss-20b`다. 요청은 Groq에만 보내며 다른 제공자의 키, 결제는 사용하지 않는다. [Groq API 규격](https://console.groq.com/docs/api-reference) ,  [Groq 모델](https://console.groq.com/docs/model/openai/gpt-oss-20b)
+설정 → AI 연결에서 **Groq, OpenAI(GPT), Anthropic(Claude)** 중 하나를 선택하고 해당 서비스의 API 키를 등록합니다. 제공자를 바꿀 때는 새 키가 필요합니다. 같은 제공자의 모델·한도 변경에는 현재 세션 키를 사용할 수 있습니다. 키는 파일에 저장하지 않으며 앱 종료 시 삭제됩니다. ChatGPT·Claude 구독과 API 요금은 별도입니다.
+
+| Provider | Default model | Endpoint |
+| --- | --- | --- |
+| Groq | `openai/gpt-oss-20b` | `https://api.groq.com/openai/v1/chat/completions` |
+| OpenAI | `gpt-4.1-mini` | `https://api.openai.com/v1/chat/completions` |
+| Anthropic | `claude-haiku-4-5-20251001` | `https://api.anthropic.com/v1/messages` |
+
+모델 이름은 설정에서 변경할 수 있습니다. 선택한 제공자의 공식 API로만 요청하며 내장 검색·코드 실행 도구는 호출하지 않습니다.
 
 1. 모델이 등록된 `evidence_read`, `style_read`, `text_analyze`, `local_ai_read` 중 필요한 조회를 선택한다.
 2. 앱이 선택한 근거 ID와 도구 인자를 검증하고 **이미 수집된 근거만** 조회한다. 임의 URL, 파일, 명령 실행, 다른 실행의 근거 접근, 기존 탐지, 사람 검토 수정은 허용하지 않는다.
@@ -51,7 +59,7 @@ Groq에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전�
 
 필수 탐지, 광고 후보가 처음 나온 DOM 상태의 viewport를 JPEG로 촬영한다. 상태당 1장을 공유하며, 최대 64장, 장당 200KB, 총 8MB를 저장한다. 요소를 강제로 표시하거나 화면을 옮기지 않는다. 투명, 화면 밖 요소의 문구가 이미지에 보이지 않을 수 있으므로 원문, 계산된 CSS와 함께 검토한다. DOM 수집과 이미지 촬영은 순차 작업이라 그 사이 동적 페이지가 바뀔 수 있다. 촬영 시각, 상태 ID, URL, 해시가 함께 기록되며 해시는 파일 무결성 확인용이다.
 
-근거 패널의 **스크린샷**에서 확대하고 기록을 다시 열어 확인한다. 결과 폴더 `evidence/<SHA-256>.jpg`에 원본 JPEG도 저장한다. 추가 탐색 화면은 `agent-<SHA-256>.jpg`다. 화면이 없는 이전 기록, 촬영 실패, 저장 한도에서는 원문, CSS 근거를 표시한다. 이미지 파일은 로컬 저장만 하며 Groq로 전송하지 않는다. 촬영은 [Playwright screenshot API](https://playwright.dev/python/docs/screenshots)를 사용한다.
+근거 패널의 **스크린샷**에서 확대하고 기록을 다시 열어 확인한다. 결과 폴더 `evidence/<SHA-256>.jpg`에 원본 JPEG도 저장한다. 추가 탐색 화면은 `agent-<SHA-256>.jpg`다. 화면이 없는 이전 기록, 촬영 실패, 저장 한도에서는 원문, CSS 근거를 표시한다. 이미지 파일은 로컬 저장만 하며 AI 제공자로 전송하지 않는다. 촬영은 [Playwright screenshot API](https://playwright.dev/python/docs/screenshots)를 사용한다.
 
 ![앱의 탐지 내역과 근거 패널](../desktop/assets/guide/review.png)
 
@@ -67,7 +75,7 @@ Groq에는 선택한 영역의 초기 발췌와 요청한 도구 결과만 전�
 
 Windows 앱은 `Chickadee.exe --groq-env-file 'C:\설정\.env'`로 명시적으로 선택한 파일의 `GROQ_API_KEY`만 읽어 같은 세션 설정을 할 수 있습니다. 파일을 실행하거나 다른 변수를 확장하지 않습니다. 키를 읽는 것만으로 API를 호출하지 않으며 기존 한도를 유지합니다. 기본 모델은 Groq의 `openai/gpt-oss-20b`입니다. 상세 실행 방법과 출력 경로는 [빠른 실행](quickstart-windows.ko.md) 첫 장에 있습니다.
 
-`inspection.read`, `agent.status`는 기존 로컬 tool-call 계약에도 등록했다. 비용 발생 명령과 인증 설정은 근거 조사 모델에 노출하지 않는다. `agent_connected`는 세션 설정 여부이며 `agent_available=true`, `providers=["groq"]`로 구현 가용성을 표시한다.
+`inspection.read`, `agent.status`는 기존 로컬 tool-call 계약에도 등록했다. 비용 발생 명령과 인증 설정은 근거 조사 모델에 노출하지 않는다. `agent_connected`는 세션 설정 여부이며 `agent_available=true`, `providers=["groq", "openai", "anthropic"]`로 구현 가용성을 표시한다.
 
 ## 검증과 재실행
 

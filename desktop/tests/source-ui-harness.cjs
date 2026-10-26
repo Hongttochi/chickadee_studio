@@ -198,6 +198,7 @@ exports.launch = async ({ env }) => {
           (value) => window.__sourceInvoke(method, value),
         ]),
       );
+      window.chickadee.language = "ko";
       window.chickadee.onEvent = (callback) => {
         window.__sourceEvents ||= new Set();
         window.__sourceEvents.add(callback);
