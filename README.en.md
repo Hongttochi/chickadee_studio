@@ -18,11 +18,11 @@
 
 An open-source desktop app for detecting text obfuscation, hidden advertising and promotional text inside images on public-sector websites.
 
-[![Latest release](https://img.shields.io/github/v/release/orqan137/chickadee_studio?style=flat&color=13836d)](https://github.com/orqan137/chickadee_studio/releases/latest)
-[![Build](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_studio/release.yml?branch=main&label=build&style=flat)](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/Kafrika-Labs/chickadee_studio?style=flat&color=13836d)](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/Kafrika-Labs/chickadee_studio/release.yml?branch=main&label=build&style=flat)](https://github.com/Kafrika-Labs/chickadee_studio/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-303438?style=flat)](LICENSE)
 
-[**Windows download**](https://github.com/orqan137/chickadee_studio/releases/latest) | [User guide](docs/quickstart-windows.en.md) | [Feature guide](docs/features.en.md) | [한국어](README.md)
+[**Windows download**](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest) | [User guide](docs/quickstart-windows.en.md) | [Feature guide](docs/features.en.md) | [한국어](README.md)
 
 </div>
 
@@ -47,7 +47,7 @@ An open-source desktop app for detecting text obfuscation, hidden advertising an
 
 ## 1. Installation
 
-1. Download `Chickadee-Studio-<version>-win-x64.zip` from the [latest release](https://github.com/orqan137/chickadee_studio/releases/latest).
+1. Download `Chickadee-Studio-<version>-win-x64.zip` from the [latest release](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest).
 2. Extract the **entire ZIP** into a new folder and run `Chickadee.exe`. Keep the bundled `resources` folder together with the app.
 3. Enter a starting URL and select **검사 실행**.
 4. Inspect source text, locations and screenshots in **탐지 내역**, then save review states and notes.
@@ -268,7 +268,7 @@ This is a small recognition audit, not overall Korean OCR accuracy or text-detec
 
 The Windows app bundles Korean PaddleOCR, RF, photo classification and the Korean Laya model with its CPU executable. Laya processes all collected text in successive batches without a fixed per-scan item cap. Identical text reuses its result. Completed work is preserved on interruption. BERT is retained as an evaluation reference. Groq runs only when configured and requested.
 
-[Windows package verification](https://github.com/orqan137/chickadee_studio/actions/runs/39824971344) covers extraction, launch, Korean OCR, image-free processing, login resumption and key registration. Published-file checksums, included models, ordinary Windows launch, report saving/reopening, review persistence and CSV export were also checked.
+[Windows package verification](https://github.com/Kafrika-Labs/chickadee_studio/actions/runs/39824971344) covers extraction, launch, Korean OCR, image-free processing, login resumption and key registration. Published-file checksums, included models, ordinary Windows launch, report saving/reopening, review persistence and CSV export were also checked.
 
 [Metrics and split hashes](docs/assets/evaluation/metrics.json) | [Test guide](docs/validation.en.md)
 
@@ -277,7 +277,7 @@ The Windows app bundles Korean PaddleOCR, RF, photo classification and the Korea
 Development baseline: **Python 3.12 and Node.js 24**. Windows download users do not need this setup.
 
 ```sh
-git clone https://github.com/orqan137/chickadee_studio.git
+git clone https://github.com/Kafrika-Labs/chickadee_studio.git
 cd chickadee_studio
 ```
 
@@ -326,7 +326,7 @@ The app shell is in `desktop/`, the engine in `chickadee/`, and output schemas i
 
 [User guide](docs/quickstart-windows.en.md) | [Feature screenshots](docs/features.en.md) | [Desktop guide](docs/desktop.en.md) | [Architecture](docs/architecture.en.md) | [Output format](docs/result-format.en.md) | [AI configuration](docs/inspection-agent.en.md) | [Tests](docs/validation.en.md) | [Contributing](CONTRIBUTING.en.md)
 
-Report reproducible bugs and propose features through [GitHub Issues](https://github.com/orqan137/chickadee_studio/issues). Do not post API keys or login credentials.
+Report reproducible bugs and propose features through [GitHub Issues](https://github.com/Kafrika-Labs/chickadee_studio/issues). Do not post API keys or login credentials.
 
 ## 10. License
 

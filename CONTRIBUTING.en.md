@@ -6,7 +6,7 @@ Contributions to bug fixes, detection rules, the UI, documentation and translati
 
 ## Issues and pull requests
 
-1. Check existing [issues](https://github.com/orqan137/chickadee_studio/issues). For larger changes, describe the problem and proposed behavior first.
+1. Check existing [issues](https://github.com/Kafrika-Labs/chickadee_studio/issues). For larger changes, describe the problem and proposed behavior first.
 2. Make a focused change on a branch. Check compatibility with existing user data, settings and result formats.
 3. Run relevant checks and describe the reason for the change and validation results in your PR. Include screenshots for UI changes.
 

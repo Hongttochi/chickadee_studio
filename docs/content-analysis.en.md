@@ -91,7 +91,7 @@ The distribution loads trained FP32 weights once after validating hashes and ind
 
 When the model is connected, 40% of the scan deadline is reserved for final analysis. New installations default to 1,800 seconds; existing settings persist. Laya continues through the remaining time, allowing up to 120 seconds per batch response and reusing the process. Cancellation is forwarded promptly; unprocessed items are not marked normal.
 
-For source development, use the [Korean context model pack](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1). Extract `laya-config.zip`, put `best.safetensors` in its root and `model.safetensors` under `base/`.
+For source development, use the [Korean context model pack](https://github.com/Kafrika-Labs/chickadee_studio/releases/tag/laya-ko-v1). Extract `laya-config.zip`, put `best.safetensors` in its root and `model.safetensors` under `base/`.
 
 ```powershell
 py -3.12 -m venv .venv-laya

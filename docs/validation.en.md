@@ -2,7 +2,7 @@
 
 [한국어](validation.md) | [English](validation.en.md)
 
-Build and validation results are available in [GitHub Actions](https://github.com/orqan137/chickadee_studio/actions) and [releases](https://github.com/orqan137/chickadee_studio/releases). Run commands from the repository root.
+Build and validation results are available in [GitHub Actions](https://github.com/Kafrika-Labs/chickadee_studio/actions) and [releases](https://github.com/Kafrika-Labs/chickadee_studio/releases). Run commands from the repository root.
 
 ## Python
 

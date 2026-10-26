@@ -2,7 +2,7 @@
 
 [한국어](quickstart-windows.md) | [English](quickstart-windows.en.md)
 
-1. Download the Windows x64 ZIP from the [latest release](https://github.com/orqan137/chickadee_studio/releases/latest) and extract the entire archive.
+1. Download the Windows x64 ZIP from the [latest release](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest) and extract the entire archive.
 2. Run `Chickadee.exe`. If Windows app control blocks it, use `ChickadeeRuntime.exe` in the same folder. This official unmodified runtime runs the same app and models without changing security settings. Keep `resources` and all accompanying files. Close any previous instance first.
 3. Enter a URL and choose **검사 실행** (Run scan). The adjacent menu offers **데모 검사** (Demo scan) for a local example.
 4. Results are saved under `Documents/Chickadee/results`, in a separate folder per run. Open **결과 폴더** (Results folder) to see the actual location.

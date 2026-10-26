@@ -8,4 +8,4 @@ SHA-256 hashes of the official runtime ZIP, original executable, icon and editin
 
 The default package is unsigned. It does not install certificates, change Windows security settings or disable protection. Execution depends on the environment's policy and file reputation.
 
-[Quick start](quickstart-windows.en.md) · [Latest release](https://github.com/orqan137/chickadee_studio/releases/latest)
+[Quick start](quickstart-windows.en.md) · [Latest release](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest)

@@ -1,7 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const REPO = 'orqan137/chickadee_studio';
+const REPO = 'Kafrika-Labs/chickadee_studio';
 const RELEASES = `https://github.com/${REPO}/releases`;
 function version(value) { return /^v?(\d+)\.(\d+)\.(\d+)$/.exec(value)?.slice(1).map(Number); }
 function newer(a, b) { const x = version(a), y = version(b); if (!x || !y) return false; for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; }

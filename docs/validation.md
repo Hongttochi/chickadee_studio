@@ -2,7 +2,7 @@
 
 [한국어](validation.md) | [English](validation.en.md)
 
-빌드·검증 결과는 [GitHub Actions](https://github.com/orqan137/chickadee_studio/actions)와 [릴리스](https://github.com/orqan137/chickadee_studio/releases)에서 확인합니다. 아래 명령은 저장소 루트 기준입니다.
+빌드·검증 결과는 [GitHub Actions](https://github.com/Kafrika-Labs/chickadee_studio/actions)와 [릴리스](https://github.com/Kafrika-Labs/chickadee_studio/releases)에서 확인합니다. 아래 명령은 저장소 루트 기준입니다.
 
 ## Python
 

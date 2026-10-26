@@ -8,4 +8,4 @@ Windows x64 ZIP의 `Chickadee.exe`에는 치카비 캐릭터 아이콘을 적용
 
 기본 패키지는 미서명입니다. 인증서 설치, Windows 보안 설정 변경이나 보호 기능 해제를 수행하지 않습니다. Windows의 실행 허용 여부는 해당 환경의 정책과 파일 평판에 따릅니다.
 
-[빠른 실행](quickstart-windows.md) ,  [최신 릴리스](https://github.com/orqan137/chickadee_studio/releases/latest)
+[빠른 실행](quickstart-windows.md) ,  [최신 릴리스](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest)

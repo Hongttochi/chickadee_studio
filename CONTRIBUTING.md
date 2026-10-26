@@ -6,7 +6,7 @@
 
 ## 이슈와 PR
 
-1. 기존 [이슈](https://github.com/orqan137/chickadee_studio/issues)를 확인합니다. 큰 변경은 먼저 문제와 제안하는 동작을 설명해 주세요.
+1. 기존 [이슈](https://github.com/Kafrika-Labs/chickadee_studio/issues)를 확인합니다. 큰 변경은 먼저 문제와 제안하는 동작을 설명해 주세요.
 2. 브랜치에서 한 가지 목적의 변경을 만듭니다. 기존 사용자 데이터·설정·결과 형식과의 호환성을 확인합니다.
 3. 관련 검증을 실행하고, PR에 변경 이유·검증 결과·UI 변경 시 화면을 첨부합니다.
 

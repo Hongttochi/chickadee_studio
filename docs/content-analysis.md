@@ -91,7 +91,7 @@ Windows 실행본에는 학습한 한국어 Laya 모델과 독립 CPU 실행 파
 
 탐색이 전체 시간을 소진하지 않도록, 모델이 연결된 검사에서는 전체 제한시간의 40%를 최종 분석용으로 확보합니다. 첫 실행 기본 제한시간은 1,800초이며 저장한 사용자 설정은 유지합니다. Laya 전체 분석은 남은 검사 시간 동안 계속 진행합니다. 묶음별 응답 대기는 최대 120초이고, 정상 처리된 다음 묶음은 같은 모델 프로세스에서 이어갑니다. 중단 요청은 즉시 전달하며 실제 처리하지 못한 항목을 정상으로 표시하지 않습니다.
 
-소스 개발 환경에서는 [한국어 문맥 모델 팩](https://github.com/orqan137/chickadee_studio/releases/tag/laya-ko-v1)을 등록할 수 있습니다. 모델 팩의 `laya-config.zip`을 압축 해제하고 `best.safetensors`는 루트에, `model.safetensors`는 `base/` 아래에 넣습니다.
+소스 개발 환경에서는 [한국어 문맥 모델 팩](https://github.com/Kafrika-Labs/chickadee_studio/releases/tag/laya-ko-v1)을 등록할 수 있습니다. 모델 팩의 `laya-config.zip`을 압축 해제하고 `best.safetensors`는 루트에, `model.safetensors`는 `base/` 아래에 넣습니다.
 
 ```powershell
 py -3.12 -m venv .venv-laya

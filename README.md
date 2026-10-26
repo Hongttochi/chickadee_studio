@@ -16,7 +16,7 @@
 
 **웹사이트의 광고 문맥과 문자 위장·은닉을 분석하는 오픈소스 데스크톱 도구**
 
-[**Windows 다운로드**](https://github.com/orqan137/chickadee_studio/releases/latest) | [사용설명서](docs/quickstart-windows.md) | [English](README.en.md)
+[**Windows 다운로드**](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest) | [사용설명서](docs/quickstart-windows.md) | [English](README.en.md)
 
 </div>
 
@@ -31,8 +31,8 @@
 
 [GIF 원본](docs/assets/demos/overview.gif) | [전체 시연 영상](docs/assets/demos/service.webm) | [기능별 화면](docs/features.md)
 
-[![최신 릴리스](https://img.shields.io/github/v/release/orqan137/chickadee_studio?style=flat&color=13836d)](https://github.com/orqan137/chickadee_studio/releases/latest)
-[![빌드](https://img.shields.io/github/actions/workflow/status/orqan137/chickadee_studio/release.yml?branch=main&label=build&style=flat)](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)
+[![최신 릴리스](https://img.shields.io/github/v/release/Kafrika-Labs/chickadee_studio?style=flat&color=13836d)](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest)
+[![빌드](https://img.shields.io/github/actions/workflow/status/Kafrika-Labs/chickadee_studio/release.yml?branch=main&label=build&style=flat)](https://github.com/Kafrika-Labs/chickadee_studio/actions/workflows/release.yml)
 [![라이선스](https://img.shields.io/badge/license-Apache--2.0-303438?style=flat)](LICENSE)
 
 ## 목차
@@ -50,7 +50,7 @@
 
 ## 1. 빠른 시작
 
-1. [최신 릴리스](https://github.com/orqan137/chickadee_studio/releases/latest)의 Windows x64 ZIP을 내려받습니다.
+1. [최신 릴리스](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest)의 Windows x64 ZIP을 내려받습니다.
 2. 전체 압축을 해제하고 **Chickadee.exe**를 실행합니다. 동봉된 `resources` 폴더를 함께 유지합니다.
 3. **검사 대상**에 URL을 입력하고 **검사 실행**을 누릅니다.
 4. 결과에서 원문과 촬영 화면을 확인하고, JSON과 보고서를 저장합니다.
@@ -484,7 +484,7 @@ BERT와 Laya는 본체까지 미세조정했습니다. 두 모델 모두 11에�
 | BERT | 학습 평가의 대조 모델 |
 | Groq | 사용자 설정 후 선택 실행 |
 
-[Windows 패키지 검증](https://github.com/orqan137/chickadee_studio/actions/workflows/release.yml)에서 ZIP 압축 해제, 앱 실행, 한국어 OCR, 이미지 없는 처리 경로, 로그인 재개와 AI 키 등록을 확인했습니다. 배포 파일의 체크섬과 포함 모델을 검증하고, Windows에서 디버그 옵션 없이 실행되는 것도 확인했습니다. 보고서 저장과 다시 열기, 검토 상태 복원과 CSV 내보내기를 검증했습니다. 한국어 게시글과 지연 로딩 댓글을 포함한 앱 검사에서는 4종 기법, 이미지 OCR 1개와 Laya 문맥 8개를 처리했고, 외부 API 호출은 없었습니다.
+[Windows 패키지 검증](https://github.com/Kafrika-Labs/chickadee_studio/actions/workflows/release.yml)에서 ZIP 압축 해제, 앱 실행, 한국어 OCR, 이미지 없는 처리 경로, 로그인 재개와 AI 키 등록을 확인했습니다. 배포 파일의 체크섬과 포함 모델을 검증하고, Windows에서 디버그 옵션 없이 실행되는 것도 확인했습니다. 보고서 저장과 다시 열기, 검토 상태 복원과 CSV 내보내기를 검증했습니다. 한국어 게시글과 지연 로딩 댓글을 포함한 앱 검사에서는 4종 기법, 이미지 OCR 1개와 Laya 문맥 8개를 처리했고, 외부 API 호출은 없었습니다.
 
 [평가 수치 및 분할 해시](docs/assets/evaluation/metrics.json) | [테스트 안내](docs/validation.md)
 
@@ -512,7 +512,7 @@ BERT와 Laya는 본체까지 미세조정했습니다. 두 모델 모두 11에�
 개발 기준은 **Python 3.12와 Node.js 24**입니다. Windows 실행본 사용자는 개발 환경을 설치할 필요가 없습니다.
 
 ```sh
-git clone https://github.com/orqan137/chickadee_studio.git
+git clone https://github.com/Kafrika-Labs/chickadee_studio.git
 cd chickadee_studio
 ```
 
@@ -570,7 +570,7 @@ Electron과 Python 가상환경의 CPU 아키텍처를 맞춰 사용합니다.
 | [테스트 안내](docs/validation.md) | 자동 테스트와 패키지 검증 |
 | [기여 안내](CONTRIBUTING.md) | 이슈 제보, 개발과 PR 절차 |
 
-버그 제보와 기능 제안은 [GitHub Issues](https://github.com/orqan137/chickadee_studio/issues)에서 받습니다. 재현 가능한 예제와 실행 환경을 함께 남겨 주세요. API 키와 로그인 정보가 포함된 자료는 게시하지 않습니다.
+버그 제보와 기능 제안은 [GitHub Issues](https://github.com/Kafrika-Labs/chickadee_studio/issues)에서 받습니다. 재현 가능한 예제와 실행 환경을 함께 남겨 주세요. API 키와 로그인 정보가 포함된 자료는 게시하지 않습니다.
 
 ## 10. 라이선스
 

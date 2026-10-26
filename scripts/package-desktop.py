@@ -85,7 +85,7 @@ def main(app_directory=None):
         'API 키는 현재 앱 세션에서만 사용하며, 환경 변수나 다른 프로젝트의 키를 자동 사용하지 않습니다.\n'
         '선택한 외부 키 파일: Chickadee.exe --groq-env-file "설정파일의 전체 경로". docs/quickstart-windows.md 참고.\n'
         '서명 서비스 가입 없이 제공되는 미서명 패키지입니다.\n'
-        'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
+        'https://github.com/Kafrika-Labs/chickadee_studio\n', encoding='utf-8-sig')
     (APP / 'README_FIRST.en.txt').write_text(
         f'Chickadee Studio {VERSION} / Windows x64\n\n'
         'Extract the entire ZIP into a new folder and run Chickadee.exe.\n'
@@ -106,7 +106,7 @@ def main(app_directory=None):
         'Keys stay in the current app session; keys from other projects or arbitrary environment variables are not used automatically.\n'
         'Explicit external key file: Chickadee.exe --groq-env-file "absolute path to settings file". See the quick start guide.\n'
         'This package is unsigned.\n'
-        'https://github.com/orqan137/chickadee_studio\n', encoding='utf-8-sig')
+        'https://github.com/Kafrika-Labs/chickadee_studio\n', encoding='utf-8-sig')
     output = ROOT / 'artifacts' / f'Chickadee-Studio-{VERSION}-win-x64.zip'
     temporary = output.with_suffix('.zip.tmp')
     entries = [(file, (Path(f'Chickadee-{VERSION}') / file.relative_to(APP)).as_posix())
