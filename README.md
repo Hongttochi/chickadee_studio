@@ -17,7 +17,7 @@ Chickadee Studio is a desktop app for reviewing suspected advertising in posts, 
 - **Scan targets**: page text, posts, comments, iframes and text inside images
 - **Obfuscation and concealment**: look-alike characters, decomposed Korean letters, transparent text and off-screen content
 - **Image text extraction**: Korean text and bounding boxes with PaddleOCR
-- **Context analysis**: RF and Laya models on the local CPU, with optional Groq review
+- **Context analysis**: RF and Laya models on the local CPU, with optional AI Model(GPT, Claude, Groq) review
 - **Review and export**: source text, screenshots, review states, notes, JSON, CSV and reports
 
 Model scores help prioritize review. Check the original text and detection evidence together.
@@ -33,7 +33,7 @@ Model scores help prioritize review. Check the original text and detection evide
 - [Latest Windows x64 release](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest)
 - [Release notes](docs/README.md#release-notes)
 
-The download bundles the Python scan engine, Chromium, OCR/RF/Laya models and CPU runtime. No separate Python installation or GPU is required. Groq runs when the user supplies an API key and starts a review.
+The download bundles the Python scan engine, Chromium, OCR/RF/Laya models and CPU runtime. No separate Python installation or GPU is required. AI Model runs when the user supplies an API key and starts a review.
 
 ## Quick start
 
@@ -51,7 +51,7 @@ If application control blocks the executable, use `ChickadeeRuntime.exe` in the 
 - [Documentation home](docs/README.md)
 - [Features and demos](docs/features.md)
 - [Project guide — processing stages, datasets and model evaluation](docs/project-guide.md)
-- [Groq setup and review](docs/inspection-agent.md)
+- [AI Model setup and review](docs/inspection-agent.md)
 - [Scheduled scans](docs/scheduled-inspections.md) · [Notifications](docs/notifications.md)
 - [Result file format](docs/result-format.md)
 - [Testing and package validation](docs/validation.md)
@@ -65,7 +65,7 @@ If application control blocks the executable, use `ChickadeeRuntime.exe` in the 
 | Obfuscation analysis | Altered characters and visually hidden elements | Unicode, DOM, CSS and coordinates |
 | OCR | Korean text and locations inside images | PaddleOCR |
 | Local context analysis | Advertising context in page and OCR text | TF-IDF, Random Forest, Laya |
-| Optional AI review | Collected evidence and further checks on the same site | Groq |
+| Optional AI review | Collected evidence and further checks on the same site | GPT, Claude, Groq |
 
 [Architecture](docs/architecture.md) · [Direct image/text analysis](docs/content-analysis.md)
 
